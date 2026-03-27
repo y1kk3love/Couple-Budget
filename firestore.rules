@@ -1,0 +1,32 @@
+// firestore.rules
+// Firebase 콘솔 → Firestore → 규칙 탭에 붙여넣기 하세요
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 허용된 이메일 목록
+    function isAllowed() {
+      return request.auth != null &&
+        request.auth.token.email in [
+          "your_email@gmail.com",       // ← 본인 이메일로 교체
+          "partner_email@gmail.com"     // ← 파트너 이메일로 교체
+        ];
+    }
+
+    // 거래 내역
+    match /transactions/{docId} {
+      allow read, write: if isAllowed();
+    }
+
+    // 고정비
+    match /fixed_items/{docId} {
+      allow read, write: if isAllowed();
+    }
+
+    // 예산
+    match /budgets/{docId} {
+      allow read, write: if isAllowed();
+    }
+  }
+}

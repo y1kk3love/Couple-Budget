@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>우리 가계부</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- 로그인 화면 -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <div class="login-logo">
+        <span class="logo-icon">◎</span>
+        <h1>우리 가계부</h1>
+        <p>함께 관리하는 커플 가계부</p>
+      </div>
+      <button id="googleLoginBtn" class="google-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+        Google로 로그인
+      </button>
+      <p class="login-note">등록된 계정만 접근 가능합니다</p>
+    </div>
+  </div>
+
+  <!-- 메인 앱 -->
+  <div id="app" class="app hidden">
+
+    <!-- 사이드바 (PC) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-icon">◎</span>
+        <span class="sidebar-title">우리 가계부</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-view="calendar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          달력
+        </button>
+        <button class="nav-btn" data-view="list">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          목록
+        </button>
+        <button class="nav-btn" data-view="stats">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          통계
+        </button>
+        <button class="nav-btn" data-view="budget">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          예산
+        </button>
+        <button class="nav-btn" data-view="fixed">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          고정비
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info" id="sidebarUser"></div>
+        <button id="logoutBtn" class="logout-btn">로그아웃</button>
+      </div>
+    </aside>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="month-nav">
+            <button id="prevMonth" class="arrow-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span id="currentMonthLabel" class="month-label"></span>
+            <button id="nextMonth" class="arrow-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="header-right">
+          <button id="csvImportBtn" class="icon-btn" title="CSV 가져오기">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            CSV
+          </button>
+          <button id="addTxBtn" class="add-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            내역 추가
+          </button>
+        </div>
+      </header>
+
+      <div class="summary-bar" id="summaryBar"></div>
+
+      <div class="view-container">
+        <div id="view-calendar" class="view active"></div>
+        <div id="view-list" class="view"></div>
+        <div id="view-stats" class="view"></div>
+        <div id="view-budget" class="view"></div>
+        <div id="view-fixed" class="view"></div>
+      </div>
+    </main>
+
+    <!-- 모바일 하단 탭 -->
+    <nav class="mobile-tabs">
+      <button class="mob-tab active" data-view="calendar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        달력
+      </button>
+      <button class="mob-tab" data-view="list">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+        목록
+      </button>
+      <button class="mob-tab add-center" id="mobAddBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="mob-tab" data-view="stats">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        통계
+      </button>
+      <button class="mob-tab" data-view="budget">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        예산
+      </button>
+    </nav>
+  </div>
+
+  <!-- 내역 추가/수정 모달 -->
+  <div id="txModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">내역 추가</h3>
+        <button class="modal-close" id="modalClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="txId" />
+        <div class="type-toggle">
+          <button class="type-btn active" data-type="expense">지출</button>
+          <button class="type-btn" data-type="income">수입</button>
+        </div>
+        <div class="form-row">
+          <label>금액</label>
+          <div class="amount-input-wrap">
+            <input type="number" id="txAmount" placeholder="0" min="0" />
+            <span class="currency">원</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>카테고리</label>
+          <select id="txCategory"></select>
+        </div>
+        <div class="form-row">
+          <label>날짜</label>
+          <input type="date" id="txDate" />
+        </div>
+        <div class="form-row">
+          <label>구분</label>
+          <div class="kind-toggle">
+            <button class="kind-btn active" data-kind="variable">변동비</button>
+            <button class="kind-btn" data-kind="fixed">고정비</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>메모</label>
+          <input type="text" id="txMemo" placeholder="메모 (선택)" maxlength="100" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="deleteTxBtn" class="delete-btn hidden">삭제</button>
+        <button id="saveTxBtn" class="save-btn">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV 가져오기 모달 -->
+  <div id="csvModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>CSV 가져오기</h3>
+        <button class="modal-close" id="csvModalClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="csv-drop-zone" id="csvDropZone">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>CSV 파일을 드래그하거나 클릭해서 선택</p>
+          <span>신한카드 CSV 형식 지원</span>
+          <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
+        </div>
+        <div id="csvPreview" class="csv-preview hidden"></div>
+        <div class="csv-note">
+          <strong>컬럼 매핑 안내</strong>
+          <p>CSV 파일을 업로드하면 컬럼을 자동으로 인식합니다.<br>인식되지 않는 형식은 수동으로 매핑할 수 있습니다.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="csvImportConfirm" class="save-btn hidden">가져오기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 고정비 수정 모달 -->
+  <div id="fixedEditModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>고정비 수정</h3>
+        <button class="modal-close" id="fixedEditClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="fixedEditId" />
+        <div class="form-row">
+          <label>항목명</label>
+          <input type="text" id="fixedEditName" placeholder="항목명" />
+        </div>
+        <div class="form-row">
+          <label>금액</label>
+          <div class="amount-input-wrap">
+            <input type="number" id="fixedEditAmount" placeholder="0" />
+            <span class="currency">원</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>카테고리</label>
+          <select id="fixedEditCategory"></select>
+        </div>
+        <div class="form-row">
+          <label>구분</label>
+          <div class="kind-toggle" id="fixedTypeToggle">
+            <button class="kind-btn active" data-kind="expense">지출</button>
+            <button class="kind-btn" data-kind="income">수입</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="fixedDeleteBtn" class="delete-btn">삭제</button>
+        <button id="fixedSaveBtn" class="save-btn">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- JS 진입점 -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
