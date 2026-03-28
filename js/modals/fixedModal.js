@@ -13,9 +13,16 @@ import { renderAll } from "../app.js";
 export function openFixedEditModal(id) {
   const item = id ? state.fixedItems.find(f => f.id === id) : null;
 
-  document.getElementById("fixedEditId").value    = id ?? "";
-  document.getElementById("fixedEditName").value  = item?.name   ?? "";
+  document.getElementById("fixedEditId").value     = id ?? "";
+  document.getElementById("fixedEditName").value   = item?.name   ?? "";
   document.getElementById("fixedEditAmount").value = item?.amount ?? "";
+
+  // 시작 연월 — 기존 항목은 저장된 값, 신규는 이번 달로 기본값
+  const defaultStart = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
+  const savedStart   = item?.startYear && item?.startMonth
+    ? `${item.startYear}-${String(item.startMonth).padStart(2, "0")}`
+    : defaultStart;
+  document.getElementById("fixedEditStart").value = savedStart;
 
   const type = item?.type ?? "expense";
   setFixedType(type);
@@ -69,14 +76,20 @@ export function setupFixedModal() {
     const name   = document.getElementById("fixedEditName").value.trim();
     const amount = parseInt(document.getElementById("fixedEditAmount").value);
 
-    if (!name)            { showToast("항목명을 입력하세요"); return; }
-    if (!amount || amount <= 0) { showToast("금액을 입력하세요"); return; }
+    const startVal                = document.getElementById("fixedEditStart").value;
+    const [startYear, startMonth] = startVal.split("-").map(Number);
+
+    if (!name)                     { showToast("항목명을 입력하세요"); return; }
+    if (!amount || amount <= 0)    { showToast("금액을 입력하세요"); return; }
+    if (!startYear || !startMonth) { showToast("시작 월을 선택하세요"); return; }
 
     const data = {
       name,
       amount,
-      type:     getFixedType(),
-      category: document.getElementById("fixedEditCategory").value,
+      type:       getFixedType(),
+      category:   document.getElementById("fixedEditCategory").value,
+      startYear,
+      startMonth,
     };
 
     closeModal();

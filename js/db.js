@@ -67,6 +67,13 @@ export async function applyFixedItemsToCurrentMonth() {
   for (const item of state.fixedItems) {
     if (appliedIds.has(item.id)) continue;
 
+    // 시작 연월 이전 달에는 적용하지 않음
+    if (item.startYear && item.startMonth) {
+      const itemStart    = item.startYear * 100 + item.startMonth;
+      const currentYM   = state.currentYear * 100 + state.currentMonth;
+      if (currentYM < itemStart) continue;
+    }
+
     const dateStr = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}-01`;
     await addDoc(collection(db, "transactions"), {
       name:      item.name,

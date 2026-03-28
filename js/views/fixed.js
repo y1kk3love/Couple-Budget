@@ -47,7 +47,7 @@ function renderFixedRow(item) {
       <div class="fixed-cat-dot" style="background:${cat.color}"></div>
       <div class="fixed-info">
         <div class="fixed-name">${item.name}</div>
-        <div class="fixed-meta">${cat.name} · ${item.type === "income" ? "수입" : "지출"}</div>
+        <div class="fixed-meta">${cat.name} · ${item.type === "income" ? "수입" : "지출"}${item.startYear ? ` · ${item.startYear}년 ${item.startMonth}월부터` : ""}</div>
       </div>
       <div class="fixed-amount ${amtCls}">${sign}${fmtMoney(item.amount)}</div>
     </div>`;
