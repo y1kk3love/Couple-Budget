@@ -24,6 +24,7 @@ const firebaseConfig = {
 // 접근 허용 이메일 목록 — 본인과 파트너 이메일로 교체하세요
 export const ALLOWED_EMAILS = [
   "y1kk3love@gmail.com",        // ← 본인 이메일
+  "rudwls0603@gmail.com"
 ];
 
 const app = initializeApp(firebaseConfig);
