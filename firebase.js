@@ -12,19 +12,18 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebas
 
 // ↓↓↓ 여기를 본인 Firebase 설정으로 교체 ↓↓↓
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyCYyGyaRggQGG07B2wJq0T494HiVDiF1os",
+  authDomain: "couple-budget-f732d.firebaseapp.com",
+  projectId: "couple-budget-f732d",
+  storageBucket: "couple-budget-f732d.firebasestorage.app",
+  messagingSenderId: "394522478385",
+  appId: "1:394522478385:web:75cc20bace344248bcd210"
 };
 // ↑↑↑ 여기까지 교체 ↑↑↑
 
 // 접근 허용 이메일 목록 — 본인과 파트너 이메일로 교체하세요
 export const ALLOWED_EMAILS = [
-  "your_email@gmail.com",        // ← 본인 이메일
-  "partner_email@gmail.com"      // ← 파트너 이메일
+  "y1kk3love@gmail.com",        // ← 본인 이메일
 ];
 
 const app = initializeApp(firebaseConfig);
