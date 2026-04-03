@@ -5,7 +5,8 @@
 import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { showToast, todayStr, fmtMoney } from "../utils.js";
-import { CATEGORIES } from "../constants.js";
+import { CATEGORIES, getCategoryInfo } from "../constants.js";
+import state from "../state.js";
 import { fetchTransactions } from "../db.js";
 import { renderAll } from "../app.js";
 
@@ -80,46 +81,61 @@ function parseCSV(text) {
 
 // ── 미리보기 렌더 ─────────────────────────────────────────────
 
-function renderPreview(rows) {
+function renderPreview(rows, skippedCount) {
   const preview = document.getElementById("csvPreview");
 
   if (!rows.length) {
-    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">
-      인식된 데이터가 없습니다. CSV 형식을 확인해주세요.
-    </p>`;
+    const msg = skippedCount > 0
+      ? `모든 데이터(${skippedCount}건)가 이미 존재합니다.`
+      : "인식된 데이터가 없습니다. CSV 형식을 확인해주세요.";
+    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">${msg}</p>`;
     preview.classList.remove("hidden");
     return;
   }
 
-  const tableRows = rows.slice(0, 5).map(r => {
-    const color = r.type === "income" ? "var(--income)" : "var(--expense)";
-    const sign  = r.type === "income" ? "+" : "-";
+  const tableRows = rows.map(r => {
+    const color   = r.type === "income" ? "var(--income)" : "var(--expense)";
+    const sign    = r.type === "income" ? "+" : "-";
+    const catName = getCategoryInfo(r.category, r.type).name;
     return `<tr>
       <td>${r.date}</td>
       <td>${r.name}</td>
       <td style="color:${color}">${sign}${fmtMoney(r.amount)}</td>
+      <td>${catName}</td>
     </tr>`;
   }).join("");
 
+  const skipNote = skippedCount > 0
+    ? ` (중복 ${skippedCount}건 제외됨)` : "";
+
   preview.innerHTML = `
     <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
-      ${rows.length}건 인식됨 (최대 5건 미리보기)
+      ${rows.length}건 가져올 예정${skipNote}
     </p>
-    <table>
-      <thead><tr><th>날짜</th><th>내용</th><th>금액</th></tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table>`;
+    <div style="max-height:260px;overflow-y:auto">
+      <table>
+        <thead><tr><th>날짜</th><th>내용</th><th>금액</th><th>카테고리</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
   preview.classList.remove("hidden");
   document.getElementById("csvImportConfirm").classList.remove("hidden");
 }
 
 // ── 파일 처리 ─────────────────────────────────────────────────
 
+function isDuplicate(row) {
+  return state.transactions.some(t =>
+    t.name === row.name && t.amount === row.amount && t.date === row.date
+  );
+}
+
 function handleFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    parsedRows = parseCSV(e.target.result);
-    renderPreview(parsedRows);
+    const all = parseCSV(e.target.result);
+    parsedRows = all.filter(row => !isDuplicate(row));
+    renderPreview(parsedRows, all.length - parsedRows.length);
   };
   reader.readAsText(file, "euc-kr");
 }
