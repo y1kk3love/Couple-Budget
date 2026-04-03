@@ -71,6 +71,8 @@ async function renderSummary() {
 
   const balanceClass = balance > 0 ? "income" : balance < 0 ? "expense" : "neutral";
   const accumClass   = accumTotal > 0 ? "income" : accumTotal < 0 ? "expense" : "neutral";
+  const balanceSign  = balance > 0 ? "+" : balance < 0 ? "-" : "";
+  const accumSign    = accumTotal > 0 ? "+" : accumTotal < 0 ? "-" : "";
 
   document.getElementById("summaryBar").innerHTML = `
     <div class="sum-card">
@@ -83,11 +85,11 @@ async function renderSummary() {
     </div>
     <div class="sum-card">
       <div class="lbl">이번달 잔액</div>
-      <div class="val ${balanceClass}">${fmtMoney(balance)}</div>
+      <div class="val ${balanceClass}">${balanceSign}${fmtMoney(balance)}</div>
     </div>
     <div class="sum-card">
       <div class="lbl">누적 잔액</div>
-      <div class="val ${accumClass}">${fmtMoney(accumTotal)}</div>
+      <div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}</div>
       <div class="sub">${state.currentMonth > 1 ? "이전 달 포함" : "첫 달"}</div>
     </div>`;
 }
