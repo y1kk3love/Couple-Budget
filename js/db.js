@@ -74,7 +74,9 @@ export async function applyFixedItemsToCurrentMonth() {
       if (currentYM < itemStart) continue;
     }
 
-    const dateStr = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}-01`;
+    const lastDay    = new Date(state.currentYear, state.currentMonth, 0).getDate();
+    const clampedDay = Math.min(item.day ?? 1, lastDay);
+    const dateStr    = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
     await addDoc(collection(db, "transactions"), {
       name:      item.name,
       amount:    item.amount,
