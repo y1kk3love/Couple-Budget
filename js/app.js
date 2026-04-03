@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast } from "./utils.js";
+import { fmtMoney, showToast, checkBudgetWarnings } from "./utils.js";
 import {
   fetchTransactions, fetchFixedItems, fetchBudgets,
   applyFixedItemsToCurrentMonth, calcAccumulatedBalance
@@ -26,6 +26,7 @@ export async function initApp() {
   setupMonthNav();
   setupViewNav();
   setupMobileMenu();
+  checkBudgetWarnings(state.transactions, state.budgets, state.currentYear, state.currentMonth);
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────
