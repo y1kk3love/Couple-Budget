@@ -107,6 +107,19 @@ export async function saveBudgetCategory(category, amount) {
   await setDoc(docRef, state.budgets, { merge: true });
 }
 
+// ── 전체 데이터 초기화 ─────────────────────────────────────────
+
+export async function clearAllData() {
+  const cols = ["transactions", "fixed_items", "budgets"];
+  for (const col of cols) {
+    const snap = await getDocs(collection(db, col));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  }
+  state.transactions = [];
+  state.fixedItems   = [];
+  state.budgets      = {};
+}
+
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
 
 export async function calcAccumulatedBalance() {

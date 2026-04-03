@@ -6,7 +6,7 @@ import state from "./state.js";
 import { fmtMoney, showToast, checkBudgetWarnings } from "./utils.js";
 import {
   fetchTransactions, fetchFixedItems, fetchBudgets,
-  applyFixedItemsToCurrentMonth, calcAccumulatedBalance
+  applyFixedItemsToCurrentMonth, calcAccumulatedBalance, clearAllData
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
 import { setupTxModal }   from "./modals/txModal.js";
@@ -26,6 +26,7 @@ export async function initApp() {
   setupMonthNav();
   setupViewNav();
   setupMobileMenu();
+  setupResetBtn();
   checkBudgetWarnings(state.transactions, state.budgets, state.currentYear, state.currentMonth);
 }
 
@@ -130,6 +131,18 @@ function switchView(view) {
   );
 
   renderAll();
+}
+
+// ── 데이터 초기화 ──────────────────────────────────────────────
+
+function setupResetBtn() {
+  document.getElementById("resetDataBtn").addEventListener("click", async () => {
+    if (!confirm("모든 거래내역, 고정비, 예산 데이터를 삭제합니다.\n정말 초기화하시겠습니까?")) return;
+    if (!confirm("⚠️ 되돌릴 수 없습니다.\n진짜로 전부 삭제하시겠습니까?")) return;
+    await clearAllData();
+    renderAll();
+    showToast("데이터가 초기화되었습니다");
+  });
 }
 
 // ── 모바일 사이드바 토글 ──────────────────────────────────────
