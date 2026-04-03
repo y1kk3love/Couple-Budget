@@ -92,6 +92,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   cursor: pointer; padding: 0; font-family: var(--font);
 }
 .logout-btn:hover { color: var(--expense); }
+.reset-btn {
+  font-size: 0.75rem; color: #fff; background: var(--expense); border: none;
+  cursor: pointer; padding: 5px 12px; border-radius: 6px;
+  font-family: var(--font); margin-top: 8px; width: 100%; opacity: 0.75;
+}
+.reset-btn:hover { opacity: 1; }
 
 /* ── 메인 콘텐츠 ── */
 .main-content {
