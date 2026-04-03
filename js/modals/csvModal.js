@@ -5,10 +5,15 @@
 import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { showToast, todayStr, fmtMoney } from "../utils.js";
+import { CATEGORIES } from "../constants.js";
 import { fetchTransactions } from "../db.js";
 import { renderAll } from "../app.js";
 
 let parsedRows = [];
+
+const categoryNameToId = Object.fromEntries(
+  CATEGORIES.expense.map(c => [c.name, c.id])
+);
 
 // ── 열기/닫기 ─────────────────────────────────────────────────
 
@@ -38,6 +43,7 @@ function parseCSV(text) {
   const amtKey  = headers.find(h => /금액|이용금액/.test(h));
   const nameKey = headers.find(h => /가맹점|내용|적요/.test(h));
   const typeKey = headers.find(h => /구분|입출금/.test(h));
+  const catKey  = headers.find(h => /카테고리/.test(h));
 
   return lines.slice(1).reduce((acc, line) => {
     const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
@@ -56,12 +62,15 @@ function parseCSV(text) {
     const rawType = row[typeKey] ?? "";
     const type    = /입금|수입/.test(rawType) ? "income" : "expense";
 
+    const rawCat  = row[catKey] ?? "";
+    const category = type === "income" ? "salary" : (categoryNameToId[rawCat] ?? "etc");
+
     acc.push({
       name:     row[nameKey] || "내역",
       amount,
       date,
       type,
-      category: type === "income" ? "salary" : "etc",
+      category,
       kind:     "variable",
       memo:     "",
     });
