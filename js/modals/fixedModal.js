@@ -23,6 +23,7 @@ export function openFixedEditModal(id) {
     ? `${item.startYear}-${String(item.startMonth).padStart(2, "0")}`
     : defaultStart;
   document.getElementById("fixedEditStart").value = savedStart;
+  document.getElementById("fixedEditDay").value   = item?.day ?? 1;
 
   const type = item?.type ?? "expense";
   setFixedType(type);
@@ -83,6 +84,8 @@ export function setupFixedModal() {
     if (!amount || amount <= 0)    { showToast("금액을 입력하세요"); return; }
     if (!startYear || !startMonth) { showToast("시작 월을 선택하세요"); return; }
 
+    const day = parseInt(document.getElementById("fixedEditDay").value) || 1;
+
     const data = {
       name,
       amount,
@@ -90,6 +93,7 @@ export function setupFixedModal() {
       category:   document.getElementById("fixedEditCategory").value,
       startYear,
       startMonth,
+      day:        Math.min(Math.max(day, 1), 31),
     };
 
     closeModal();
