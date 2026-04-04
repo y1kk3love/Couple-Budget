@@ -114,7 +114,7 @@ export function setupTxModal() {
       date,
       year:     y,
       month:    m,
-      name:     getCategoryInfo(catId, type).name,
+      name:     document.getElementById("txMemo").value.trim() || getCategoryInfo(catId, type).name,
     };
 
     closeModal();

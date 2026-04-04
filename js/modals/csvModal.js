@@ -73,7 +73,7 @@ function parseCSV(text) {
       type,
       category,
       kind:     "variable",
-      memo:     "",
+      memo:     row[nameKey] || "",
     });
     return acc;
   }, []);
