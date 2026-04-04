@@ -83,7 +83,7 @@ export async function applyFixedItemsToCurrentMonth() {
       type:      item.type,
       category:  item.category,
       kind:      "fixed",
-      memo:      "고정비 자동 적용",
+      memo:      item.name,
       date:      dateStr,
       year:      state.currentYear,
       month:     state.currentMonth,
