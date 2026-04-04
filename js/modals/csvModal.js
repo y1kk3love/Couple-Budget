@@ -6,7 +6,6 @@ import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { showToast, todayStr, fmtMoney } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import state from "../state.js";
 import { fetchTransactions } from "../db.js";
 import { renderAll } from "../app.js";
 
@@ -81,14 +80,11 @@ function parseCSV(text) {
 
 // ── 미리보기 렌더 ─────────────────────────────────────────────
 
-function renderPreview(rows, skippedCount) {
+function renderPreview(rows) {
   const preview = document.getElementById("csvPreview");
 
   if (!rows.length) {
-    const msg = skippedCount > 0
-      ? `모든 데이터(${skippedCount}건)가 이미 존재합니다.`
-      : "인식된 데이터가 없습니다. CSV 형식을 확인해주세요.";
-    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">${msg}</p>`;
+    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">인식된 데이터가 없습니다. CSV 형식을 확인해주세요.</p>`;
     preview.classList.remove("hidden");
     return;
   }
@@ -105,12 +101,9 @@ function renderPreview(rows, skippedCount) {
     </tr>`;
   }).join("");
 
-  const skipNote = skippedCount > 0
-    ? ` (중복 ${skippedCount}건 제외됨)` : "";
-
   preview.innerHTML = `
     <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
-      ${rows.length}건 가져올 예정${skipNote}
+      ${rows.length}건 인식됨
     </p>
     <div style="max-height:260px;overflow-y:auto">
       <table>
@@ -124,18 +117,11 @@ function renderPreview(rows, skippedCount) {
 
 // ── 파일 처리 ─────────────────────────────────────────────────
 
-function isDuplicate(row) {
-  return state.transactions.some(t =>
-    t.name === row.name && t.amount === row.amount && t.date === row.date
-  );
-}
-
 function handleFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    const all = parseCSV(e.target.result);
-    parsedRows = all.filter(row => !isDuplicate(row));
-    renderPreview(parsedRows, all.length - parsedRows.length);
+    parsedRows = parseCSV(e.target.result);
+    renderPreview(parsedRows);
   };
   reader.readAsText(file, "euc-kr");
 }
