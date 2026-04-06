@@ -211,6 +211,47 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   color: var(--text-2); cursor: pointer; font-family: var(--font); white-space: nowrap;
 }
 .sort-dir-btn:hover { background: var(--surface3); }
+
+/* ── 목록 필터 ── */
+.filter-toggle-row { margin-bottom: 8px; }
+.filter-toggle-btn {
+  font-size: 0.78rem; padding: 4px 12px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.filter-toggle-btn.has-filter { border-color: var(--income); color: var(--income); }
+.filter-badge {
+  background: var(--income); color: #fff; border-radius: 50%;
+  width: 16px; height: 16px; font-size: 0.65rem;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.filter-panel {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 10px;
+}
+.filter-row { display: flex; align-items: center; gap: 10px; }
+.filter-row label { font-size: 0.78rem; color: var(--text-2); min-width: 52px; }
+.filter-row input, .filter-row select {
+  flex: 1; padding: 5px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 0.82rem; background: var(--bg);
+  color: var(--text); font-family: var(--font);
+}
+.filter-range { display: flex; align-items: center; gap: 6px; flex: 1; }
+.filter-range span { color: var(--text-3); font-size: 0.8rem; }
+.filter-range input { flex: 1; }
+.filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.filter-reset-btn {
+  font-size: 0.8rem; padding: 5px 14px; border-radius: 6px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+}
+.filter-apply-btn {
+  font-size: 0.8rem; padding: 5px 14px; border-radius: 6px;
+  border: none; background: var(--text); color: var(--bg);
+  cursor: pointer; font-family: var(--font);
+}
+
 .list-group { margin-bottom: 1.5rem; }
 .list-date-header {
   font-size: 0.8rem; font-weight: 600; color: var(--text-2);
