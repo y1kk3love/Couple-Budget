@@ -5,7 +5,7 @@
 import state from "../state.js";
 import { showToast } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
-import { saveFixedItem, deleteFixedItem, fetchFixedItems } from "../db.js";
+import { saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions } from "../db.js";
 import { renderAll } from "../app.js";
 
 // ── 열기 ──────────────────────────────────────────────────────
@@ -98,6 +98,7 @@ export function setupFixedModal() {
 
     closeModal();
     await saveFixedItem(data, id);
+    if (id) await syncFixedItemTransactions(id, data);
     showToast(id ? "수정되었습니다" : "고정비가 추가되었습니다");
     await fetchFixedItems();
     renderAll();

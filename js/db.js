@@ -55,6 +55,27 @@ export async function deleteFixedItem(id) {
   await deleteDoc(doc(db, "fixed_items", id));
 }
 
+export async function syncFixedItemTransactions(id, data) {
+  const q    = query(collection(db, "transactions"), where("fixedId", "==", id), where("fromFixed", "==", true));
+  const snap = await getDocs(q);
+
+  await Promise.all(snap.docs.map(d => {
+    const t = d.data();
+    const lastDay    = new Date(t.year, t.month, 0).getDate();
+    const clampedDay = Math.min(data.day ?? 1, lastDay);
+    const dateStr    = `${t.year}-${String(t.month).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+
+    return updateDoc(d.ref, {
+      name:     data.name,
+      amount:   data.amount,
+      type:     data.type,
+      category: data.category,
+      memo:     data.name,
+      date:     dateStr,
+    });
+  }));
+}
+
 // ── 고정비 → 이번 달 자동 적용 ────────────────────────────────
 
 export async function applyFixedItemsToCurrentMonth() {
