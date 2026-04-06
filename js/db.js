@@ -96,13 +96,13 @@ export async function applyFixedItemsToCurrentMonth() {
 // ── 예산 ──────────────────────────────────────────────────────
 
 export async function fetchBudgets() {
-  const docRef = doc(db, "budgets", `${state.currentYear}-${state.currentMonth}`);
+  const docRef = doc(db, "budgets", "default");
   const snap   = await getDoc(docRef);
   state.budgets = snap.exists() ? snap.data() : {};
 }
 
 export async function saveBudgetCategory(category, amount) {
-  const docRef = doc(db, "budgets", `${state.currentYear}-${state.currentMonth}`);
+  const docRef = doc(db, "budgets", "default");
   state.budgets[category] = amount;
   await setDoc(docRef, state.budgets, { merge: true });
 }
