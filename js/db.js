@@ -141,6 +141,41 @@ export async function clearAllData() {
   state.budgets      = {};
 }
 
+// ── 최근 N개월 카테고리별 지출 조회 ───────────────────────────
+
+export async function fetchRecentMonthsExpenses(n = 6) {
+  // 현재 달 포함 최근 n개월의 year/month 쌍 계산
+  const months = [];
+  for (let i = 0; i < n; i++) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    while (m < 1) { m += 12; y--; }
+    months.unshift({ year: y, month: m });
+  }
+
+  // 각 월별 병렬 조회
+  const results = await Promise.all(months.map(({ year, month }) =>
+    getDocs(query(
+      collection(db, "transactions"),
+      where("year",  "==", year),
+      where("month", "==", month),
+      where("type",  "==", "expense")
+    ))
+  ));
+
+  // { "YYYY-M": { catId: amount, ... } } 형태로 반환
+  const data = {};
+  months.forEach(({ year, month }, i) => {
+    const key = `${year}-${month}`;
+    data[key] = {};
+    results[i].docs.forEach(d => {
+      const t = d.data();
+      data[key][t.category] = (data[key][t.category] ?? 0) + t.amount;
+    });
+  });
+  return { months, data };
+}
+
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
 
 export async function calcAccumulatedBalance() {

@@ -51,7 +51,7 @@ export function renderAll() {
     case "calendar": renderCalendarView(); break;
     case "list":     renderListView();     break;
     case "stats":    renderStatsView();    break;
-    case "budget":   renderBudgetView();   break;
+    case "budget":   renderBudgetView();    break;
     case "fixed":    renderFixedView();    break;
   }
 }
