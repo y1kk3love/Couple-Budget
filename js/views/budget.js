@@ -22,8 +22,8 @@ export function renderBudgetView() {
 
   container.innerHTML = `
     <div class="section-header">
-      <h3>${state.currentYear}년 ${state.currentMonth}월 예산</h3>
-      <span class="section-sub">카테고리별 예산을 설정하세요</span>
+      <h3>기준 예산</h3>
+      <span class="section-sub">모든 달에 적용되는 기준 예산을 설정하세요</span>
     </div>
     <div class="budget-card">
       <h4>지출 카테고리 예산</h4>
