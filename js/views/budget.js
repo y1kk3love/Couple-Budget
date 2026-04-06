@@ -5,12 +5,12 @@
 import state from "../state.js";
 import { fmtMoney, showToast } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
-import { saveBudgetCategory } from "../db.js";
+import { saveBudgetCategory, fetchRecentMonthsExpenses } from "../db.js";
 
-export function renderBudgetView() {
+export async function renderBudgetView() {
   const container = document.getElementById("view-budget");
 
-  // 카테고리별 실제 지출 집계
+  // 카테고리별 실제 지출 집계 (이번 달)
   const spentMap = state.transactions
     .filter(t => t.type === "expense")
     .reduce((acc, t) => {
@@ -18,7 +18,12 @@ export function renderBudgetView() {
       return acc;
     }, {});
 
-  const rows = CATEGORIES.expense.map(cat => renderBudgetRow(cat, spentMap)).join("");
+  // 최근 6개월 데이터 조회
+  const { months, data: monthlyData } = await fetchRecentMonthsExpenses(6);
+
+  const rows = CATEGORIES.expense.map(cat =>
+    renderBudgetRow(cat, spentMap, months, monthlyData)
+  ).join("");
 
   container.innerHTML = `
     <div class="section-header">
@@ -30,7 +35,6 @@ export function renderBudgetView() {
       ${rows}
     </div>`;
 
-  // 저장 버튼 이벤트
   container.querySelectorAll(".budget-save-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const catId  = btn.dataset.cat;
@@ -42,7 +46,7 @@ export function renderBudgetView() {
   });
 }
 
-function renderBudgetRow(cat, spentMap) {
+function renderBudgetRow(cat, spentMap, months, monthlyData) {
   const spent  = spentMap[cat.id] ?? 0;
   const budget = state.budgets[cat.id] ?? 0;
   const pct    = budget > 0 ? Math.min(100, Math.round(spent / budget * 100)) : 0;
@@ -54,6 +58,14 @@ function renderBudgetRow(cat, spentMap) {
        </div>`
     : "";
 
+  // 최근 6개월 막대 그래프
+  const monthAmounts = months.map(({ year, month }) => {
+    const key = `${year}-${month}`;
+    return monthlyData[key]?.[cat.id] ?? 0;
+  });
+  const maxAmt = Math.max(...monthAmounts, 1);
+  const chart  = renderMonthChart(months, monthAmounts, maxAmt, cat.color, budget);
+
   return `
     <div class="budget-item-row">
       <div class="budget-labels">
@@ -63,6 +75,7 @@ function renderBudgetRow(cat, spentMap) {
         </span>
       </div>
       ${progressBar}
+      ${chart}
       <div class="budget-edit-row">
         <div class="budget-input-wrap">
           <input type="number" id="budget-${cat.id}" value="${budget || ""}" placeholder="0" />
@@ -71,4 +84,23 @@ function renderBudgetRow(cat, spentMap) {
         <button class="budget-save-btn" data-cat="${cat.id}">저장</button>
       </div>
     </div>`;
+}
+
+function renderMonthChart(months, amounts, maxAmt, color, budget) {
+  const bars = months.map(({ month }, i) => {
+    const amt    = amounts[i];
+    const hPct   = Math.round(amt / maxAmt * 100);
+    const isOver = budget > 0 && amt > budget;
+    const barColor = isOver ? "var(--expense)" : color;
+    return `
+      <div class="mchart-col">
+        <div class="mchart-bar-wrap">
+          ${budget > 0 ? `<div class="mchart-budget-line" style="bottom:${Math.min(100, Math.round(budget / maxAmt * 100))}%"></div>` : ""}
+          <div class="mchart-bar" style="height:${hPct}%;background:${barColor}" title="${fmtMoney(amt)}원"></div>
+        </div>
+        <div class="mchart-label">${month}월</div>
+      </div>`;
+  }).join("");
+
+  return `<div class="mchart">${bars}</div>`;
 }
