@@ -116,29 +116,16 @@ export async function applyFixedItemsToCurrentMonth() {
 
 // ── 예산 ──────────────────────────────────────────────────────
 
-export async function fetchBudgets() {
-  const docRef = doc(db, "budgets", "default");
-  const snap   = await getDoc(docRef);
-  state.budgets = snap.exists() ? snap.data() : {};
-}
-
-export async function saveBudgetCategory(category, amount) {
-  const docRef = doc(db, "budgets", "default");
-  state.budgets[category] = amount;
-  await setDoc(docRef, state.budgets, { merge: true });
-}
-
 // ── 전체 데이터 초기화 ─────────────────────────────────────────
 
 export async function clearAllData() {
-  const cols = ["transactions", "fixed_items", "budgets"];
+  const cols = ["transactions", "fixed_items"];
   for (const col of cols) {
     const snap = await getDocs(collection(db, col));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   }
   state.transactions = [];
   state.fixedItems   = [];
-  state.budgets      = {};
 }
 
 // ── 최근 N개월 이름 유사 거래 조회 ────────────────────────────
@@ -172,41 +159,6 @@ export async function fetchRecentTransactionsByName(name, excludeId = null, n = 
   });
 
   return txs.sort((a, b) => b.date.localeCompare(a.date));
-}
-
-// ── 최근 N개월 카테고리별 지출 조회 ───────────────────────────
-
-export async function fetchRecentMonthsExpenses(n = 6) {
-  // 현재 달 포함 최근 n개월의 year/month 쌍 계산
-  const months = [];
-  for (let i = 0; i < n; i++) {
-    let m = state.currentMonth - i;
-    let y = state.currentYear;
-    while (m < 1) { m += 12; y--; }
-    months.unshift({ year: y, month: m });
-  }
-
-  // 각 월별 병렬 조회
-  const results = await Promise.all(months.map(({ year, month }) =>
-    getDocs(query(
-      collection(db, "transactions"),
-      where("year",  "==", year),
-      where("month", "==", month),
-      where("type",  "==", "expense")
-    ))
-  ));
-
-  // { "YYYY-M": { catId: amount, ... } } 형태로 반환
-  const data = {};
-  months.forEach(({ year, month }, i) => {
-    const key = `${year}-${month}`;
-    data[key] = {};
-    results[i].docs.forEach(d => {
-      const t = d.data();
-      data[key][t.category] = (data[key][t.category] ?? 0) + t.amount;
-    });
-  });
-  return { months, data };
 }
 
 // ── 누적 잔액 계산 ─────────────────────────────────────────────

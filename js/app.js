@@ -3,9 +3,9 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast, checkBudgetWarnings } from "./utils.js";
+import { fmtMoney, showToast } from "./utils.js";
 import {
-  fetchTransactions, fetchFixedItems, fetchBudgets,
+  fetchTransactions, fetchFixedItems,
   applyFixedItemsToCurrentMonth, calcAccumulatedBalance, clearAllData
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
@@ -15,7 +15,6 @@ import { setupCsvModal }  from "./modals/csvModal.js";
 import { renderCalendarView } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
 import { renderStatsView }    from "./views/stats.js";
-import { renderBudgetView }   from "./views/budget.js";
 import { renderFixedView }    from "./views/fixed.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
@@ -27,7 +26,6 @@ export async function initApp() {
   setupViewNav();
   setupMobileMenu();
   setupResetBtn();
-  checkBudgetWarnings(state.transactions, state.budgets, state.currentYear, state.currentMonth);
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────
@@ -36,7 +34,6 @@ async function loadAllData() {
   await Promise.all([
     fetchTransactions(),
     fetchFixedItems(),
-    fetchBudgets(),
   ]);
   await applyFixedItemsToCurrentMonth();
   await fetchTransactions(); // 고정비 적용 후 재조회
@@ -51,7 +48,6 @@ export function renderAll() {
     case "calendar": renderCalendarView(); break;
     case "list":     renderListView();     break;
     case "stats":    renderStatsView();    break;
-    case "budget":   renderBudgetView();    break;
     case "fixed":    renderFixedView();    break;
   }
 }
@@ -143,7 +139,7 @@ function switchView(view) {
 
 function setupResetBtn() {
   document.getElementById("resetDataBtn").addEventListener("click", async () => {
-    if (!confirm("모든 거래내역, 고정비, 예산 데이터를 삭제합니다.\n정말 초기화하시겠습니까?")) return;
+    if (!confirm("모든 거래내역, 고정비 데이터를 삭제합니다.\n정말 초기화하시겠습니까?")) return;
     if (!confirm("⚠️ 되돌릴 수 없습니다.\n진짜로 전부 삭제하시겠습니까?")) return;
     await clearAllData();
     renderAll();
