@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, todayStr, checkBudgetWarnings, fmtMoney } from "../utils.js";
+import { showToast, todayStr, fmtMoney } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName } from "../db.js";
 import { renderAll } from "../app.js";
@@ -165,7 +165,6 @@ export function setupTxModal() {
 
     await fetchTransactions();
     renderAll();
-    setTimeout(() => checkBudgetWarnings(state.transactions, state.budgets, state.currentYear, state.currentMonth), 2400);
   });
 
   // 삭제
