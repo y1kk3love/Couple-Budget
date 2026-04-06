@@ -385,6 +385,21 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   padding: 1rem 1.5rem; border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 8px;
 }
+.tx-context-panel {
+  border-top: 1px solid var(--border);
+  padding: 10px 1.5rem 1rem;
+}
+.ctx-title { font-size: 0.75rem; color: var(--text-2); margin-bottom: 8px; font-weight: 500; }
+.ctx-list { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.ctx-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; padding: 4px 0; border-bottom: 1px solid var(--border);
+}
+.ctx-row:last-child { border-bottom: none; }
+.ctx-date { color: var(--text-3); min-width: 36px; font-family: var(--mono); }
+.ctx-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-amt { font-family: var(--mono); font-size: 0.8rem; white-space: nowrap; }
+.ctx-loading { font-size: 0.8rem; color: var(--text-3); padding: 4px 0; }
 .form-row { display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 0.8rem; font-weight: 500; color: var(--text-2); }
 .form-row input, .form-row select {

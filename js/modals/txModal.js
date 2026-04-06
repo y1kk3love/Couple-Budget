@@ -3,9 +3,9 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, todayStr, checkBudgetWarnings } from "../utils.js";
+import { showToast, todayStr, checkBudgetWarnings, fmtMoney } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions } from "../db.js";
+import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName } from "../db.js";
 import { renderAll } from "../app.js";
 
 let editingTxId = null;
@@ -14,16 +14,24 @@ let editingTxId = null;
 
 export function openAddModal(dateStr = null) {
   editingTxId = null;
+  const date = dateStr ?? todayStr();
   document.getElementById("modalTitle").textContent = "내역 추가";
   document.getElementById("txId").value = "";
   document.getElementById("txAmount").value = "";
-  document.getElementById("txDate").value = dateStr ?? todayStr();
+  document.getElementById("txDate").value = date;
   document.getElementById("txMemo").value = "";
   document.getElementById("deleteTxBtn").classList.add("hidden");
 
   setType("expense");
   setKind("variable");
   document.getElementById("txModal").classList.remove("hidden");
+
+  // 해당 날 기존 내역 패널
+  const dayTxs = state.transactions.filter(t => t.date === date);
+  renderContextPanel(
+    dayTxs.length ? `${date.slice(5).replace("-", "/")} 기존 내역` : null,
+    dayTxs
+  );
 }
 
 export function openEditModal(id) {
@@ -43,6 +51,14 @@ export function openEditModal(id) {
   document.getElementById("txCategory").value = t.category;
   setKind(t.kind ?? "variable");
   document.getElementById("txModal").classList.remove("hidden");
+
+  // 최근 3개월 유사 이름 내역 패널 (비동기)
+  const panel = document.getElementById("txContextPanel");
+  panel.innerHTML = `<p class="ctx-loading">불러오는 중…</p>`;
+  panel.classList.remove("hidden");
+  fetchRecentTransactionsByName(t.name, id, 3).then(txs => {
+    renderContextPanel(txs.length ? `'${t.name}' 최근 3개월 내역` : null, txs);
+  });
 }
 
 // ── 내부 헬퍼 ─────────────────────────────────────────────────
@@ -72,6 +88,26 @@ function populateCategorySelect(type) {
 
 function closeModal() {
   document.getElementById("txModal").classList.add("hidden");
+  document.getElementById("txContextPanel").classList.add("hidden");
+  document.getElementById("txContextPanel").innerHTML = "";
+}
+
+function renderContextPanel(title, txs) {
+  const panel = document.getElementById("txContextPanel");
+  if (!title || !txs.length) { panel.classList.add("hidden"); return; }
+
+  const rows = txs.map(t => {
+    const sign  = t.type === "income" ? "+" : "-";
+    const color = t.type === "income" ? "var(--income)" : "var(--expense)";
+    return `<div class="ctx-row">
+      <span class="ctx-date">${t.date.slice(5).replace("-", "/")}</span>
+      <span class="ctx-name">${t.name}</span>
+      <span class="ctx-amt" style="color:${color}">${sign}${fmtMoney(t.amount)}</span>
+    </div>`;
+  }).join("");
+
+  panel.innerHTML = `<div class="ctx-title">${title}</div><div class="ctx-list">${rows}</div>`;
+  panel.classList.remove("hidden");
 }
 
 // ── 이벤트 바인딩 ─────────────────────────────────────────────

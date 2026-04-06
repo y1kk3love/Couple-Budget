@@ -141,6 +141,39 @@ export async function clearAllData() {
   state.budgets      = {};
 }
 
+// ── 최근 N개월 이름 유사 거래 조회 ────────────────────────────
+
+export async function fetchRecentTransactionsByName(name, excludeId = null, n = 3) {
+  const months = [];
+  for (let i = 0; i < n; i++) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    while (m < 1) { m += 12; y--; }
+    months.push({ year: y, month: m });
+  }
+
+  const results = await Promise.all(months.map(({ year, month }) =>
+    getDocs(query(
+      collection(db, "transactions"),
+      where("year",  "==", year),
+      where("month", "==", month)
+    ))
+  ));
+
+  const nameLower = name.toLowerCase();
+  const txs = [];
+  results.forEach(snap => {
+    snap.docs.forEach(d => {
+      if (d.id === excludeId) return;
+      const t = { id: d.id, ...d.data() };
+      const n2 = t.name.toLowerCase();
+      if (n2.includes(nameLower) || nameLower.includes(n2)) txs.push(t);
+    });
+  });
+
+  return txs.sort((a, b) => b.date.localeCompare(a.date));
+}
+
 // ── 최근 N개월 카테고리별 지출 조회 ───────────────────────────
 
 export async function fetchRecentMonthsExpenses(n = 6) {
