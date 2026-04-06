@@ -194,6 +194,23 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .cal-exp { font-size: 0.7rem; color: var(--expense); font-family: var(--mono); font-weight: 500; }
 
 /* ── 목록 뷰 ── */
+.sort-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 1rem; flex-wrap: wrap;
+}
+.sort-keys { display: flex; gap: 4px; flex-wrap: wrap; }
+.sort-key-btn {
+  font-size: 0.78rem; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+}
+.sort-key-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.sort-dir-btn {
+  font-size: 0.78rem; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-2); cursor: pointer; font-family: var(--font); white-space: nowrap;
+}
+.sort-dir-btn:hover { background: var(--surface3); }
 .list-group { margin-bottom: 1.5rem; }
 .list-date-header {
   font-size: 0.8rem; font-weight: 600; color: var(--text-2);
