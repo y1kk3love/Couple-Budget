@@ -5,10 +5,15 @@
 import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { showToast, todayStr, fmtMoney } from "../utils.js";
+import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { fetchTransactions } from "../db.js";
 import { renderAll } from "../app.js";
 
 let parsedRows = [];
+
+const categoryNameToId = Object.fromEntries(
+  CATEGORIES.expense.map(c => [c.name, c.id])
+);
 
 // ── 열기/닫기 ─────────────────────────────────────────────────
 
@@ -38,6 +43,7 @@ function parseCSV(text) {
   const amtKey  = headers.find(h => /금액|이용금액/.test(h));
   const nameKey = headers.find(h => /가맹점|내용|적요/.test(h));
   const typeKey = headers.find(h => /구분|입출금/.test(h));
+  const catKey  = headers.find(h => /카테고리/.test(h));
 
   return lines.slice(1).reduce((acc, line) => {
     const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
@@ -56,14 +62,17 @@ function parseCSV(text) {
     const rawType = row[typeKey] ?? "";
     const type    = /입금|수입/.test(rawType) ? "income" : "expense";
 
+    const rawCat  = row[catKey] ?? "";
+    const category = type === "income" ? "salary" : (categoryNameToId[rawCat] ?? "etc");
+
     acc.push({
       name:     row[nameKey] || "내역",
       amount,
       date,
       type,
-      category: type === "income" ? "salary" : "etc",
+      category,
       kind:     "variable",
-      memo:     "",
+      memo:     row[nameKey] || "",
     });
     return acc;
   }, []);
@@ -75,31 +84,33 @@ function renderPreview(rows) {
   const preview = document.getElementById("csvPreview");
 
   if (!rows.length) {
-    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">
-      인식된 데이터가 없습니다. CSV 형식을 확인해주세요.
-    </p>`;
+    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">인식된 데이터가 없습니다. CSV 형식을 확인해주세요.</p>`;
     preview.classList.remove("hidden");
     return;
   }
 
-  const tableRows = rows.slice(0, 5).map(r => {
-    const color = r.type === "income" ? "var(--income)" : "var(--expense)";
-    const sign  = r.type === "income" ? "+" : "-";
+  const tableRows = rows.map(r => {
+    const color   = r.type === "income" ? "var(--income)" : "var(--expense)";
+    const sign    = r.type === "income" ? "+" : "-";
+    const catName = getCategoryInfo(r.category, r.type).name;
     return `<tr>
       <td>${r.date}</td>
       <td>${r.name}</td>
       <td style="color:${color}">${sign}${fmtMoney(r.amount)}</td>
+      <td>${catName}</td>
     </tr>`;
   }).join("");
 
   preview.innerHTML = `
     <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
-      ${rows.length}건 인식됨 (최대 5건 미리보기)
+      ${rows.length}건 인식됨
     </p>
-    <table>
-      <thead><tr><th>날짜</th><th>내용</th><th>금액</th></tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table>`;
+    <div style="max-height:260px;overflow-y:auto">
+      <table>
+        <thead><tr><th>날짜</th><th>내용</th><th>금액</th><th>카테고리</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
   preview.classList.remove("hidden");
   document.getElementById("csvImportConfirm").classList.remove("hidden");
 }

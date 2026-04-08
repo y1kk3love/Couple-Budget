@@ -92,6 +92,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   cursor: pointer; padding: 0; font-family: var(--font);
 }
 .logout-btn:hover { color: var(--expense); }
+.reset-btn {
+  font-size: 0.75rem; color: #fff; background: var(--expense); border: none;
+  cursor: pointer; padding: 5px 12px; border-radius: 6px;
+  font-family: var(--font); margin-top: 8px; width: 100%; opacity: 0.75;
+}
+.reset-btn:hover { opacity: 1; }
 
 /* ── 메인 콘텐츠 ── */
 .main-content {
@@ -188,6 +194,64 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .cal-exp { font-size: 0.7rem; color: var(--expense); font-family: var(--mono); font-weight: 500; }
 
 /* ── 목록 뷰 ── */
+.sort-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 1rem; flex-wrap: wrap;
+}
+.sort-keys { display: flex; gap: 4px; flex-wrap: wrap; }
+.sort-key-btn {
+  font-size: 0.78rem; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+}
+.sort-key-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.sort-dir-btn {
+  font-size: 0.78rem; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-2); cursor: pointer; font-family: var(--font); white-space: nowrap;
+}
+.sort-dir-btn:hover { background: var(--surface3); }
+
+/* ── 목록 필터 ── */
+.filter-toggle-row { margin-bottom: 8px; }
+.filter-toggle-btn {
+  font-size: 0.78rem; padding: 4px 12px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.filter-toggle-btn.has-filter { border-color: var(--income); color: var(--income); }
+.filter-badge {
+  background: var(--income); color: #fff; border-radius: 50%;
+  width: 16px; height: 16px; font-size: 0.65rem;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.filter-panel {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 10px;
+}
+.filter-row { display: flex; align-items: center; gap: 10px; }
+.filter-row label { font-size: 0.78rem; color: var(--text-2); min-width: 52px; }
+.filter-row input, .filter-row select {
+  flex: 1; padding: 5px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 0.82rem; background: var(--bg);
+  color: var(--text); font-family: var(--font);
+}
+.filter-range { display: flex; align-items: center; gap: 6px; flex: 1; }
+.filter-range span { color: var(--text-3); font-size: 0.8rem; }
+.filter-range input { flex: 1; }
+.filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.filter-reset-btn {
+  font-size: 0.8rem; padding: 5px 14px; border-radius: 6px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+}
+.filter-apply-btn {
+  font-size: 0.8rem; padding: 5px 14px; border-radius: 6px;
+  border: none; background: var(--text); color: var(--bg);
+  cursor: pointer; font-family: var(--font);
+}
+
 .list-group { margin-bottom: 1.5rem; }
 .list-date-header {
   font-size: 0.8rem; font-weight: 600; color: var(--text-2);
@@ -234,22 +298,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .monthly-bar-wrap { display: flex; align-items: center; gap: 6px; }
 .monthly-bar { height: 8px; border-radius: 4px; min-width: 2px; transition: width 0.4s; }
 .monthly-val { font-size: 0.72rem; font-family: var(--mono); color: var(--text-2); white-space: nowrap; }
-
-/* ── 예산 뷰 ── */
-.budget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
-.budget-card h4 { font-size: 0.82rem; font-weight: 500; color: var(--text-2); margin-bottom: 1rem; }
-.budget-item-row { margin-bottom: 14px; }
-.budget-item-row:last-child { margin-bottom: 0; }
-.budget-labels { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center; }
-.budget-name { font-size: 0.88rem; color: var(--text); }
-.budget-nums { font-size: 0.78rem; color: var(--text-2); font-family: var(--mono); }
-.budget-over { color: var(--expense) !important; font-weight: 600; }
-.budget-edit-row { display: flex; gap: 8px; margin-top: 0.75rem; }
-.budget-input-wrap { display: flex; align-items: center; gap: 6px; flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; }
-.budget-input-wrap input { background: none; border: none; font-family: var(--mono); font-size: 0.88rem; color: var(--text); width: 100%; padding: 0.5rem 0; outline: none; }
-.budget-input-wrap span { font-size: 0.8rem; color: var(--text-2); }
-.budget-save-btn { padding: 0.5rem 0.875rem; background: var(--text); color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; cursor: pointer; font-family: var(--font); }
 
 /* ── 고정비 뷰 ── */
 .fixed-list { display: flex; flex-direction: column; gap: 8px; }
@@ -301,6 +349,21 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   padding: 1rem 1.5rem; border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 8px;
 }
+.tx-context-panel {
+  border-top: 1px solid var(--border);
+  padding: 10px 1.5rem 1rem;
+}
+.ctx-title { font-size: 0.75rem; color: var(--text-2); margin-bottom: 8px; font-weight: 500; }
+.ctx-list { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.ctx-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; padding: 4px 0; border-bottom: 1px solid var(--border);
+}
+.ctx-row:last-child { border-bottom: none; }
+.ctx-date { color: var(--text-3); min-width: 36px; font-family: var(--mono); }
+.ctx-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-amt { font-family: var(--mono); font-size: 0.8rem; white-space: nowrap; }
+.ctx-loading { font-size: 0.8rem; color: var(--text-3); padding: 4px 0; }
 .form-row { display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 0.8rem; font-weight: 500; color: var(--text-2); }
 .form-row input, .form-row select {
@@ -384,8 +447,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   .summary-bar { grid-template-columns: repeat(2, 1fr); padding: 1rem; }
   .view-container { padding: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
-  .budget-grid { grid-template-columns: 1fr; }
-  .add-btn span { display: none; }
+.add-btn span { display: none; }
 }
 @media (max-width: 480px) {
   .cal-cell { min-height: 58px; padding: 4px; }

@@ -11,7 +11,6 @@ const state = {
   currentUser:   null,
   transactions:  [],
   fixedItems:    [],
-  budgets:       {},
 };
 
 export default state;

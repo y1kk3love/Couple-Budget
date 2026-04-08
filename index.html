@@ -49,10 +49,6 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           통계
         </button>
-        <button class="nav-btn" data-view="budget">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          예산
-        </button>
         <button class="nav-btn" data-view="fixed">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           고정비
@@ -61,6 +57,7 @@
       <div class="sidebar-footer">
         <div class="user-info" id="sidebarUser"></div>
         <button id="logoutBtn" class="logout-btn">로그아웃</button>
+        <button id="resetDataBtn" class="reset-btn">초기화</button>
       </div>
     </aside>
 
@@ -99,7 +96,6 @@
         <div id="view-calendar" class="view active"></div>
         <div id="view-list" class="view"></div>
         <div id="view-stats" class="view"></div>
-        <div id="view-budget" class="view"></div>
         <div id="view-fixed" class="view"></div>
       </div>
     </main>
@@ -120,10 +116,6 @@
       <button class="mob-tab" data-view="stats">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         통계
-      </button>
-      <button class="mob-tab" data-view="budget">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        예산
       </button>
     </nav>
   </div>
@@ -174,6 +166,7 @@
         <button id="deleteTxBtn" class="delete-btn hidden">삭제</button>
         <button id="saveTxBtn" class="save-btn">저장</button>
       </div>
+      <div id="txContextPanel" class="tx-context-panel hidden"></div>
     </div>
   </div>
 
@@ -236,6 +229,13 @@
           <div class="kind-toggle" id="fixedTypeToggle">
             <button class="kind-btn active" data-kind="expense">지출</button>
             <button class="kind-btn" data-kind="income">수입</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>지출일</label>
+          <div class="amount-input-wrap">
+            <input type="number" id="fixedEditDay" placeholder="1" min="1" max="31" />
+            <span class="currency">일</span>
           </div>
         </div>
         <div class="form-row">

@@ -55,6 +55,27 @@ export async function deleteFixedItem(id) {
   await deleteDoc(doc(db, "fixed_items", id));
 }
 
+export async function syncFixedItemTransactions(id, data) {
+  const q    = query(collection(db, "transactions"), where("fixedId", "==", id), where("fromFixed", "==", true));
+  const snap = await getDocs(q);
+
+  await Promise.all(snap.docs.map(d => {
+    const t = d.data();
+    const lastDay    = new Date(t.year, t.month, 0).getDate();
+    const clampedDay = Math.min(data.day ?? 1, lastDay);
+    const dateStr    = `${t.year}-${String(t.month).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+
+    return updateDoc(d.ref, {
+      name:     data.name,
+      amount:   data.amount,
+      type:     data.type,
+      category: data.category,
+      memo:     data.name,
+      date:     dateStr,
+    });
+  }));
+}
+
 // ── 고정비 → 이번 달 자동 적용 ────────────────────────────────
 
 export async function applyFixedItemsToCurrentMonth() {
@@ -74,14 +95,16 @@ export async function applyFixedItemsToCurrentMonth() {
       if (currentYM < itemStart) continue;
     }
 
-    const dateStr = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}-01`;
+    const lastDay    = new Date(state.currentYear, state.currentMonth, 0).getDate();
+    const clampedDay = Math.min(item.day ?? 1, lastDay);
+    const dateStr    = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
     await addDoc(collection(db, "transactions"), {
       name:      item.name,
       amount:    item.amount,
       type:      item.type,
       category:  item.category,
       kind:      "fixed",
-      memo:      "고정비 자동 적용",
+      memo:      item.name,
       date:      dateStr,
       year:      state.currentYear,
       month:     state.currentMonth,
@@ -93,16 +116,49 @@ export async function applyFixedItemsToCurrentMonth() {
 
 // ── 예산 ──────────────────────────────────────────────────────
 
-export async function fetchBudgets() {
-  const docRef = doc(db, "budgets", `${state.currentYear}-${state.currentMonth}`);
-  const snap   = await getDoc(docRef);
-  state.budgets = snap.exists() ? snap.data() : {};
+// ── 전체 데이터 초기화 ─────────────────────────────────────────
+
+export async function clearAllData() {
+  const cols = ["transactions", "fixed_items"];
+  for (const col of cols) {
+    const snap = await getDocs(collection(db, col));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  }
+  state.transactions = [];
+  state.fixedItems   = [];
 }
 
-export async function saveBudgetCategory(category, amount) {
-  const docRef = doc(db, "budgets", `${state.currentYear}-${state.currentMonth}`);
-  state.budgets[category] = amount;
-  await setDoc(docRef, state.budgets, { merge: true });
+// ── 최근 N개월 이름 유사 거래 조회 ────────────────────────────
+
+export async function fetchRecentTransactionsByName(name, excludeId = null, n = 3) {
+  const months = [];
+  for (let i = 0; i < n; i++) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    while (m < 1) { m += 12; y--; }
+    months.push({ year: y, month: m });
+  }
+
+  const results = await Promise.all(months.map(({ year, month }) =>
+    getDocs(query(
+      collection(db, "transactions"),
+      where("year",  "==", year),
+      where("month", "==", month)
+    ))
+  ));
+
+  const nameLower = name.toLowerCase();
+  const txs = [];
+  results.forEach(snap => {
+    snap.docs.forEach(d => {
+      if (d.id === excludeId) return;
+      const t = { id: d.id, ...d.data() };
+      const n2 = t.name.toLowerCase();
+      if (n2.includes(nameLower) || nameLower.includes(n2)) txs.push(t);
+    });
+  });
+
+  return txs.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
