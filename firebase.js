@@ -11,14 +11,15 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ↓↓↓ 여기를 본인 Firebase 설정으로 교체 ↓↓↓
-const firebaseConfig = {
-  apiKey: "AIzaSyCYyGyaRggQGG07B2wJq0T494HiVDiF1os",
-  authDomain: "couple-budget-f732d.firebaseapp.com",
-  projectId: "couple-budget-f732d",
-  storageBucket: "couple-budget-f732d.firebasestorage.app",
-  messagingSenderId: "394522478385",
-  appId: "1:394522478385:web:75cc20bace344248bcd210"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyBQRCS2hiy_0B1kU0LXirzYcp9m-JhCt9o",
+    authDomain: "couple-budget-fab03.firebaseapp.com",
+    projectId: "couple-budget-fab03",
+    storageBucket: "couple-budget-fab03.firebasestorage.app",
+    messagingSenderId: "117434284199",
+    appId: "1:117434284199:web:ed370359e993dbe8568382",
+    measurementId: "G-CSD8ZZM10R"
+  };
 // ↑↑↑ 여기까지 교체 ↑↑↑
 
 // 접근 허용 이메일 목록 — 본인과 파트너 이메일로 교체하세요
