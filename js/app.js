@@ -105,6 +105,14 @@ async function changeMonth(delta) {
   await loadAllData();
 }
 
+export async function setMonth(year, month) {
+  if (year === state.currentYear && month === state.currentMonth) return;
+  state.currentYear  = year;
+  state.currentMonth = month;
+  updateMonthLabel();
+  await loadAllData();
+}
+
 function updateMonthLabel() {
   document.getElementById("currentMonthLabel").textContent =
     `${state.currentYear}년 ${state.currentMonth}월`;

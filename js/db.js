@@ -11,15 +11,16 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
 
-// ── 누적 잔액 캐시 ─────────────────────────────────────────────
-// calcAccumulatedBalance는 transactions 컬렉션 전체를 스캔하므로
-// 메모리 캐시로 월 이동 시 반복 비용을 줄인다.
-// 모든 쓰기 경로에서 invalidate 호출.
+// ── 집계 캐시 ──────────────────────────────────────────────────
+// calcAccumulatedBalance / fetchMonthlySummary 둘 다 거래 변경 시
+// 같이 무효화되어야 하므로 같은 invalidate 진입점을 공유한다.
 
-const balanceCache = new Map();
+const balanceCache         = new Map();
+const monthlySummaryCache  = new Map();
 
 export function invalidateBalanceCache() {
   balanceCache.clear();
+  monthlySummaryCache.clear();
 }
 
 // ── 거래 내역 ──────────────────────────────────────────────────
@@ -189,6 +190,43 @@ export async function fetchRecentTransactionsByName(name, excludeId = null, n = 
   });
 
   return txs.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// ── 최근 N개월 수입/지출 합계 ─────────────────────────────────
+
+export async function fetchMonthlySummary(months = 6) {
+  const cacheKey = `${state.currentYear}-${state.currentMonth}-${months}`;
+  if (monthlySummaryCache.has(cacheKey)) return monthlySummaryCache.get(cacheKey);
+
+  // 현재 달 포함 N개월 (오래된 → 최신 순)
+  const monthsList = [];
+  for (let i = months - 1; i >= 0; i--) {
+    let m = state.currentMonth - i;
+    let y = state.currentYear;
+    while (m < 1) { m += 12; y--; }
+    monthsList.push({ year: y, month: m });
+  }
+
+  const results = await Promise.all(monthsList.map(({ year, month }) =>
+    getDocs(query(
+      collection(db, "transactions"),
+      where("year",  "==", year),
+      where("month", "==", month)
+    ))
+  ));
+
+  const summary = monthsList.map((m, i) => {
+    let income = 0, expense = 0;
+    results[i].docs.forEach(d => {
+      const t = d.data();
+      if (t.type === "income")       income  += t.amount;
+      else if (t.type === "expense") expense += t.amount;
+    });
+    return { ...m, income, expense };
+  });
+
+  monthlySummaryCache.set(cacheKey, summary);
+  return summary;
 }
 
 // ── 누적 잔액 계산 ─────────────────────────────────────────────

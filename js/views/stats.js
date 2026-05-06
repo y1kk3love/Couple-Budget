@@ -3,8 +3,12 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney } from "../utils.js";
+import { fmtMoney, fmtMoneyShort } from "../utils.js";
 import { getCategoryInfo } from "../constants.js";
+import { fetchMonthlySummary } from "../db.js";
+import { setMonth } from "../app.js";
+
+const MONTHLY_COMPARE_RANGE = 6;
 
 export function renderStatsView() {
   const container = document.getElementById("view-stats");
@@ -14,10 +18,65 @@ export function renderStatsView() {
 
   container.innerHTML = `
     <div class="stats-grid">
+      <div class="stats-card full" id="monthly-compare-card">
+        <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 비교</h4>
+        <p class="monthly-loading">불러오는 중…</p>
+      </div>
       ${renderCategoryBars(expTxs)}
       ${renderFixedVsVariable(expTxs)}
       ${renderIncomeVsExpense(incTxs, expTxs)}
     </div>`;
+
+  // 월별 비교는 비동기 fetch 후 채움
+  fetchMonthlySummary(MONTHLY_COMPARE_RANGE).then(summary => {
+    const card = document.getElementById("monthly-compare-card");
+    if (!card) return; // 그 사이 다른 뷰로 전환됐다면 무시
+    card.innerHTML = `
+      <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 비교</h4>
+      ${renderMonthlyChart(summary)}`;
+    bindMonthlyClicks(card);
+  });
+}
+
+function renderMonthlyChart(summary) {
+  const max = Math.max(...summary.flatMap(s => [s.income, s.expense]), 1);
+
+  const cols = summary.map(s => {
+    const incH = (s.income  / max) * 100;
+    const expH = (s.expense / max) * 100;
+    const isCurrent = s.year === state.currentYear && s.month === state.currentMonth;
+    return `
+      <div class="mc-col${isCurrent ? " current" : ""}" data-year="${s.year}" data-month="${s.month}">
+        <div class="mc-bars">
+          <div class="mc-bar mc-bar-inc" style="height:${incH}%" title="수입 ${fmtMoney(s.income)}원"></div>
+          <div class="mc-bar mc-bar-exp" style="height:${expH}%" title="지출 ${fmtMoney(s.expense)}원"></div>
+        </div>
+        <div class="mc-label">${s.month}월</div>
+        <div class="mc-amounts">
+          <span class="mc-inc">+${fmtMoneyShort(s.income)}</span>
+          <span class="mc-exp">-${fmtMoneyShort(s.expense)}</span>
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="monthly-chart">
+      <div class="mc-grid" style="grid-template-columns:repeat(${summary.length}, 1fr)">${cols}</div>
+      <div class="mc-legend">
+        <span><i class="mc-dot mc-dot-inc"></i>수입</span>
+        <span><i class="mc-dot mc-dot-exp"></i>지출</span>
+      </div>
+    </div>`;
+}
+
+function bindMonthlyClicks(card) {
+  card.querySelectorAll(".mc-col[data-year]").forEach(col => {
+    col.addEventListener("click", () => {
+      const y = parseInt(col.dataset.year);
+      const m = parseInt(col.dataset.month);
+      setMonth(y, m);
+    });
+  });
 }
 
 function renderCategoryBars(expTxs) {

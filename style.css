@@ -299,6 +299,51 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .monthly-bar { height: 8px; border-radius: 4px; min-width: 2px; transition: width 0.4s; }
 .monthly-val { font-size: 0.72rem; font-family: var(--mono); color: var(--text-2); white-space: nowrap; }
 
+/* 월별 비교 차트 */
+.monthly-loading { font-size: 0.85rem; color: var(--text-3); }
+.monthly-chart { padding-top: 4px; }
+.mc-grid {
+  display: grid; gap: 8px; align-items: end;
+  height: 160px; margin-bottom: 12px;
+}
+.mc-col {
+  display: flex; flex-direction: column; align-items: center;
+  height: 100%; min-width: 0; padding: 2px;
+  border-radius: var(--radius); cursor: pointer;
+  transition: background 0.15s;
+}
+.mc-col:hover { background: var(--surface2); }
+.mc-col.current { background: var(--surface2); }
+.mc-bars {
+  flex: 1; width: 100%; min-height: 0;
+  display: flex; gap: 3px; align-items: end; justify-content: center;
+}
+.mc-bar {
+  width: 40%; min-height: 2px; border-radius: 3px 3px 0 0;
+  transition: opacity 0.15s;
+}
+.mc-bar-inc { background: var(--income); }
+.mc-bar-exp { background: var(--expense); }
+.mc-col:hover .mc-bar { opacity: 0.85; }
+.mc-label { font-size: 0.72rem; color: var(--text-2); margin-top: 4px; }
+.mc-amounts {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-family: var(--mono); font-size: 0.6rem; line-height: 1.2;
+  margin-top: 2px;
+}
+.mc-inc { color: var(--income); }
+.mc-exp { color: var(--expense); }
+.mc-legend {
+  display: flex; gap: 1rem; justify-content: center;
+  font-size: 0.78rem; color: var(--text-2);
+}
+.mc-dot {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 2px; margin-right: 4px; vertical-align: middle;
+}
+.mc-dot-inc { background: var(--income); }
+.mc-dot-exp { background: var(--expense); }
+
 /* ── 고정비 뷰 ── */
 .fixed-list { display: flex; flex-direction: column; gap: 8px; }
 .fixed-item {
