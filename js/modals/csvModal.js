@@ -6,7 +6,7 @@ import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { showToast, todayStr, fmtMoney } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import { fetchTransactions } from "../db.js";
+import { fetchTransactions, invalidateBalanceCache } from "../db.js";
 import { renderAll } from "../app.js";
 
 let parsedRows = [];
@@ -161,6 +161,7 @@ export function setupCsvModal() {
       const [y, m] = row.date.split("-").map(Number);
       await addDoc(collection(db, "transactions"), { ...row, year: y, month: m });
     }
+    invalidateBalanceCache();
 
     closeModal();
     showToast(`${count}건을 가져왔습니다`);

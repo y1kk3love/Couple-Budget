@@ -11,6 +11,17 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
 
+// ── 누적 잔액 캐시 ─────────────────────────────────────────────
+// calcAccumulatedBalance는 transactions 컬렉션 전체를 스캔하므로
+// 메모리 캐시로 월 이동 시 반복 비용을 줄인다.
+// 모든 쓰기 경로에서 invalidate 호출.
+
+const balanceCache = new Map();
+
+export function invalidateBalanceCache() {
+  balanceCache.clear();
+}
+
 // ── 거래 내역 ──────────────────────────────────────────────────
 
 export async function fetchTransactions() {
@@ -26,14 +37,17 @@ export async function fetchTransactions() {
 
 export async function addTransaction(data) {
   await addDoc(collection(db, "transactions"), data);
+  invalidateBalanceCache();
 }
 
 export async function updateTransaction(id, data) {
   await updateDoc(doc(db, "transactions", id), data);
+  invalidateBalanceCache();
 }
 
 export async function deleteTransaction(id) {
   await deleteDoc(doc(db, "transactions", id));
+  invalidateBalanceCache();
 }
 
 // ── 고정비 ────────────────────────────────────────────────────
@@ -53,6 +67,8 @@ export async function saveFixedItem(data, id = null) {
 
 export async function deleteFixedItem(id) {
   await deleteDoc(doc(db, "fixed_items", id));
+  // 고정비에서 자동 생성된 거래는 그대로 두지만, 향후 보강 시 필요할 수 있어 무효화.
+  invalidateBalanceCache();
 }
 
 // 현재 달(state.currentYear/Month) 이상의 자동생성 거래만 갱신.
@@ -80,6 +96,7 @@ export async function syncFixedItemTransactions(id, data) {
       date:     dateStr,
     });
   }));
+  invalidateBalanceCache();
 }
 
 // ── 고정비 → 이번 달 자동 적용 ────────────────────────────────
@@ -122,6 +139,7 @@ export async function applyFixedItemsToCurrentMonth() {
       fromFixed: true,
       fixedId:   item.id,
     });
+    invalidateBalanceCache();
   }
 }
 
@@ -137,6 +155,7 @@ export async function clearAllData() {
   }
   state.transactions = [];
   state.fixedItems   = [];
+  invalidateBalanceCache();
 }
 
 // ── 최근 N개월 이름 유사 거래 조회 ────────────────────────────
@@ -175,6 +194,9 @@ export async function fetchRecentTransactionsByName(name, excludeId = null, n = 
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
 
 export async function calcAccumulatedBalance() {
+  const cacheKey = `${state.currentYear}-${state.currentMonth}`;
+  if (balanceCache.has(cacheKey)) return balanceCache.get(cacheKey);
+
   const snap = await getDocs(collection(db, "transactions"));
   let total = 0;
 
@@ -185,5 +207,7 @@ export async function calcAccumulatedBalance() {
     if (t.year === state.currentYear && t.month >= state.currentMonth) continue;
     total += t.type === "income" ? t.amount : -t.amount;
   }
+
+  balanceCache.set(cacheKey, total);
   return total;
 }
