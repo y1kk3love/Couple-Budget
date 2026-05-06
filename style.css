@@ -418,7 +418,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .mobile-tabs {
   display: none; position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--surface); border-top: 1px solid var(--border);
-  display: none; grid-template-columns: repeat(4, 1fr);
+  display: none; grid-template-columns: repeat(5, 1fr);
   z-index: 100; padding-bottom: env(safe-area-inset-bottom);
 }
 .mob-tab {
