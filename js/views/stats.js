@@ -4,9 +4,10 @@
 
 import state from "../state.js";
 import { fmtMoney, fmtMoneyShort } from "../utils.js";
-import { getCategoryInfo } from "../constants.js";
+import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { fetchMonthlySummary } from "../db.js";
 import { setMonth } from "../app.js";
+import { openEditModal } from "../modals/txModal.js";
 
 const MONTHLY_COMPARE_RANGE = 6;
 
@@ -19,7 +20,7 @@ export function renderStatsView() {
   container.innerHTML = `
     <div class="stats-grid">
       <div class="stats-card full" id="monthly-compare-card">
-        <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 비교</h4>
+        <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 카테고리별 지출</h4>
         <p class="monthly-loading">불러오는 중…</p>
       </div>
       ${renderCategoryBars(expTxs)}
@@ -27,45 +28,61 @@ export function renderStatsView() {
       ${renderIncomeVsExpense(incTxs, expTxs)}
     </div>`;
 
+  // 카테고리 막대 클릭 → 세부 내역 모달
+  container.querySelectorAll(".cat-bar-item[data-cat-id]").forEach(el => {
+    el.addEventListener("click", () => openCategoryDetail(el.dataset.catId));
+  });
+
   // 월별 비교는 비동기 fetch 후 채움
   fetchMonthlySummary(MONTHLY_COMPARE_RANGE).then(summary => {
     const card = document.getElementById("monthly-compare-card");
     if (!card) return; // 그 사이 다른 뷰로 전환됐다면 무시
     card.innerHTML = `
-      <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 비교</h4>
+      <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 카테고리별 지출</h4>
       ${renderMonthlyChart(summary)}`;
     bindMonthlyClicks(card);
   });
 }
 
 function renderMonthlyChart(summary) {
-  const max = Math.max(...summary.flatMap(s => [s.income, s.expense]), 1);
+  const max = Math.max(...summary.map(s => s.expense), 1);
+  // 6개월 동안 한 번이라도 등장한 카테고리만 범례에 노출
+  const usedCategoryIds = new Set();
+  summary.forEach(s => Object.keys(s.expenseByCategory).forEach(id => usedCategoryIds.add(id)));
+  const usedCategories = CATEGORIES.expense.filter(c => usedCategoryIds.has(c.id));
 
   const cols = summary.map(s => {
-    const incH = (s.income  / max) * 100;
-    const expH = (s.expense / max) * 100;
+    const totalH = (s.expense / max) * 100;
+    // 카테고리 정의 순서대로 쌓아 색상 패턴이 6개월 내내 일관됨
+    const segments = CATEGORIES.expense
+      .filter(c => s.expenseByCategory[c.id])
+      .map(c => {
+        const amt  = s.expenseByCategory[c.id];
+        const segH = (amt / s.expense) * 100;
+        return `<div class="mc-segment" style="height:${segH}%;background:${c.color}" title="${c.name} ${fmtMoney(amt)}원"></div>`;
+      }).join("");
+
     const isCurrent = s.year === state.currentYear && s.month === state.currentMonth;
     return `
       <div class="mc-col${isCurrent ? " current" : ""}" data-year="${s.year}" data-month="${s.month}">
-        <div class="mc-bars">
-          <div class="mc-bar mc-bar-inc" style="height:${incH}%" title="수입 ${fmtMoney(s.income)}원"></div>
-          <div class="mc-bar mc-bar-exp" style="height:${expH}%" title="지출 ${fmtMoney(s.expense)}원"></div>
+        <div class="mc-stack-wrap">
+          <div class="mc-stack" style="height:${totalH}%">${segments}</div>
         </div>
         <div class="mc-label">${s.month}월</div>
         <div class="mc-amounts">
-          <span class="mc-inc">+${fmtMoneyShort(s.income)}</span>
           <span class="mc-exp">-${fmtMoneyShort(s.expense)}</span>
         </div>
       </div>`;
   }).join("");
 
+  const legend = usedCategories.map(c =>
+    `<span><i class="mc-dot" style="background:${c.color}"></i>${c.name}</span>`
+  ).join("");
+
   return `
     <div class="monthly-chart">
       <div class="mc-grid" style="grid-template-columns:repeat(${summary.length}, 1fr)">${cols}</div>
-      <div class="mc-legend">
-        <span><i class="mc-dot mc-dot-inc"></i>수입</span>
-        <span><i class="mc-dot mc-dot-exp"></i>지출</span>
-      </div>
+      <div class="mc-legend">${legend}</div>
     </div>`;
 }
 
@@ -76,6 +93,56 @@ function bindMonthlyClicks(card) {
       const m = parseInt(col.dataset.month);
       setMonth(y, m);
     });
+  });
+}
+
+// ── 카테고리 상세 모달 ────────────────────────────────────────
+
+function openCategoryDetail(catId) {
+  const cat = getCategoryInfo(catId, "expense");
+  const txs = state.transactions
+    .filter(t => t.type === "expense" && t.category === catId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const total = txs.reduce((s, t) => s + t.amount, 0);
+
+  document.getElementById("categoryDetailTitle").innerHTML = `
+    <span class="cd-cat-dot" style="background:${cat.color}"></span>
+    <span>${cat.name}</span>
+    <span class="cd-total">-${fmtMoney(total)}원</span>`;
+
+  const body = document.getElementById("categoryDetailBody");
+  if (!txs.length) {
+    body.innerHTML = `<p class="cd-empty">내역이 없습니다</p>`;
+  } else {
+    body.innerHTML = txs.map(t => {
+      const memo = t.memo && t.memo !== t.name ? `<span class="cd-memo">${t.memo}</span>` : "";
+      const kind = t.kind === "fixed" ? `<span class="tag fixed">고정</span>` : "";
+      return `
+        <div class="cd-row" data-tx-id="${t.id}">
+          <span class="cd-date">${t.date.slice(5).replace("-", "/")}</span>
+          <span class="cd-name">${t.name}${kind}${memo}</span>
+          <span class="cd-amt">-${fmtMoney(t.amount)}원</span>
+        </div>`;
+    }).join("");
+    body.querySelectorAll(".cd-row[data-tx-id]").forEach(el => {
+      el.addEventListener("click", () => {
+        closeCategoryDetail();
+        openEditModal(el.dataset.txId);
+      });
+    });
+  }
+
+  document.getElementById("categoryDetailModal").classList.remove("hidden");
+}
+
+function closeCategoryDetail() {
+  document.getElementById("categoryDetailModal").classList.add("hidden");
+}
+
+export function setupCategoryDetailModal() {
+  document.getElementById("categoryDetailClose").addEventListener("click", closeCategoryDetail);
+  document.getElementById("categoryDetailModal").addEventListener("click", e => {
+    if (e.target.id === "categoryDetailModal") closeCategoryDetail();
   });
 }
 
@@ -92,7 +159,7 @@ function renderCategoryBars(expTxs) {
     const cat = getCategoryInfo(catId, "expense");
     const pct = Math.round(amt / max * 100);
     return `
-      <div class="cat-bar-item">
+      <div class="cat-bar-item clickable" data-cat-id="${catId}">
         <div class="cat-bar-row">
           <span class="cat-bar-label">${cat.name}</span>
           <span class="cat-bar-val">${fmtMoney(amt)}원</span>

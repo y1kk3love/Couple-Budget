@@ -14,7 +14,7 @@ import { setupFixedModal } from "./modals/fixedModal.js";
 import { setupCsvModal }  from "./modals/csvModal.js";
 import { renderCalendarView } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
-import { renderStatsView }    from "./views/stats.js";
+import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
@@ -176,3 +176,4 @@ setupAuth();
 setupTxModal();
 setupFixedModal();
 setupCsvModal();
+setupCategoryDetailModal();

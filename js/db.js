@@ -217,12 +217,17 @@ export async function fetchMonthlySummary(months = 6) {
 
   const summary = monthsList.map((m, i) => {
     let income = 0, expense = 0;
+    const expenseByCategory = {};
     results[i].docs.forEach(d => {
       const t = d.data();
-      if (t.type === "income")       income  += t.amount;
-      else if (t.type === "expense") expense += t.amount;
+      if (t.type === "income") {
+        income += t.amount;
+      } else if (t.type === "expense") {
+        expense += t.amount;
+        expenseByCategory[t.category] = (expenseByCategory[t.category] ?? 0) + t.amount;
+      }
     });
-    return { ...m, income, expense };
+    return { ...m, income, expense, expenseByCategory };
   });
 
   monthlySummaryCache.set(cacheKey, summary);

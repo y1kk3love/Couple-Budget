@@ -287,6 +287,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .stats-card h4 { font-size: 0.82rem; font-weight: 500; color: var(--text-2); margin-bottom: 1rem; }
 .stats-card.full { grid-column: 1 / -1; }
 .cat-bar-item { margin-bottom: 10px; }
+.cat-bar-item.clickable { cursor: pointer; padding: 4px 6px; margin-left: -6px; margin-right: -6px; border-radius: var(--radius); transition: background 0.15s; }
+.cat-bar-item.clickable:hover { background: var(--surface2); }
 .cat-bar-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
 .cat-bar-label { font-size: 0.82rem; color: var(--text); }
 .cat-bar-val { font-size: 0.8rem; color: var(--text-2); font-family: var(--mono); }
@@ -314,17 +316,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 }
 .mc-col:hover { background: var(--surface2); }
 .mc-col.current { background: var(--surface2); }
-.mc-bars {
+.mc-stack-wrap {
   flex: 1; width: 100%; min-height: 0;
-  display: flex; gap: 3px; align-items: end; justify-content: center;
+  display: flex; flex-direction: column; justify-content: end;
 }
-.mc-bar {
-  width: 40%; min-height: 2px; border-radius: 3px 3px 0 0;
+.mc-stack {
+  width: 70%; margin: 0 auto;
+  display: flex; flex-direction: column-reverse;
+  border-radius: 3px 3px 0 0; overflow: hidden;
   transition: opacity 0.15s;
 }
-.mc-bar-inc { background: var(--income); }
-.mc-bar-exp { background: var(--expense); }
-.mc-col:hover .mc-bar { opacity: 0.85; }
+.mc-segment { width: 100%; min-height: 1px; }
+.mc-col:hover .mc-stack { opacity: 0.85; }
 .mc-label { font-size: 0.72rem; color: var(--text-2); margin-top: 4px; }
 .mc-amounts {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -334,15 +337,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .mc-inc { color: var(--income); }
 .mc-exp { color: var(--expense); }
 .mc-legend {
-  display: flex; gap: 1rem; justify-content: center;
-  font-size: 0.78rem; color: var(--text-2);
+  display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center;
+  font-size: 0.74rem; color: var(--text-2);
 }
 .mc-dot {
   display: inline-block; width: 10px; height: 10px;
   border-radius: 2px; margin-right: 4px; vertical-align: middle;
 }
-.mc-dot-inc { background: var(--income); }
-.mc-dot-exp { background: var(--expense); }
 
 /* ── 고정비 뷰 ── */
 .fixed-list { display: flex; flex-direction: column; gap: 8px; }
@@ -466,6 +467,27 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .csv-summary-row strong { font-family: var(--mono); font-weight: 500; }
 .csv-summary-net { padding-top: 6px; margin-top: 2px; border-top: 1px solid var(--border); }
 .csv-summary-net span { color: var(--text); font-weight: 500; }
+
+/* ── 카테고리 상세 모달 ── */
+#categoryDetailTitle { display: flex; align-items: center; gap: 8px; }
+.cd-cat-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.cd-total { margin-left: auto; font-family: var(--mono); font-size: 0.92rem; color: var(--expense); }
+#categoryDetailBody { max-height: 60vh; overflow-y: auto; padding: 0; }
+.cd-empty { color: var(--text-3); font-size: 0.88rem; text-align: center; padding: 2rem 0; }
+.cd-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 1.25rem; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.15s;
+}
+.cd-row:hover { background: var(--surface2); }
+.cd-row:last-child { border-bottom: none; }
+.cd-date { font-family: var(--mono); font-size: 0.78rem; color: var(--text-3); width: 44px; flex-shrink: 0; }
+.cd-name {
+  flex: 1; min-width: 0; font-size: 0.88rem; color: var(--text);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.cd-memo { font-size: 0.74rem; color: var(--text-3); }
+.cd-amt { font-family: var(--mono); font-size: 0.88rem; color: var(--expense); flex-shrink: 0; }
 .csv-note { background: var(--surface2); border-radius: var(--radius); padding: 1rem; font-size: 0.82rem; }
 .csv-note strong { display: block; margin-bottom: 4px; color: var(--text); }
 .csv-note p { color: var(--text-2); line-height: 1.6; }
