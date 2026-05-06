@@ -77,6 +77,9 @@ export async function syncFixedItemTransactions(id, data) {
 }
 
 // ── 고정비 → 이번 달 자동 적용 ────────────────────────────────
+// Deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` + setDoc → 동시 호출에도
+// 멱등. 두 사용자가 같은 달에 동시에 접속해도 같은 문서가 덮어써질 뿐
+// 중복 생성되지 않는다.
 
 export async function applyFixedItemsToCurrentMonth() {
   const appliedIds = new Set(
@@ -97,8 +100,10 @@ export async function applyFixedItemsToCurrentMonth() {
 
     const lastDay    = new Date(state.currentYear, state.currentMonth, 0).getDate();
     const clampedDay = Math.min(item.day ?? 1, lastDay);
-    const dateStr    = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
-    await addDoc(collection(db, "transactions"), {
+    const ym         = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
+    const dateStr    = `${ym}-${String(clampedDay).padStart(2, "0")}`;
+    const txId       = `fixed_${item.id}_${ym}`;
+    await setDoc(doc(db, "transactions", txId), {
       name:      item.name,
       amount:    item.amount,
       type:      item.type,
