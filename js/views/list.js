@@ -49,9 +49,14 @@ function applyFilters(txs) {
 // ── 필터 패널 UI ──────────────────────────────────────────────
 
 function renderFilterPanel() {
-  const catOptions = CATEGORIES.expense.map(c =>
-    `<option value="${c.id}" ${filters.category === c.id ? "selected" : ""}>${c.name}</option>`
-  ).join("");
+  const catOptions = [
+    `<optgroup label="지출">${CATEGORIES.expense.map(c =>
+      `<option value="${c.id}" ${filters.category === c.id ? "selected" : ""}>${c.name}</option>`
+    ).join("")}</optgroup>`,
+    `<optgroup label="수입">${CATEGORIES.income.map(c =>
+      `<option value="${c.id}" ${filters.category === c.id ? "selected" : ""}>${c.name}</option>`
+    ).join("")}</optgroup>`,
+  ].join("");
 
   const activeCount = Object.values(filters).filter(v => v !== "").length;
   const badge = activeCount > 0 ? `<span class="filter-badge">${activeCount}</span>` : "";
