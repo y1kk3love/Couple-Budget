@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast } from "../utils.js";
+import { showToast, setupAmountPresets } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import { saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions } from "../db.js";
 import { renderAll } from "../app.js";
@@ -60,6 +60,9 @@ function closeModal() {
 // ── 이벤트 바인딩 ─────────────────────────────────────────────
 
 export function setupFixedModal() {
+  // 금액 빠른 입력 버튼
+  document.querySelectorAll('.amount-presets[data-target="fixedEditAmount"]').forEach(setupAmountPresets);
+
   // 지출/수입 타입 토글
   document.querySelectorAll("#fixedTypeToggle .kind-btn").forEach(b =>
     b.addEventListener("click", () => setFixedType(b.dataset.kind))

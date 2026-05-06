@@ -376,6 +376,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .amount-input-wrap { display: flex; align-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
 .amount-input-wrap input { border: none; flex: 1; padding: 0.6rem 0.875rem; font-family: var(--mono); font-size: 1rem; outline: none; background: var(--surface); color: var(--text); }
 .currency { padding: 0 0.875rem; color: var(--text-2); font-size: 0.85rem; background: var(--surface2); border-left: 1px solid var(--border-strong); height: 100%; display: flex; align-items: center; }
+.amount-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.preset-btn {
+  padding: 0.5rem 0; border: 1px solid var(--border-strong); border-radius: var(--radius);
+  background: var(--surface); color: var(--text-2); font-family: var(--font);
+  font-size: 0.82rem; cursor: pointer; transition: all 0.15s;
+}
+.preset-btn:hover { border-color: var(--text); color: var(--text); }
+.preset-btn:active { transform: translateY(1px); }
+.preset-btn.preset-clear { color: var(--text-3); }
+.preset-btn.preset-clear:hover { border-color: var(--expense); color: var(--expense); }
 .type-toggle, .kind-toggle { display: flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
 .type-btn, .kind-btn {
   flex: 1; padding: 0.55rem; border: none; background: none; cursor: pointer;

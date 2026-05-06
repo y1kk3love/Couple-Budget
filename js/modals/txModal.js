@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, todayStr, fmtMoney } from "../utils.js";
+import { showToast, todayStr, fmtMoney, setupAmountPresets } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName } from "../db.js";
 import { renderAll } from "../app.js";
@@ -113,6 +113,9 @@ function renderContextPanel(title, txs) {
 // ── 이벤트 바인딩 ─────────────────────────────────────────────
 
 export function setupTxModal() {
+  // 금액 빠른 입력 버튼
+  document.querySelectorAll('.amount-presets[data-target="txAmount"]').forEach(setupAmountPresets);
+
   // 타입 토글
   document.querySelectorAll(".type-btn").forEach(b =>
     b.addEventListener("click", () => setType(b.dataset.type))

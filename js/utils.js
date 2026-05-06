@@ -31,6 +31,27 @@ export function showToast(msg) {
   setTimeout(() => toast.classList.add("hidden"), 2200);
 }
 
+/** 금액 입력 빠른 버튼 그룹(.amount-presets) 바인딩.
+ *  컨테이너의 data-target 속성으로 input id를 지정.
+ *  data-add: 현재값에 누적, data-clear: 빈 값으로 초기화. */
+export function setupAmountPresets(container) {
+  const targetId = container.dataset.target;
+  const input    = document.getElementById(targetId);
+  if (!input) return;
+
+  container.querySelectorAll(".preset-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.add) {
+        const cur = parseInt(input.value) || 0;
+        input.value = cur + parseInt(btn.dataset.add);
+      } else if (btn.dataset.clear) {
+        input.value = "";
+      }
+      input.focus();
+    });
+  });
+}
+
 /** 빈 상태 HTML 반환 */
 export function emptyStateHTML(msg) {
   return `
