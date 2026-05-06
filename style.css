@@ -412,6 +412,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .csv-preview table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .csv-preview th { background: var(--surface2); padding: 6px 8px; text-align: left; font-weight: 500; color: var(--text-2); }
 .csv-preview td { padding: 6px 8px; border-top: 1px solid var(--border); color: var(--text); }
+.csv-summary {
+  margin-top: 12px; padding: 10px 12px; background: var(--surface2);
+  border-radius: var(--radius); display: flex; flex-direction: column; gap: 4px;
+}
+.csv-summary-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+.csv-summary-row span { color: var(--text-2); }
+.csv-summary-row strong { font-family: var(--mono); font-weight: 500; }
+.csv-summary-net { padding-top: 6px; margin-top: 2px; border-top: 1px solid var(--border); }
+.csv-summary-net span { color: var(--text); font-weight: 500; }
 .csv-note { background: var(--surface2); border-radius: var(--radius); padding: 1rem; font-size: 0.82rem; }
 .csv-note strong { display: block; margin-bottom: 4px; color: var(--text); }
 .csv-note p { color: var(--text-2); line-height: 1.6; }

@@ -101,6 +101,24 @@ function renderPreview(rows) {
     </tr>`;
   }).join("");
 
+  const totalIncome  = rows.filter(r => r.type === "income").reduce((s, r) => s + r.amount, 0);
+  const totalExpense = rows.filter(r => r.type === "expense").reduce((s, r) => s + r.amount, 0);
+  const net          = totalIncome - totalExpense;
+  const netColor     = net >= 0 ? "var(--income)" : "var(--expense)";
+  const netSign      = net >= 0 ? "+" : "-";
+
+  let summaryRows = "";
+  if (totalIncome && totalExpense) {
+    summaryRows = `
+      <div class="csv-summary-row"><span>지출</span><strong style="color:var(--expense)">-${fmtMoney(totalExpense)}원</strong></div>
+      <div class="csv-summary-row"><span>수입</span><strong style="color:var(--income)">+${fmtMoney(totalIncome)}원</strong></div>
+      <div class="csv-summary-row csv-summary-net"><span>합계</span><strong style="color:${netColor}">${netSign}${fmtMoney(net)}원</strong></div>`;
+  } else if (totalExpense) {
+    summaryRows = `<div class="csv-summary-row"><span>총 지출</span><strong style="color:var(--expense)">-${fmtMoney(totalExpense)}원</strong></div>`;
+  } else if (totalIncome) {
+    summaryRows = `<div class="csv-summary-row"><span>총 수입</span><strong style="color:var(--income)">+${fmtMoney(totalIncome)}원</strong></div>`;
+  }
+
   preview.innerHTML = `
     <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
       ${rows.length}건 인식됨
@@ -110,7 +128,8 @@ function renderPreview(rows) {
         <thead><tr><th>날짜</th><th>내용</th><th>금액</th><th>카테고리</th></tr></thead>
         <tbody>${tableRows}</tbody>
       </table>
-    </div>`;
+    </div>
+    <div class="csv-summary">${summaryRows}</div>`;
   preview.classList.remove("hidden");
   document.getElementById("csvImportConfirm").classList.remove("hidden");
 }
