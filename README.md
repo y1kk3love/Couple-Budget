@@ -107,6 +107,8 @@ export const ALLOWED_EMAILS = [
 
 Firebase 콘솔 → Firestore → 규칙 탭에서 `firestore.rules` 내용을 붙여넣고, 이메일 주소를 본인 것으로 수정 후 게시합니다.
 
+> ⚠️ **이메일은 두 곳에서 따로 관리됩니다.** `firebase.js`의 `ALLOWED_EMAILS`(클라이언트 차단)와 `firestore.rules`의 `isAllowed()` 함수(서버 차단)는 자동 동기화되지 않습니다. 사용자를 추가/변경/제거할 때마다 **두 파일 모두** 갱신하고, rules는 Firebase 콘솔에 다시 게시해야 합니다.
+
 **5. 로컬 실행**
 ```bash
 # Python
