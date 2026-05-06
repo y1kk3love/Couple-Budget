@@ -23,10 +23,5 @@ service cloud.firestore {
     match /fixed_items/{docId} {
       allow read, write: if isAllowed();
     }
-
-    // 예산
-    match /budgets/{docId} {
-      allow read, write: if isAllowed();
-    }
   }
 }
