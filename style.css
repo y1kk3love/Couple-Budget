@@ -43,7 +43,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   text-align: center; width: 340px;
 }
 .login-logo { margin-bottom: 2rem; }
-.logo-icon { font-size: 2.4rem; display: block; margin-bottom: 0.75rem; color: var(--text); }
+.logo-icon { display: block; margin-bottom: 0.75rem; color: var(--text); }
 .login-logo h1 { font-size: 1.4rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
 .login-logo p { font-size: 0.85rem; color: var(--text-2); }
 .google-btn {
@@ -73,7 +73,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   padding: 1.5rem 1.25rem 1.25rem;
   border-bottom: 1px solid var(--border);
 }
-.sidebar-header .logo-icon { font-size: 1.3rem; }
 .sidebar-title { font-size: 0.95rem; font-weight: 600; color: var(--text); }
 .sidebar-nav { flex: 1; padding: 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 2px; }
 .nav-btn {
@@ -92,12 +91,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   cursor: pointer; padding: 0; font-family: var(--font);
 }
 .logout-btn:hover { color: var(--expense); }
-.reset-btn {
-  font-size: 0.75rem; color: #fff; background: var(--expense); border: none;
-  cursor: pointer; padding: 5px 12px; border-radius: 6px;
-  font-family: var(--font); margin-top: 8px; width: 100%; opacity: 0.75;
-}
-.reset-btn:hover { opacity: 1; }
 
 /* ── 메인 콘텐츠 ── */
 .main-content {
