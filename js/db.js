@@ -55,12 +55,18 @@ export async function deleteFixedItem(id) {
   await deleteDoc(doc(db, "fixed_items", id));
 }
 
+// 현재 달(state.currentYear/Month) 이상의 자동생성 거래만 갱신.
+// 과거 달은 실제 지출 기록이므로 고정비 금액·카테고리 변경 시에도 보존한다.
 export async function syncFixedItemTransactions(id, data) {
   const q    = query(collection(db, "transactions"), where("fixedId", "==", id), where("fromFixed", "==", true));
   const snap = await getDocs(q);
 
+  const currentYM = state.currentYear * 100 + state.currentMonth;
+
   await Promise.all(snap.docs.map(d => {
     const t = d.data();
+    if ((t.year * 100 + t.month) < currentYM) return null;
+
     const lastDay    = new Date(t.year, t.month, 0).getDate();
     const clampedDay = Math.min(data.day ?? 1, lastDay);
     const dateStr    = `${t.year}-${String(t.month).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
