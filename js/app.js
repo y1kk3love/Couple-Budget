@@ -16,7 +16,6 @@ import { renderCalendarView } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
 import { renderStatsView }    from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
-import { renderTravelView }   from "./views/travel.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -50,7 +49,6 @@ export function renderAll() {
     case "list":     renderListView();     break;
     case "stats":    renderStatsView();    break;
     case "fixed":    renderFixedView();    break;
-    case "travel":   renderTravelView();   break;
   }
 }
 

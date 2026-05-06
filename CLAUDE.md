@@ -31,7 +31,7 @@ js/utils.js              ← fmtMoney, todayStr, showToast, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
-js/views/{calendar,list,stats,fixed,travel}.js   ← each exports render<Name>View() that fills its #view-<name> div
+js/views/{calendar,list,stats,fixed}.js          ← each exports render<Name>View() that fills its #view-<name> div
 js/modals/{txModal,fixedModal,csvModal}.js       ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
 ```
 
@@ -58,10 +58,6 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 - Editing a fixed item must call `syncFixedItemTransactions()` to propagate changes to already-materialized transactions.
 - The day-of-month is clamped against the target month's last day (e.g. day 31 in February becomes 28/29).
 - A fixed item's `startYear`/`startMonth` gates application; earlier months are skipped.
-
-### Travel view
-
-`js/views/travel.js` is a **hardcoded** itinerary (Fukuoka trip, April 2026) with embedded Leaflet map. It does not read from Firestore. Leaflet CSS/JS is loaded via CDN in `index.html`.
 
 ### CSV import
 
