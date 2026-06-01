@@ -144,21 +144,6 @@ export async function applyFixedItemsToCurrentMonth() {
   }
 }
 
-// ── 예산 ──────────────────────────────────────────────────────
-
-// ── 전체 데이터 초기화 ─────────────────────────────────────────
-
-export async function clearAllData() {
-  const cols = ["transactions", "fixed_items"];
-  for (const col of cols) {
-    const snap = await getDocs(collection(db, col));
-    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-  }
-  state.transactions = [];
-  state.fixedItems   = [];
-  invalidateBalanceCache();
-}
-
 // ── 최근 N개월 이름 유사 거래 조회 ────────────────────────────
 
 export async function fetchRecentTransactionsByName(name, excludeId = null, n = 3) {

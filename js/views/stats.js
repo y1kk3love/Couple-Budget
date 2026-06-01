@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml } from "../utils.js";
 import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { fetchMonthlySummary } from "../db.js";
 import { setMonth } from "../app.js";
@@ -115,12 +115,12 @@ function openCategoryDetail(catId) {
     body.innerHTML = `<p class="cd-empty">내역이 없습니다</p>`;
   } else {
     body.innerHTML = txs.map(t => {
-      const memo = t.memo && t.memo !== t.name ? `<span class="cd-memo">${t.memo}</span>` : "";
+      const memo = t.memo && t.memo !== t.name ? `<span class="cd-memo">${escapeHtml(t.memo)}</span>` : "";
       const kind = t.kind === "fixed" ? `<span class="tag fixed">고정</span>` : "";
       return `
         <div class="cd-row" data-tx-id="${t.id}">
           <span class="cd-date">${t.date.slice(5).replace("-", "/")}</span>
-          <span class="cd-name">${t.name}${kind}${memo}</span>
+          <span class="cd-name">${escapeHtml(t.name)}${kind}${memo}</span>
           <span class="cd-amt">-${fmtMoney(t.amount)}원</span>
         </div>`;
     }).join("");

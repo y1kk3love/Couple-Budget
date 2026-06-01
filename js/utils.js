@@ -15,6 +15,17 @@ export function fmtMoneyShort(n) {
   return abs.toLocaleString();
 }
 
+/** 사용자 입력 문자열을 innerHTML에 안전하게 넣기 위해 HTML 특수문자 이스케이프.
+ *  거래 이름·메모·CSV 가맹점명처럼 사용자/외부에서 들어온 값을 출력할 때 사용. */
+export function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** 오늘 날짜를 YYYY-MM-DD 형식으로 반환 */
 export function todayStr() {
   const d = new Date();

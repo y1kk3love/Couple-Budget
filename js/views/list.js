@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, emptyStateHTML } from "../utils.js";
+import { fmtMoney, emptyStateHTML, escapeHtml } from "../utils.js";
 import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { openEditModal } from "../modals/txModal.js";
 
@@ -65,7 +65,7 @@ function renderFilterPanel() {
     <div class="filter-panel">
       <div class="filter-row">
         <label>이름</label>
-        <input type="text" id="f-name" value="${filters.name}" placeholder="전체" />
+        <input type="text" id="f-name" value="${escapeHtml(filters.name)}" placeholder="전체" />
       </div>
       <div class="filter-row">
         <label>카테고리</label>
@@ -212,13 +212,13 @@ function renderTxRow(t) {
   const kindTag = t.kind === "fixed"
     ? `<span class="tag fixed">고정</span>`
     : `<span class="tag variable">변동</span>`;
-  const memoTag = t.memo ? `<span class="tx-memo">${t.memo}</span>` : "";
+  const memoTag = t.memo ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
 
   return `
     <div class="tx-item" data-id="${t.id}">
       <div class="tx-cat-dot" style="background:${cat.color}"></div>
       <div class="tx-info">
-        <div class="tx-name">${t.name}</div>
+        <div class="tx-name">${escapeHtml(t.name)}</div>
         <div class="tx-meta"><span>${cat.name}</span>${kindTag}${memoTag}</div>
       </div>
       <div class="tx-amount ${amtCls}">${sign}${fmtMoney(t.amount)}</div>

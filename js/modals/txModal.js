@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, todayStr, fmtMoney, setupAmountPresets } from "../utils.js";
+import { showToast, todayStr, fmtMoney, setupAmountPresets, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName } from "../db.js";
 import { renderAll } from "../app.js";
@@ -57,7 +57,7 @@ export function openEditModal(id) {
   panel.innerHTML = `<p class="ctx-loading">불러오는 중…</p>`;
   panel.classList.remove("hidden");
   fetchRecentTransactionsByName(t.name, id, 3).then(txs => {
-    renderContextPanel(txs.length ? `'${t.name}' 최근 3개월 내역` : null, txs);
+    renderContextPanel(txs.length ? `'${escapeHtml(t.name)}' 최근 3개월 내역` : null, txs);
   });
 }
 
@@ -101,7 +101,7 @@ function renderContextPanel(title, txs) {
     const color = t.type === "income" ? "var(--income)" : "var(--expense)";
     return `<div class="ctx-row">
       <span class="ctx-date">${t.date.slice(5).replace("-", "/")}</span>
-      <span class="ctx-name">${t.name}</span>
+      <span class="ctx-name">${escapeHtml(t.name)}</span>
       <span class="ctx-amt" style="color:${color}">${sign}${fmtMoney(t.amount)}</span>
     </div>`;
   }).join("");

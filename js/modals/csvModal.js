@@ -4,7 +4,7 @@
 
 import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { showToast, todayStr, fmtMoney } from "../utils.js";
+import { showToast, todayStr, fmtMoney, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { fetchTransactions, invalidateBalanceCache } from "../db.js";
 import { renderAll } from "../app.js";
@@ -95,7 +95,7 @@ function renderPreview(rows) {
     const catName = getCategoryInfo(r.category, r.type).name;
     return `<tr>
       <td>${r.date}</td>
-      <td>${r.name}</td>
+      <td>${escapeHtml(r.name)}</td>
       <td style="color:${color}">${sign}${fmtMoney(r.amount)}</td>
       <td>${catName}</td>
     </tr>`;
