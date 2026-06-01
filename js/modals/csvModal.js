@@ -3,7 +3,7 @@
 // ================================================================
 
 import { db } from "../../firebase.js";
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { showToast, todayStr, fmtMoney, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { fetchTransactions, invalidateBalanceCache } from "../db.js";
@@ -14,6 +14,34 @@ let parsedRows = [];
 const categoryNameToId = Object.fromEntries(
   CATEGORIES.expense.map(c => [c.name, c.id])
 );
+
+// 문자열을 안정적인 짧은 해시로 (FNV-1a 32bit). 가맹점명을 문서 ID에
+// 안전하게 끼워넣기 위한 용도라 암호학적 강도는 필요 없음.
+function hashStr(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}
+
+// 같은 CSV를 다시 가져와도 중복이 쌓이지 않도록, 행 내용으로 결정적
+// 문서 ID를 만든다. 한 파일 안에 완전히 동일한 행(같은 날·금액·가맹점)이
+// 여러 건이면 occ(등장 순번)로 구분해 모두 보존한다.
+function buildImportOps(rows) {
+  const seen = new Map();
+  return rows.map(row => {
+    const [y, m]  = row.date.split("-").map(Number);
+    const baseKey = `${row.date}_${row.amount}_${hashStr(row.name)}`;
+    const occ     = seen.get(baseKey) ?? 0;
+    seen.set(baseKey, occ + 1);
+    return {
+      id:   `csv_${baseKey}_${occ}`,
+      data: { ...row, year: y, month: m },
+    };
+  });
+}
 
 // ── 열기/닫기 ─────────────────────────────────────────────────
 
@@ -176,9 +204,16 @@ export function setupCsvModal() {
     if (!parsedRows.length) return;
 
     const count = parsedRows.length;
-    for (const row of parsedRows) {
-      const [y, m] = row.date.split("-").map(Number);
-      await addDoc(collection(db, "transactions"), { ...row, year: y, month: m });
+    const ops   = buildImportOps(parsedRows);
+
+    // writeBatch는 한 번에 최대 500개 쓰기. 여유를 두고 450개씩 끊어 커밋.
+    const CHUNK = 450;
+    for (let i = 0; i < ops.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      for (const { id, data } of ops.slice(i, i + CHUNK)) {
+        batch.set(doc(db, "transactions", id), data);
+      }
+      await batch.commit();
     }
     invalidateBalanceCache();
 
