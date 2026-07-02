@@ -139,7 +139,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
 /* ── 요약바 ── */
 .summary-bar {
-  display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+  display: grid; grid-template-columns: repeat(5, minmax(0,1fr));
   gap: 12px; padding: 1.25rem 1.5rem;
   background: var(--surface); border-bottom: 1px solid var(--border);
 }
@@ -150,7 +150,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .val.income { color: var(--income); }
 .val.expense { color: var(--expense); }
 .val.neutral { color: var(--text); }
+.val.warn { color: var(--var-text); }
 .val.accum { color: #534ab7; }
+
+/* 예산 카드 */
+.budget-card { cursor: pointer; transition: background 0.15s; }
+.budget-card:hover { background: #e9e5de; }
+.budget-card .budget-pbar { margin-top: 7px; background: rgba(0,0,0,0.08); }
+.budget-card .budget-unset-val { font-family: var(--font); font-size: 0.95rem; color: var(--text-2); }
+.budget-note { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; line-height: 1.5; }
 
 /* ── 뷰 컨테이너 ── */
 .view-container { flex: 1; padding: 1.5rem; overflow-y: auto; }
@@ -525,6 +533,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   .main-content { margin-left: 0; padding-bottom: 70px; }
   .mobile-tabs { display: grid; }
   .summary-bar { grid-template-columns: repeat(2, 1fr); padding: 1rem; }
+  .budget-card { grid-column: 1 / -1; } /* 예산 카드는 모바일에서 한 줄 전체 */
   .view-container { padding: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
 .add-btn span { display: none; }

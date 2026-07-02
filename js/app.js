@@ -6,12 +6,13 @@ import state from "./state.js";
 import { fmtMoney, showToast } from "./utils.js";
 import {
   fetchTransactions, fetchFixedItems,
-  applyFixedItemsToCurrentMonth, calcAccumulatedBalance
+  applyFixedItemsToCurrentMonth, calcAccumulatedBalance, fetchBudget
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
 import { setupTxModal }   from "./modals/txModal.js";
 import { setupFixedModal } from "./modals/fixedModal.js";
 import { setupCsvModal }  from "./modals/csvModal.js";
+import { setupBudgetModal, openBudgetModal } from "./modals/budgetModal.js";
 import { renderCalendarView } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
@@ -19,12 +20,19 @@ import { renderFixedView }    from "./views/fixed.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
+// 로그아웃 → 재로그인 시 onAuthStateChanged가 initApp을 다시 호출하므로,
+// 이벤트 리스너는 최초 1회만 등록한다 (중복 등록 시 클릭당 여러 번 실행됨).
+let listenersBound = false;
+
 export async function initApp() {
   updateMonthLabel();
   await loadAllData();
-  setupMonthNav();
-  setupViewNav();
-  setupMobileMenu();
+  if (!listenersBound) {
+    setupMonthNav();
+    setupViewNav();
+    setupMobileMenu();
+    listenersBound = true;
+  }
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────
@@ -33,6 +41,7 @@ async function loadAllData() {
   await Promise.all([
     fetchTransactions(),
     fetchFixedItems(),
+    fetchBudget(),
   ]);
   await applyFixedItemsToCurrentMonth();
   await fetchTransactions(); // 고정비 적용 후 재조회
@@ -85,7 +94,43 @@ async function renderSummary() {
     <div class="sum-card">
       <div class="lbl">누적 잔액</div>
       <div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}</div>
-      <div class="sub">${state.currentMonth > 1 ? "이전 달 포함" : "첫 달"}</div>
+      <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>
+    </div>
+    ${renderBudgetCard(totalExpense)}`;
+
+  // 예산 카드 클릭 → 설정 모달 (innerHTML 재생성이므로 매번 다시 바인딩)
+  document.getElementById("budgetCard").addEventListener("click", openBudgetModal);
+}
+
+// ── 예산 카드 ─────────────────────────────────────────────────
+
+function renderBudgetCard(totalExpense) {
+  if (state.budget == null) {
+    return `
+      <div class="sum-card budget-card unset" id="budgetCard" title="클릭해서 월 예산 설정">
+        <div class="lbl">예산</div>
+        <div class="val neutral budget-unset-val">설정하기</div>
+        <div class="sub">클릭해서 월 예산 설정</div>
+      </div>`;
+  }
+
+  const pct       = Math.round(totalExpense / state.budget * 100);
+  const barPct    = Math.min(100, pct);
+  const remaining = state.budget - totalExpense;
+  const over      = remaining < 0;
+  const warn      = !over && pct >= 80;
+  const barColor  = over ? "var(--expense)" : warn ? "var(--var-text)" : "var(--income)";
+  const valClass  = over ? "expense" : warn ? "warn" : "income";
+  const subText   = over
+    ? `예산 초과! (${pct}%)`
+    : `예산 ${fmtMoney(state.budget)} 중 ${pct}% 사용`;
+
+  return `
+    <div class="sum-card budget-card" id="budgetCard" title="클릭해서 월 예산 수정">
+      <div class="lbl">예산 ${over ? "초과" : "남음"}</div>
+      <div class="val ${valClass}">${over ? "-" : ""}${fmtMoney(remaining)}</div>
+      <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
+      <div class="sub">${subText}</div>
     </div>`;
 }
 
@@ -163,4 +208,5 @@ setupAuth();
 setupTxModal();
 setupFixedModal();
 setupCsvModal();
+setupBudgetModal();
 setupCategoryDetailModal();

@@ -23,5 +23,10 @@ service cloud.firestore {
     match /fixed_items/{docId} {
       allow read, write: if isAllowed();
     }
+
+    // 앱 설정 (월 예산 등)
+    match /settings/{docId} {
+      allow read, write: if isAllowed();
+    }
   }
 }

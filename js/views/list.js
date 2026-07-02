@@ -212,7 +212,8 @@ function renderTxRow(t) {
   const kindTag = t.kind === "fixed"
     ? `<span class="tag fixed">고정</span>`
     : `<span class="tag variable">변동</span>`;
-  const memoTag = t.memo ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
+  // 이름이 메모에서 파생되므로(txModal) 동일하면 중복 표시하지 않음
+  const memoTag = t.memo && t.memo !== t.name ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
 
   return `
     <div class="tx-item" data-id="${t.id}">

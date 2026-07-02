@@ -18,8 +18,11 @@ $XlsDir = Join-Path $ProjectRoot 'excel'
 $OutDir = Join-Path $XlsDir 'converted'
 
 function Get-Cat($industry, $merchant) {
+  # 관리비 — 가맹점 우선
+  if ($merchant -match '관리비|관리사무소') { return '관리비' }
+
   # 주거 (공과금) — 가맹점 우선
-  if ($merchant -match '도시가스|관리비|한국전력|^03전기\d+|^한전') { return '주거' }
+  if ($merchant -match '도시가스|한국전력|^03전기\d+|^한전') { return '주거' }
 
   # 식비
   if ($industry -match '할인점|슈퍼마켓|한식|중식|일식|양식|분식|카페|커피전문점|제과|제빵|뷔페|패스트푸드|음료|주류|편의점|도시락|치킨|피자|족발|보쌈|곱창|닭갈비|샤브|구이|찜|국수|쌀국수|찌개|탕|일반대중음식|농가공산품') { return '식비' }

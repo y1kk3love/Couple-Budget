@@ -5,7 +5,7 @@
 import state from "../state.js";
 import { showToast, todayStr, fmtMoney, setupAmountPresets, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName } from "../db.js";
+import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName } from "../db.js";
 import { renderAll } from "../app.js";
 
 let editingTxId = null;
@@ -159,8 +159,15 @@ export function setupTxModal() {
     closeModal();
 
     if (editingTxId) {
+      const prev = state.transactions.find(t => t.id === editingTxId);
       await updateTransaction(editingTxId, data);
-      showToast("수정되었습니다");
+
+      // 카테고리를 바꿨으면 같은 이름의 거래 전체(전 기간)에 전파
+      let synced = 0;
+      if (prev && prev.category !== data.category) {
+        synced = await updateCategoryByName(data.name, data.type, data.category, editingTxId);
+      }
+      showToast(synced > 0 ? `수정되었습니다 · 같은 이름 ${synced}건 카테고리 변경` : "수정되었습니다");
     } else {
       await addTransaction(data);
       showToast("추가되었습니다");

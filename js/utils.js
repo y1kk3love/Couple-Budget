@@ -35,11 +35,13 @@ export function todayStr() {
 }
 
 /** 토스트 알림 표시 */
+let toastTimer = null;
 export function showToast(msg) {
   const toast = document.getElementById("toast");
   toast.textContent = msg;
   toast.classList.remove("hidden");
-  setTimeout(() => toast.classList.add("hidden"), 2200);
+  clearTimeout(toastTimer); // 연속 호출 시 이전 타이머가 새 토스트를 조기에 숨기는 것 방지
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), 2200);
 }
 
 /** 금액 입력 빠른 버튼 그룹(.amount-presets) 바인딩.

@@ -6,7 +6,7 @@ import { db } from "../firebase.js";
 import {
   collection, doc,
   addDoc, updateDoc, deleteDoc,
-  getDocs, getDoc, setDoc,
+  getDocs, getDoc, setDoc, writeBatch,
   query, where, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
@@ -33,7 +33,12 @@ export async function fetchTransactions() {
     orderBy("date", "desc")
   );
   const snap = await getDocs(q);
-  state.transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // skip 마커(고정비 자동생성 거래를 사용자가 삭제한 흔적)는 화면에서 제외하고,
+  // applyFixedItemsToCurrentMonth가 재생성하지 않도록 ID만 따로 보관한다.
+  state.skippedFixedIds = new Set(rows.filter(t => t.skipped).map(t => t.fixedId));
+  state.transactions    = rows.filter(t => !t.skipped);
 }
 
 export async function addTransaction(data) {
@@ -46,8 +51,47 @@ export async function updateTransaction(id, data) {
   invalidateBalanceCache();
 }
 
+// 같은 이름(+같은 수입/지출 타입)의 모든 거래에 카테고리를 일괄 적용.
+// 전 기간 대상. excludeId(방금 직접 수정한 거래)와 skip 마커는 제외.
+// 반환값: 함께 변경된 건수.
+export async function updateCategoryByName(name, type, category, excludeId = null) {
+  const q = query(
+    collection(db, "transactions"),
+    where("name", "==", name),
+    where("type", "==", type)
+  );
+  const snap = await getDocs(q);
+
+  const targets = snap.docs.filter(d => {
+    if (d.id === excludeId) return false;
+    const t = d.data();
+    return !t.skipped && t.category !== category;
+  });
+  if (!targets.length) return 0;
+
+  const batch = writeBatch(db);
+  targets.forEach(d => batch.update(d.ref, { category }));
+  await batch.commit();
+  invalidateBalanceCache();
+  return targets.length;
+}
+
 export async function deleteTransaction(id) {
-  await deleteDoc(doc(db, "transactions", id));
+  const t = state.transactions.find(x => x.id === id);
+
+  if (t?.fromFixed && t.fixedId) {
+    // 고정비 자동생성 거래는 문서를 지우면 다음 방문 때 결정적 ID로 되살아난다.
+    // 대신 같은 ID를 skip 마커로 덮어써 "이 달은 건너뛰기"를 기록한다.
+    await setDoc(doc(db, "transactions", id), {
+      fixedId:   t.fixedId,
+      year:      t.year,
+      month:     t.month,
+      fromFixed: true,
+      skipped:   true,
+    });
+  } else {
+    await deleteDoc(doc(db, "transactions", id));
+  }
   invalidateBalanceCache();
 }
 
@@ -82,6 +126,7 @@ export async function syncFixedItemTransactions(id, data) {
 
   await Promise.all(snap.docs.map(d => {
     const t = d.data();
+    if (t.skipped) return null; // 삭제(건너뛰기)된 달은 갱신하지 않음
     if ((t.year * 100 + t.month) < currentYM) return null;
 
     const lastDay    = new Date(t.year, t.month, 0).getDate();
@@ -114,6 +159,7 @@ export async function applyFixedItemsToCurrentMonth() {
 
   for (const item of state.fixedItems) {
     if (appliedIds.has(item.id)) continue;
+    if (state.skippedFixedIds.has(item.id)) continue; // 이 달은 사용자가 삭제함
 
     // 시작 연월 이전 달에는 적용하지 않음
     if (item.startYear && item.startMonth) {
@@ -169,6 +215,7 @@ export async function fetchRecentTransactionsByName(name, excludeId = null, n = 
     snap.docs.forEach(d => {
       if (d.id === excludeId) return;
       const t = { id: d.id, ...d.data() };
+      if (t.skipped) return; // skip 마커는 name이 없음
       const n2 = t.name.toLowerCase();
       if (n2.includes(nameLower) || nameLower.includes(n2)) txs.push(t);
     });
@@ -219,6 +266,23 @@ export async function fetchMonthlySummary(months = 6) {
   return summary;
 }
 
+// ── 월 예산 (settings/budget 단일 문서) ───────────────────────
+
+export async function fetchBudget() {
+  const snap = await getDoc(doc(db, "settings", "budget"));
+  state.budget = snap.exists() ? (snap.data().amount ?? null) : null;
+}
+
+export async function saveBudget(amount) {
+  await setDoc(doc(db, "settings", "budget"), { amount });
+  state.budget = amount;
+}
+
+export async function deleteBudget() {
+  await deleteDoc(doc(db, "settings", "budget"));
+  state.budget = null;
+}
+
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
 
 export async function calcAccumulatedBalance() {
@@ -230,6 +294,7 @@ export async function calcAccumulatedBalance() {
 
   for (const d of snap.docs) {
     const t = d.data();
+    if (t.skipped) continue; // skip 마커는 금액이 없음
     // 현재 달 이전 데이터만 합산
     if (t.year > state.currentYear) continue;
     if (t.year === state.currentYear && t.month >= state.currentMonth) continue;

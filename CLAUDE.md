@@ -26,7 +26,7 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 ```
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
 js/state.js              ← single shared mutable state (currentYear/Month/View, transactions[], fixedItems[], currentUser)
-js/constants.js          ← CATEGORIES (expense×10, income×4) + getCategoryInfo()
+js/constants.js          ← CATEGORIES (expense×11, income×4) + getCategoryInfo()
 js/utils.js              ← fmtMoney, todayStr, showToast, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
@@ -35,7 +35,7 @@ js/views/{calendar,list,stats,fixed}.js          ← each exports render<Name>Vi
 js/modals/{txModal,fixedModal,csvModal}.js       ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
 ```
 
-Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()` plus the three modal `setup*` calls run on module load. `auth.js` then calls `initApp()` once a permitted user signs in.
+Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, the three modal `setup*` calls, and `setupCategoryDetailModal()` run on module load. `auth.js` then calls `initApp()` once a permitted user signs in.
 
 ### The render cycle
 
@@ -47,21 +47,30 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 
 `renderAll()` always rebuilds the summary bar plus the currently active view only. Views are not memoized — they `innerHTML =` their container each call and rebind listeners.
 
+### Aggregation caches
+
+`db.js` keeps two module-level `Map` caches — `balanceCache` (for `calcAccumulatedBalance()`) and `monthlySummaryCache` (for `fetchMonthlySummary()`, used by the stats view). Both are cleared only through `invalidateBalanceCache()`. **Any code that writes to the `transactions` collection must call `invalidateBalanceCache()` afterwards** — the `db.js` mutation helpers already do, but code writing directly to Firestore (e.g. `csvModal.js`) must call it explicitly, or the summary bar / stats will show stale numbers until reload.
+
 ### Month scoping
 
-`state.currentYear` / `state.currentMonth` define the active month. `fetchTransactions()` queries Firestore filtered by `year` and `month` fields, so transactions written elsewhere **must** include both fields or they will be invisible to the month view (the global `calcAccumulatedBalance()` in `db.js` is the only function that scans all transactions across months).
+`state.currentYear` / `state.currentMonth` define the active month. `fetchTransactions()` queries Firestore filtered by `year` and `month` fields, so transactions written elsewhere **must** include both fields or they will be invisible to the month view. Only three `db.js` functions look beyond the current month: `calcAccumulatedBalance()` (scans all transactions), `fetchMonthlySummary()` (last N months, stats view), and `fetchRecentTransactionsByName()` (last N months, tx modal suggestions).
 
 ### Fixed items → transactions materialization
 
-`fixed_items` are templates; they are materialized into the `transactions` collection on demand by `applyFixedItemsToCurrentMonth()` (called from `loadAllData()` every time the month changes). Each generated transaction is tagged `fromFixed: true` and `fixedId: <fixed_items.id>` so it is not re-applied. Important consequences:
+`fixed_items` are templates; they are materialized into the `transactions` collection on demand by `applyFixedItemsToCurrentMonth()` (called from `loadAllData()` every time the month changes). Each generated transaction uses the deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` written with `setDoc`, so concurrent sessions overwrite the same doc instead of duplicating it, and is tagged `fromFixed: true` / `fixedId` so it is skipped on re-apply. Important consequences:
 
-- Editing a fixed item must call `syncFixedItemTransactions()` to propagate changes to already-materialized transactions.
+- Editing a fixed item must call `syncFixedItemTransactions()` to propagate changes to already-materialized transactions — but it deliberately only touches the current month and later; past months are preserved as historical record.
 - The day-of-month is clamped against the target month's last day (e.g. day 31 in February becomes 28/29).
 - A fixed item's `startYear`/`startMonth` gates application; earlier months are skipped.
+- Deleting a materialized fixed transaction does **not** delete the doc — `deleteTransaction()` overwrites it with a skip marker (`{skipped: true, fixedId, year, month, fromFixed: true}`, no amount/name) so the deterministic ID can't resurrect it. `fetchTransactions()` filters skip markers out of `state.transactions` and collects them into `state.skippedFixedIds`; all-collection scans (`calcAccumulatedBalance`, `fetchRecentTransactionsByName`, `syncFixedItemTransactions`) must guard against `t.skipped` docs, which lack `amount`/`name`.
+
+### Monthly budget
+
+A single expense budget (same amount every month) lives in the `settings/budget` Firestore doc as `{amount}`, loaded into `state.budget` by `fetchBudget()` on every `loadAllData()`. The summary bar renders a fifth card (`renderBudgetCard()` in `js/app.js`) with a progress bar (green → orange at ≥80% → red over budget); clicking it opens `js/modals/budgetModal.js`. The `settings` collection must be allowed in `firestore.rules` (already included — re-paste rules into the console when deploying).
 
 ### CSV import
 
-`js/modals/csvModal.js` auto-detects Shinhan Card column headers using regex (`날짜|일자|거래일`, `금액|이용금액`, etc.) and writes directly to the `transactions` collection (bypassing `db.js`). After import, the caller must `fetchTransactions()` + `renderAll()` to refresh.
+`js/modals/csvModal.js` auto-detects Shinhan Card column headers using regex (`날짜|일자|거래일`, `금액|이용금액`, etc.) and writes directly to the `transactions` collection via `writeBatch` in chunks of 450 (bypassing the `db.js` mutation helpers, so it calls `invalidateBalanceCache()` itself). Each row gets a deterministic doc ID `csv_<date>_<amount>_<nameHash>_<occ>`, so re-importing the same CSV overwrites instead of duplicating (`occ` disambiguates genuinely identical rows within one file). After import, the caller must `fetchTransactions()` + `renderAll()` to refresh.
 
 The importer reads the uploaded file as **EUC-KR**, not UTF-8 (`reader.readAsText(file, "euc-kr")`) — a UTF-8 CSV with Korean headers/values will mojibake and fail header detection.
 
