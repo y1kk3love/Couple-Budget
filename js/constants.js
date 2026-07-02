@@ -7,6 +7,7 @@ export const CATEGORIES = {
     { id: "food",      name: "식비",     color: "#e67e22" },
     { id: "transport", name: "교통",     color: "#2980b9" },
     { id: "housing",   name: "주거",     color: "#8e44ad" },
+    { id: "rent",      name: "월세",     color: "#c0679f" },
     { id: "mgmt",      name: "관리비",   color: "#8d6e63" },
     { id: "health",    name: "의료/건강", color: "#27ae60" },
     { id: "shopping",  name: "쇼핑",     color: "#e74c3c" },

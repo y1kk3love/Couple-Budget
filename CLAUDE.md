@@ -26,7 +26,7 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 ```
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
 js/state.js              ← single shared mutable state (currentYear/Month/View, transactions[], fixedItems[], currentUser)
-js/constants.js          ← CATEGORIES (expense×11, income×4) + getCategoryInfo()
+js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo()
 js/utils.js              ← fmtMoney, todayStr, showToast, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
