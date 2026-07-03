@@ -38,16 +38,19 @@ function getPlan(email) {
 // ── 카드 렌더 ─────────────────────────────────────────────────
 
 function renderCard(email, isMine) {
-  const title = isMine ? "내 예산안" : "상대 예산안";
+  const plan  = getPlan(email);
+  // 표시 이름이 설정되어 있으면 "OO의 예산안", 없으면 기본 문구
+  const title = plan?.name
+    ? `${escapeHtml(plan.name)}의 예산안`
+    : (isMine ? "내 예산안" : "상대 예산안");
+  const meTag = isMine ? `<span class="plan-me-tag">나</span>` : "";
   const sub   = escapeHtml(email?.split("@")[0] ?? "");
 
-  if (isMine && editing) return renderEditCard(title, sub);
-
-  const plan = getPlan(email);
+  if (isMine && editing) return renderEditCard(`${title}${meTag}`, sub);
   if (!plan) {
     return `
       <div class="plan-card">
-        <div class="plan-head"><span class="plan-title">${title}</span><span class="plan-sub">${sub}</span></div>
+        <div class="plan-head"><span class="plan-title">${title}${meTag}</span><span class="plan-sub">${sub}</span></div>
         <div class="plan-empty">
           <p>아직 예산안이 없습니다</p>
           ${isMine ? `<button class="save-btn" id="planCreateBtn">예산안 만들기</button>` : ""}
@@ -69,7 +72,7 @@ function renderCard(email, isMine) {
   return `
     <div class="plan-card">
       <div class="plan-head">
-        <span class="plan-title">${title}</span>
+        <span class="plan-title">${title}${meTag}</span>
         <span class="plan-sub">${sub} · 월급 ${fmtMoney(plan.income)}원</span>
       </div>
       <div class="plan-donut-wrap">${donutSVG(plan.income, plan.items, remain)}</div>
@@ -124,6 +127,8 @@ function renderEditCard(title, sub) {
     <div class="plan-card">
       <div class="plan-head"><span class="plan-title">${title}</span><span class="plan-sub">${sub}</span></div>
       <div class="plan-edit">
+        <label>표시 이름</label>
+        <input type="text" id="peName" placeholder="예: 바오랍" maxlength="20" value="${escapeHtml(draft.name ?? "")}" />
         <label>월급</label>
         <input type="number" id="peIncome" placeholder="0" min="0" value="${draft.income || ""}" />
         <label>배정 항목</label>
@@ -139,6 +144,7 @@ function renderEditCard(title, sub) {
 
 // 입력 중이던 값을 draft로 회수 (행 추가/삭제로 재렌더해도 유지되도록)
 function syncDraft(container) {
+  draft.name   = container.querySelector("#peName")?.value.trim() ?? "";
   draft.income = parseInt(container.querySelector("#peIncome")?.value) || 0;
   draft.items  = [...container.querySelectorAll(".plan-edit-row")].map(row => ({
     name:   row.querySelector(".pe-name").value.trim(),
@@ -152,8 +158,8 @@ function bindEvents(container, myEmail) {
   const startEdit = () => {
     const plan = getPlan(myEmail);
     draft = plan
-      ? { income: plan.income, items: plan.items.map(i => ({ ...i })) }
-      : { income: "", items: [{ name: "", amount: "" }] };
+      ? { name: plan.name ?? "", income: plan.income, items: plan.items.map(i => ({ ...i })) }
+      : { name: "", income: "", items: [{ name: "", amount: "" }] };
     editing = true;
     renderPlanView();
   };
@@ -187,7 +193,7 @@ function bindEvents(container, myEmail) {
     const items  = draft.items.filter(i => i.name && i.amount > 0);
     if (!income || income <= 0) { showToast("월급을 입력하세요"); return; }
 
-    await saveBudgetPlan(myEmail, { owner: myEmail, income, items });
+    await saveBudgetPlan(myEmail, { owner: myEmail, name: draft.name, income, items });
     editing = false;
     draft = null;
     await fetchBudgetPlans();

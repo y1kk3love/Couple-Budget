@@ -509,6 +509,10 @@ body {
 .plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
 .plan-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 0.5rem; }
 .plan-title { font-size: 0.95rem; font-weight: 600; }
+.plan-me-tag {
+  display: inline-block; font-size: 0.65rem; padding: 1px 7px; border-radius: 8px;
+  background: var(--income-bg); color: var(--income); margin-left: 6px; vertical-align: 2px;
+}
 .plan-sub { font-size: 0.78rem; color: var(--text-2); }
 .plan-donut-wrap { display: flex; justify-content: center; margin: 0.5rem 0; }
 .plan-donut-lbl { font-size: 0.7rem; fill: var(--text-3); }
