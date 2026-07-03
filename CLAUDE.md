@@ -35,7 +35,7 @@ js/utils.js              ← fmtMoney, todayStr, showToast, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
-js/views/{calendar,list,stats,fixed}.js          ← each exports render<Name>View() that fills its #view-<name> div
+js/views/{calendar,list,stats,fixed,plan}.js     ← each exports render<Name>View() that fills its #view-<name> div
 js/modals/{txModal,fixedModal,csvModal}.js       ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
 ```
 
@@ -71,6 +71,10 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 ### Monthly budget
 
 A single expense budget (same amount every month) lives in the `settings/budget` Firestore doc as `{amount}`, loaded into `state.budget` by `fetchBudget()` on every `loadAllData()`. The summary bar renders a fifth card (`renderBudgetCard()` in `js/app.js`) with a progress bar (green → orange at ≥80% → red over budget); clicking it opens `js/modals/budgetModal.js`. The `settings` collection must be allowed in `firestore.rules` (already included — re-paste rules into the console when deploying).
+
+### Personal budget plans (예산안)
+
+The `plan` view is a per-person salary allocation planner, independent of actual transactions and month navigation. Each of the two users has at most one plan in the `budget_plans` collection (doc ID = their email): `{owner, income, items: [{name, amount}]}`. Both users can see both plans; the client only allows editing your own (Firestore rules allow either — enforcement is UI-level only). Item colors are auto-assigned by cycling `CATEGORIES.expense` colors; the donut chart shows allocations plus remaining (or over-allocation in red). `fetchBudgetPlans()` swallows permission errors so the app still works if `budget_plans` is missing from the deployed rules — but the view will look empty; re-paste `firestore.rules` into the console when deploying this feature.
 
 ### CSV import
 

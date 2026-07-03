@@ -28,5 +28,10 @@ service cloud.firestore {
     match /settings/{docId} {
       allow read, write: if isAllowed();
     }
+
+    // 개인 예산안 (문서 ID = 이메일, 서로 열람 가능)
+    match /budget_plans/{docId} {
+      allow read, write: if isAllowed();
+    }
   }
 }

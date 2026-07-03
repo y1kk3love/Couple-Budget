@@ -15,6 +15,8 @@ const state = {
   skippedFixedIds: new Set(),
   // 월 지출 예산 (settings/budget 문서, 미설정 시 null)
   budget:        null,
+  // 개인 예산안 (budget_plans 컬렉션, 문서 ID = 이메일)
+  budgetPlans:   [],
 };
 
 export default state;

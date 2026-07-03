@@ -6,7 +6,8 @@ import state from "./state.js";
 import { fmtMoney, showToast } from "./utils.js";
 import {
   fetchTransactions, fetchFixedItems,
-  applyFixedItemsToCurrentMonth, calcAccumulatedBalance, fetchBudget
+  applyFixedItemsToCurrentMonth, calcAccumulatedBalance, fetchBudget,
+  fetchBudgetPlans
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
 import { setupTxModal }   from "./modals/txModal.js";
@@ -17,6 +18,7 @@ import { renderCalendarView } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
+import { renderPlanView }     from "./views/plan.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ async function loadAllData() {
     fetchTransactions(),
     fetchFixedItems(),
     fetchBudget(),
+    fetchBudgetPlans(),
   ]);
   await applyFixedItemsToCurrentMonth();
   await fetchTransactions(); // 고정비 적용 후 재조회
@@ -57,6 +60,7 @@ export function renderAll() {
     case "list":     renderListView();     break;
     case "stats":    renderStatsView();    break;
     case "fixed":    renderFixedView();    break;
+    case "plan":     renderPlanView();     break;
   }
 }
 

@@ -283,6 +283,23 @@ export async function deleteBudget() {
   state.budget = null;
 }
 
+// ── 개인 예산안 (budget_plans, 문서 ID = 이메일) ───────────────
+// 월급에서 항목별 배정을 미리 짜보는 계획표. 월과 무관하게 1인 1문서 유지.
+
+export async function fetchBudgetPlans() {
+  try {
+    const snap = await getDocs(collection(db, "budget_plans"));
+    state.budgetPlans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch {
+    // rules에 budget_plans가 아직 게시되지 않은 경우 앱 전체가 죽지 않도록 무시
+    state.budgetPlans = [];
+  }
+}
+
+export async function saveBudgetPlan(email, data) {
+  await setDoc(doc(db, "budget_plans", email), data);
+}
+
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
 
 export async function calcAccumulatedBalance() {

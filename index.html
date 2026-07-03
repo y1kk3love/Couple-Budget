@@ -54,6 +54,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           고정비
         </button>
+        <button class="nav-btn" data-view="plan">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+          예산안
+        </button>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info" id="sidebarUser"></div>
@@ -97,6 +101,7 @@
         <div id="view-list" class="view"></div>
         <div id="view-stats" class="view"></div>
         <div id="view-fixed" class="view"></div>
+        <div id="view-plan" class="view"></div>
       </div>
     </main>
 
@@ -120,6 +125,10 @@
       <button class="mob-tab" data-view="fixed">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         고정비
+      </button>
+      <button class="mob-tab" data-view="plan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+        예산안
       </button>
     </nav>
   </div>
