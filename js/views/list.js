@@ -198,7 +198,7 @@ function renderGrouped(sorted) {
     const [, , dd]  = date.split("-");
     const dayTotal  = items.reduce((s, t) => t.type === "income" ? s + t.amount : s - t.amount, 0);
     const color     = dayTotal >= 0 ? "var(--income)" : "var(--expense)";
-    const sign      = dayTotal >= 0 ? "+" : "";
+    const sign      = dayTotal > 0 ? "+" : dayTotal < 0 ? "-" : "";
     return `
       <div class="list-group">
         <div class="list-date-header">
