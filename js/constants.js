@@ -2,26 +2,27 @@
 // js/constants.js — 상수 및 카테고리 설정
 // ================================================================
 
+// 파스텔 톤 팔레트 — 채도·명도를 비슷하게 맞춰 차트/점 표시가 조화롭게 보이도록.
 export const CATEGORIES = {
   expense: [
-    { id: "food",      name: "식비",     color: "#e67e22" },
-    { id: "transport", name: "교통",     color: "#2980b9" },
-    { id: "housing",   name: "주거",     color: "#8e44ad" },
-    { id: "rent",      name: "월세",     color: "#c0679f" },
-    { id: "mgmt",      name: "관리비",   color: "#8d6e63" },
-    { id: "health",    name: "의료/건강", color: "#27ae60" },
-    { id: "shopping",  name: "쇼핑",     color: "#e74c3c" },
-    { id: "culture",   name: "문화/여가", color: "#16a085" },
-    { id: "sub",       name: "구독",     color: "#2c3e50" },
-    { id: "beauty",    name: "미용",     color: "#d35400" },
-    { id: "edu",       name: "교육",     color: "#1abc9c" },
-    { id: "etc",       name: "기타",     color: "#95a5a6" },
+    { id: "food",      name: "식비",     color: "#f4a261" },
+    { id: "transport", name: "교통",     color: "#7fb3d5" },
+    { id: "housing",   name: "주거",     color: "#b39ddb" },
+    { id: "rent",      name: "월세",     color: "#f2a6c2" },
+    { id: "mgmt",      name: "관리비",   color: "#c9a48c" },
+    { id: "health",    name: "의료/건강", color: "#86c7a1" },
+    { id: "shopping",  name: "쇼핑",     color: "#ef9a9a" },
+    { id: "culture",   name: "문화/여가", color: "#80cbc4" },
+    { id: "sub",       name: "구독",     color: "#9fa8da" },
+    { id: "beauty",    name: "미용",     color: "#ffab91" },
+    { id: "edu",       name: "교육",     color: "#90caf9" },
+    { id: "etc",       name: "기타",     color: "#b0bec5" },
   ],
   income: [
-    { id: "salary",   name: "월급",   color: "#1a7a55" },
-    { id: "extra",    name: "부수입", color: "#2980b9" },
-    { id: "transfer", name: "이체",   color: "#8e44ad" },
-    { id: "etc_in",   name: "기타",   color: "#95a5a6" },
+    { id: "salary",   name: "월급",   color: "#81c784" },
+    { id: "extra",    name: "부수입", color: "#7fb3d5" },
+    { id: "transfer", name: "이체",   color: "#b39ddb" },
+    { id: "etc_in",   name: "기타",   color: "#b0bec5" },
   ]
 };
 
