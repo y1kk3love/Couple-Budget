@@ -34,9 +34,18 @@ export function renderListView() {
 
 // ── 필터 로직 ─────────────────────────────────────────────────
 
+// 검색어를 공백 단위로 쪼개 이름·메모에 하나라도 포함되면 통과 (대소문자 무시).
+// 예: "스타벅스 커피" → "스타벅스"만 있어도, "커피"만 있어도 표시.
+function matchesName(t, query) {
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const hay = `${t.name} ${t.memo ?? ""}`.toLowerCase();
+  return tokens.some(tok => hay.includes(tok));
+}
+
 function applyFilters(txs) {
   return txs.filter(t => {
-    if (filters.name     && !t.name.includes(filters.name))   return false;
+    if (filters.name     && !matchesName(t, filters.name))     return false;
     if (filters.category && t.category !== filters.category)   return false;
     if (filters.minAmount && t.amount < Number(filters.minAmount)) return false;
     if (filters.maxAmount && t.amount > Number(filters.maxAmount)) return false;
