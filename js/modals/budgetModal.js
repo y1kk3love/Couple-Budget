@@ -44,6 +44,7 @@ export function setupBudgetModal() {
 
   // 설정 해제
   document.getElementById("budgetDeleteBtn").addEventListener("click", async () => {
+    if (!confirm("예산 설정을 해제하시겠습니까?")) return;
     closeModal();
     await deleteBudget();
     showToast("예산 설정이 해제되었습니다");
