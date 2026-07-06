@@ -177,10 +177,8 @@ function sortTransactions(txs) {
   return txs.sort((a, b) => {
     let cmp = 0;
     if (sortKey === "date")     cmp = a.date.localeCompare(b.date);
-    if (sortKey === "amount") {
-      const signed = t => t.type === "income" ? t.amount : -t.amount;
-      cmp = signed(a) - signed(b);
-    }
+    if (sortKey === "amount")   cmp = a.amount - b.amount; // 수입/지출 구분 없이 절대 금액 기준
+
     if (sortKey === "category") cmp = a.category.localeCompare(b.category);
     if (sortKey === "name")     cmp = a.name.localeCompare(b.name);
     return sortDir === "asc" ? cmp : -cmp;
