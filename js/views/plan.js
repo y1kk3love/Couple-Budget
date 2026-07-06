@@ -17,22 +17,86 @@ const DONUT_C = 339.292; // 반지름 54 원둘레
 let editing = false;   // 내 예산안 수정 모드
 let draft   = null;    // 수정 중 임시값 { income, items:[{name, amount}] }
 
+// ── 정렬 상태 (두 카드에 공통 적용) ───────────────────────────
+let sortKey = "default"; // "default"(저장 순서) | "name" | "amount"
+let sortDir = "asc";
+
 export function renderPlanView() {
   const container = document.getElementById("view-plan");
   const myEmail   = state.currentUser?.email;
   const partner   = ALLOWED_EMAILS.find(e => e !== myEmail);
 
   container.innerHTML = `
+    ${renderSortBar()}
     <div class="plan-grid">
       ${renderCard(myEmail, true)}
       ${partner ? renderCard(partner, false) : ""}
     </div>`;
 
+  bindSortEvents(container);
   bindEvents(container, myEmail);
 }
 
 function getPlan(email) {
   return state.budgetPlans.find(p => p.id === email) ?? null;
+}
+
+// ── 정렬 ──────────────────────────────────────────────────────
+
+// 색은 저장된 순서 기준으로 먼저 고정한 뒤 정렬한다.
+// 정렬 방식을 바꿔도 각 항목의 색(도넛·행)이 따라 바뀌지 않게 하기 위함.
+function sortedItems(items) {
+  const colored = items.map((it, i) => ({ ...it, color: PLAN_COLORS[i % PLAN_COLORS.length] }));
+  if (sortKey === "default") return colored;
+
+  return colored.sort((a, b) => {
+    const cmp = sortKey === "name"
+      ? a.name.localeCompare(b.name, "ko")
+      : a.amount - b.amount;
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+}
+
+function renderSortBar() {
+  // 표시할 항목이 하나도 없으면 정렬 바도 숨긴다
+  if (!state.budgetPlans.some(p => p.items?.length)) return "";
+
+  const keys = [
+    { key: "default", label: "기본" },
+    { key: "name",    label: "이름" },
+    { key: "amount",  label: "금액" },
+  ];
+  const keyBtns = keys.map(({ key, label }) => `
+    <button class="sort-key-btn ${sortKey === key ? "active" : ""}" data-sort-key="${key}">${label}</button>`
+  ).join("");
+
+  // 기본(저장 순서)일 때는 방향 토글이 의미 없으므로 숨김
+  const dirBtn = sortKey === "default" ? "" : `
+    <button class="sort-dir-btn" id="planSortDirBtn">${sortDir === "asc" ? "↑ 오름차순" : "↓ 내림차순"}</button>`;
+
+  return `
+    <div class="sort-bar">
+      <div class="sort-keys">${keyBtns}</div>
+      ${dirBtn}
+    </div>`;
+}
+
+function bindSortEvents(container) {
+  container.querySelectorAll(".sort-key-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.sortKey;
+      if (key !== sortKey) {
+        sortKey = key;
+        // 키 전환 시 자연스러운 기본 방향: 이름은 가나다순, 금액은 큰 순
+        sortDir = key === "amount" ? "desc" : "asc";
+      }
+      renderPlanView();
+    });
+  });
+  container.querySelector("#planSortDirBtn")?.addEventListener("click", () => {
+    sortDir = sortDir === "asc" ? "desc" : "asc";
+    renderPlanView();
+  });
 }
 
 // ── 카드 렌더 ─────────────────────────────────────────────────
@@ -60,10 +124,11 @@ function renderCard(email, isMine) {
 
   const total  = plan.items.reduce((s, i) => s + i.amount, 0);
   const remain = plan.income - total;
+  const items  = sortedItems(plan.items);
 
-  const rows = plan.items.map((it, i) => `
+  const rows = items.map(it => `
     <div class="plan-row">
-      <span class="plan-dot" style="background:${PLAN_COLORS[i % PLAN_COLORS.length]}"></span>
+      <span class="plan-dot" style="background:${it.color}"></span>
       <span class="plan-name">${escapeHtml(it.name)}</span>
       <span class="plan-pct">${plan.income > 0 ? Math.round(it.amount / plan.income * 100) : 0}%</span>
       <span class="plan-amt">${fmtMoney(it.amount)}</span>
@@ -75,13 +140,14 @@ function renderCard(email, isMine) {
         <span class="plan-title">${title}${meTag}</span>
         <span class="plan-sub">${sub} · 월급 ${fmtMoney(plan.income)}원</span>
       </div>
-      <div class="plan-donut-wrap">${donutSVG(plan.income, plan.items, remain)}</div>
+      <div class="plan-donut-wrap">${donutSVG(plan.income, items, remain)}</div>
       <div class="plan-rows">${rows}</div>
       ${isMine ? `<button class="plan-edit-btn" id="planEditBtn">수정</button>` : ""}
     </div>`;
 }
 
 // ── 도넛 차트 ─────────────────────────────────────────────────
+// items는 sortedItems()를 거친 배열(색 포함) — 세그먼트 순서가 행 순서와 일치한다.
 
 function donutSVG(income, items, remain) {
   const total = items.reduce((s, i) => s + i.amount, 0);
@@ -90,9 +156,9 @@ function donutSVG(income, items, remain) {
   const base  = over ? total : income;
 
   let off = 0;
-  const segs = items.map((it, i) => {
+  const segs = items.map(it => {
     const len = base > 0 ? (it.amount / base) * DONUT_C : 0;
-    const seg = `<circle cx="70" cy="70" r="54" stroke="${PLAN_COLORS[i % PLAN_COLORS.length]}"
+    const seg = `<circle cx="70" cy="70" r="54" stroke="${it.color}"
       stroke-dasharray="${len} ${DONUT_C}" stroke-dashoffset="${-off}"/>`;
     off += len;
     return seg;
