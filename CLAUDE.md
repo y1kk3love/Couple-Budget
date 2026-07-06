@@ -31,15 +31,15 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
 js/state.js              ← single shared mutable state (currentYear/Month/View, transactions[], fixedItems[], currentUser)
 js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo()
-js/utils.js              ← fmtMoney, todayStr, showToast, emptyStateHTML
+js/utils.js              ← fmtMoney, escapeHtml, todayStr, showToast, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
 js/views/{calendar,list,stats,fixed,plan}.js     ← each exports render<Name>View() that fills its #view-<name> div
-js/modals/{txModal,fixedModal,csvModal}.js       ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
+js/modals/{txModal,fixedModal,csvModal,budgetModal}.js  ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
 ```
 
-Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, the three modal `setup*` calls, and `setupCategoryDetailModal()` run on module load. `auth.js` then calls `initApp()` once a permitted user signs in.
+Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, the four modal `setup*` calls, and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click.
 
 ### The render cycle
 
@@ -54,6 +54,10 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 ### Aggregation caches
 
 `db.js` keeps two module-level `Map` caches — `balanceCache` (for `calcAccumulatedBalance()`) and `monthlySummaryCache` (for `fetchMonthlySummary()`, used by the stats view). Both are cleared only through `invalidateBalanceCache()`. **Any code that writes to the `transactions` collection must call `invalidateBalanceCache()` afterwards** — the `db.js` mutation helpers already do, but code writing directly to Firestore (e.g. `csvModal.js`) must call it explicitly, or the summary bar / stats will show stale numbers until reload.
+
+### Transaction names and category propagation
+
+The tx modal has no name input: a transaction's `name` is the trimmed memo, falling back to the category label (`txModal.js` save handler). `name` drives the tx modal's recent-history suggestions (`fetchRecentTransactionsByName()`) and category propagation: when an edit changes a transaction's category, `updateCategoryByName()` batch-applies the new category to **every** transaction with the same `name`+`type` across all months. This app-wide side effect is intentional (a merchant's category correction should apply everywhere) — keep it in mind when touching the edit flow.
 
 ### Month scoping
 
