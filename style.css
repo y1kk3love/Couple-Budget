@@ -544,6 +544,13 @@ body {
 .plan-edit-row { display: flex; gap: 6px; align-items: center; }
 .plan-edit-row .pe-name { flex: 1.4; }
 .plan-edit-row .pe-amount { flex: 1; }
+.pe-drag {
+  cursor: grab; touch-action: none; user-select: none;
+  color: var(--text-3); font-size: 0.9rem; padding: 0 2px; flex-shrink: 0;
+}
+.pe-drag:active { cursor: grabbing; }
+.plan-edit-row.dragging { opacity: 0.55; }
+.plan-edit-row.dragging input { pointer-events: none; }
 .pe-del {
   background: none; border: none; color: var(--text-3); font-size: 1.1rem;
   cursor: pointer; padding: 0 4px; flex-shrink: 0;
