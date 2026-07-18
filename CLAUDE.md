@@ -31,7 +31,7 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
 js/state.js              ← single shared mutable state (currentYear/Month/View, transactions[], fixedItems[], currentUser)
 js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo()
-js/utils.js              ← fmtMoney, escapeHtml, todayStr, showToast, emptyStateHTML
+js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, todayStr, showToast, setupAmountPresets, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
@@ -51,6 +51,10 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 
 `renderAll()` always rebuilds the summary bar plus the currently active view only. Views are not memoized — they `innerHTML =` their container each call and rebind listeners.
 
+Because re-rendering wipes all DOM state, transient UI state lives in **module-level variables** inside the owning view/modal module: `list.js` keeps its sort key/direction and filter values, `plan.js` keeps its sort state plus the edit-mode `draft` object, `txModal.js` keeps `editingTxId`. New UI state that must survive a re-render follows this pattern (note it also survives view switches and logout/login, since modules are never reloaded — reset it explicitly if that's not wanted).
+
+A view that needs async data after its synchronous render (e.g. `stats.js` filling the monthly-compare card from `fetchMonthlySummary()`) renders a loading placeholder, then in the `.then()` re-checks that its target element still exists — the user may have switched views or months before the fetch resolved.
+
 ### Aggregation caches
 
 `db.js` keeps two module-level `Map` caches — `balanceCache` (for `calcAccumulatedBalance()`) and `monthlySummaryCache` (for `fetchMonthlySummary()`, used by the stats view). Both are cleared only through `invalidateBalanceCache()`. **Any code that writes to the `transactions` collection must call `invalidateBalanceCache()` afterwards** — the `db.js` mutation helpers already do, but code writing directly to Firestore (e.g. `csvModal.js`) must call it explicitly, or the summary bar / stats will show stale numbers until reload.
@@ -58,6 +62,10 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 ### Transaction names and category propagation
 
 The tx modal has no name input: a transaction's `name` is the trimmed memo, falling back to the category label (`txModal.js` save handler). `name` drives the tx modal's recent-history suggestions (`fetchRecentTransactionsByName()`) and category propagation: when an edit changes a transaction's category, `updateCategoryByName()` batch-applies the new category to **every** transaction with the same `name`+`type` across all months. This app-wide side effect is intentional (a merchant's category correction should apply everywhere) — keep it in mind when touching the edit flow.
+
+### Firestore document shapes
+
+The field-by-field schemas for `transactions` and `fixed_items` docs are documented in `README.md` (§ Firestore 데이터 구조). Note `fixed_items` also carry an optional `day` (day-of-month, defaulting to 1) used by the materialization described below.
 
 ### Month scoping
 
