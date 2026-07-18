@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, setupAmountPresets } from "../utils.js";
+import { showToast, showConfirm, setupAmountPresets } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import { saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions } from "../db.js";
 import { renderAll } from "../app.js";
@@ -110,7 +110,8 @@ export function setupFixedModal() {
   // 삭제
   document.getElementById("fixedDeleteBtn").addEventListener("click", async () => {
     const id = document.getElementById("fixedEditId").value;
-    if (!id || !confirm("삭제하시겠습니까?")) return;
+    if (!id) return;
+    if (!(await showConfirm("이 고정비를 삭제할까요?\n이미 기록된 달의 내역은 유지됩니다.", { confirmText: "삭제" }))) return;
     closeModal();
     await deleteFixedItem(id);
     showToast("삭제되었습니다");

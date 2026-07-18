@@ -7,20 +7,22 @@ import {
   collection, doc,
   addDoc, updateDoc, deleteDoc,
   getDocs, getDoc, setDoc, writeBatch,
-  query, where, orderBy
+  query, where, orderBy, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
 
 // ── 집계 캐시 ──────────────────────────────────────────────────
-// calcAccumulatedBalance / fetchMonthlySummary 둘 다 거래 변경 시
-// 같이 무효화되어야 하므로 같은 invalidate 진입점을 공유한다.
+// calcAccumulatedBalance / fetchMonthlySummary / fetchAllTransactions 모두
+// 거래 변경 시 같이 무효화되어야 하므로 같은 invalidate 진입점을 공유한다.
 
 const balanceCache         = new Map();
 const monthlySummaryCache  = new Map();
+let   allTxCache           = null;
 
 export function invalidateBalanceCache() {
   balanceCache.clear();
   monthlySummaryCache.clear();
+  allTxCache = null;
 }
 
 // ── 거래 내역 ──────────────────────────────────────────────────
@@ -77,7 +79,13 @@ export async function updateCategoryByName(name, type, category, excludeId = nul
 }
 
 export async function deleteTransaction(id) {
-  const t = state.transactions.find(x => x.id === id);
+  // 전체 기간 목록에서 삭제하는 경우 state.transactions(현재 달)에 없을 수 있어
+  // 문서를 직접 읽어 고정비 자동생성 여부를 확인한다.
+  let t = state.transactions.find(x => x.id === id);
+  if (!t) {
+    const snap = await getDoc(doc(db, "transactions", id));
+    t = snap.exists() ? snap.data() : null;
+  }
 
   if (t?.fromFixed && t.fixedId) {
     // 고정비 자동생성 거래는 문서를 지우면 다음 방문 때 결정적 ID로 되살아난다.
@@ -267,20 +275,50 @@ export async function fetchMonthlySummary(months = 6) {
 }
 
 // ── 월 예산 (settings/budget 단일 문서) ───────────────────────
+// 문서 형태: { amount: 기본 예산(매달 동일), months: {"YYYY-MM": 그 달 전용 예산} }
+// 현재 달 예산(state.budget)은 월별 전용 값이 있으면 그것을, 없으면 기본값을 쓴다.
+
+function currentYM() {
+  return `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
+}
+
+function resolveBudget() {
+  state.budget = state.budgetMonths[currentYM()] ?? state.budgetDefault;
+}
 
 export async function fetchBudget() {
   const snap = await getDoc(doc(db, "settings", "budget"));
-  state.budget = snap.exists() ? (snap.data().amount ?? null) : null;
+  const data = snap.exists() ? snap.data() : {};
+  state.budgetDefault = data.amount ?? null;
+  state.budgetMonths  = data.months ?? {};
+  resolveBudget();
 }
 
 export async function saveBudget(amount) {
-  await setDoc(doc(db, "settings", "budget"), { amount });
-  state.budget = amount;
+  await setDoc(doc(db, "settings", "budget"), { amount }, { merge: true });
+  state.budgetDefault = amount;
+  resolveBudget();
+}
+
+export async function saveMonthBudget(amount) {
+  const ym = currentYM();
+  await setDoc(doc(db, "settings", "budget"), { months: { [ym]: amount } }, { merge: true });
+  state.budgetMonths[ym] = amount;
+  resolveBudget();
+}
+
+export async function deleteMonthBudget() {
+  const ym = currentYM();
+  await updateDoc(doc(db, "settings", "budget"), { [`months.${ym}`]: deleteField() });
+  delete state.budgetMonths[ym];
+  resolveBudget();
 }
 
 export async function deleteBudget() {
   await deleteDoc(doc(db, "settings", "budget"));
-  state.budget = null;
+  state.budgetDefault = null;
+  state.budgetMonths  = {};
+  state.budget        = null;
 }
 
 // ── 개인 예산안 (budget_plans, 문서 ID = 이메일) ───────────────
@@ -298,6 +336,19 @@ export async function fetchBudgetPlans() {
 
 export async function saveBudgetPlan(email, data) {
   await setDoc(doc(db, "budget_plans", email), data);
+}
+
+// ── 전체 기간 거래 조회 (전체 검색·CSV 내보내기) ───────────────
+// skip 마커 제외, 최신 날짜순. 거래 변경 시 invalidateBalanceCache로 무효화된다.
+
+export async function fetchAllTransactions() {
+  if (allTxCache) return allTxCache;
+  const snap = await getDocs(collection(db, "transactions"));
+  allTxCache = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(t => !t.skipped)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return allTxCache;
 }
 
 // ── 누적 잔액 계산 ─────────────────────────────────────────────

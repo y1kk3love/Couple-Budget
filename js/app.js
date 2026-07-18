@@ -3,11 +3,12 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast } from "./utils.js";
+import { fmtMoney, showToast, todayStr, downloadCSV } from "./utils.js";
+import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
   applyFixedItemsToCurrentMonth, calcAccumulatedBalance, fetchBudget,
-  fetchBudgetPlans
+  fetchBudgetPlans, fetchAllTransactions
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
 import { setupTxModal }   from "./modals/txModal.js";
@@ -123,11 +124,15 @@ function renderBudgetCard(totalExpense) {
   const remaining = state.budget - totalExpense;
   const over      = remaining < 0;
   const warn      = !over && pct >= 80;
-  const barColor  = over ? "var(--expense)" : warn ? "var(--var-text)" : "var(--income)";
+  const barColor  = over ? "var(--expense)" : warn ? "var(--warn)" : "var(--income)";
   const valClass  = over ? "expense" : warn ? "warn" : "income";
-  const subText   = over
+
+  const ym         = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
+  const isOverride = state.budgetMonths?.[ym] != null;
+  const subText    = (over
     ? `예산 초과! (${pct}%)`
-    : `예산 ${fmtMoney(state.budget)} 중 ${pct}% 사용`;
+    : `예산 ${fmtMoney(state.budget)} 중 ${pct}% 사용`)
+    + (isOverride ? " · 이번 달 전용" : "");
 
   return `
     <div class="sum-card budget-card" id="budgetCard" title="클릭해서 월 예산 수정">
@@ -206,9 +211,34 @@ function setupMobileMenu() {
   });
 }
 
+// ── CSV 내보내기 ──────────────────────────────────────────────
+// 전체 기간 거래를 CSV로 다운로드 (엑셀 호환 UTF-8 BOM).
+
+async function exportAllCsv() {
+  if (!state.currentUser) return;
+  const txs = await fetchAllTransactions();
+  if (!txs.length) { showToast("내보낼 내역이 없습니다"); return; }
+
+  const rows = [["날짜", "이름", "금액", "구분", "카테고리", "고정/변동", "메모", "작성자"]];
+  txs.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(t => rows.push([
+    t.date,
+    t.name,
+    t.amount,
+    t.type === "income" ? "수입" : "지출",
+    getCategoryInfo(t.category, t.type).name,
+    t.kind === "fixed" ? "고정" : "변동",
+    t.memo ?? "",
+    t.owner ?? "",
+  ]));
+
+  downloadCSV(`우리가계부_${todayStr()}.csv`, rows);
+  showToast(`${txs.length}건을 내보냈습니다`);
+}
+
 // ── 앱 부트스트랩 ─────────────────────────────────────────────
 
 setupAuth();
+document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
 setupTxModal();
 setupFixedModal();
 setupCsvModal();

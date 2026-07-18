@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, todayStr, fmtMoney, setupAmountPresets, escapeHtml } from "../utils.js";
+import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName } from "../db.js";
 import { renderAll } from "../app.js";
@@ -34,8 +34,9 @@ export function openAddModal(dateStr = null) {
   );
 }
 
-export function openEditModal(id) {
-  const t = state.transactions.find(t => t.id === id);
+// tx: 현재 달 state에 없는 거래(전체 기간 목록)를 열 때 직접 전달
+export function openEditModal(id, tx = null) {
+  const t = tx ?? state.transactions.find(t => t.id === id);
   if (!t) return;
 
   editingTxId = id;
@@ -156,6 +157,9 @@ export function setupTxModal() {
       name:     document.getElementById("txMemo").value.trim() || getCategoryInfo(catId, type).name,
     };
 
+    // 새 내역에만 작성자를 기록 — 수정 시에는 원래 작성자를 보존한다
+    if (!editingTxId) data.owner = state.currentUser?.email ?? null;
+
     closeModal();
 
     if (editingTxId) {
@@ -179,7 +183,7 @@ export function setupTxModal() {
 
   // 삭제
   document.getElementById("deleteTxBtn").addEventListener("click", async () => {
-    if (!confirm("삭제하시겠습니까?")) return;
+    if (!(await showConfirm("이 내역을 삭제할까요?", { confirmText: "삭제" }))) return;
     closeModal();
     await deleteTransaction(editingTxId);
     showToast("삭제되었습니다");

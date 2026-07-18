@@ -46,9 +46,22 @@ function renderFixedRow(item) {
     <div class="fixed-item" data-id="${item.id}">
       <div class="fixed-cat-dot" style="background:${cat.color}"></div>
       <div class="fixed-info">
-        <div class="fixed-name">${escapeHtml(item.name)}</div>
+        <div class="fixed-name">${escapeHtml(item.name)} ${renderStatusTag(item)}</div>
         <div class="fixed-meta">${cat.name} · ${item.type === "income" ? "수입" : "지출"}${item.startYear ? ` · ${item.startYear}년 ${item.startMonth}월부터` : ""}</div>
       </div>
       <div class="fixed-amount ${amtCls}">${sign}${fmtMoney(item.amount)}</div>
     </div>`;
+}
+
+// 이번 달(현재 보고 있는 달) 기준 적용 상태 표시
+function renderStatusTag(item) {
+  if (state.skippedFixedIds.has(item.id)) {
+    return `<span class="tag skipped">이번 달 건너뜀</span>`;
+  }
+  if (state.transactions.some(t => t.fromFixed && t.fixedId === item.id)) {
+    return `<span class="tag applied">이번 달 반영</span>`;
+  }
+  const future = item.startYear &&
+    item.startYear * 100 + item.startMonth > state.currentYear * 100 + state.currentMonth;
+  return future ? `<span class="tag future">적용 전</span>` : "";
 }

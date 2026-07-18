@@ -3,9 +3,14 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, emptyStateHTML, escapeHtml } from "../utils.js";
+import { fmtMoney, emptyStateHTML, escapeHtml, ownerName } from "../utils.js";
 import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { openEditModal } from "../modals/txModal.js";
+import { fetchAllTransactions } from "../db.js";
+
+// ── 조회 범위 ─────────────────────────────────────────────────
+// "month": 현재 달(state.transactions), "all": 전체 기간(fetchAllTransactions)
+let scope = "month";
 
 // ── 정렬 상태 ─────────────────────────────────────────────────
 let sortKey = "date";
@@ -17,18 +22,71 @@ let filterOpen = false;
 
 export function renderListView() {
   const container = document.getElementById("view-list");
-  const filtered  = applyFilters(state.transactions);
 
-  const html = `
+  container.innerHTML = `
+    ${renderToolbar()}
     ${renderSortControls()}
     ${renderFilterPanel()}
-    ${renderContent(filtered)}`;
+    <div id="listContent">${
+      scope === "all"
+        ? `<p class="list-loading">전체 기간 내역을 불러오는 중…</p>`
+        : renderContent(applyFilters(state.transactions))
+    }</div>`;
 
-  container.innerHTML = html;
+  bindScopeEvents(container);
   bindSortEvents(container);
   bindFilterEvents(container);
-  container.querySelectorAll(".tx-item[data-id]").forEach(el => {
-    el.addEventListener("click", () => openEditModal(el.dataset.id));
+
+  if (scope === "month") {
+    bindRowEvents(container);
+  } else {
+    // 전체 기간은 비동기 조회 — 완료 시점에 다른 뷰/범위로 이동했으면 무시
+    fetchAllTransactions().then(txs => {
+      if (state.currentView !== "list" || scope !== "all") return;
+      const content = container.querySelector("#listContent");
+      if (!content) return;
+      const filtered = applyFilters(txs);
+      content.innerHTML = renderContent(filtered);
+      bindRowEvents(content, new Map(filtered.map(t => [t.id, t])));
+    });
+  }
+}
+
+// 행 클릭 → 수정 모달. 전체 기간 모드에서는 현재 달 state에 없는 거래일 수
+// 있어 거래 객체를 직접 넘긴다.
+function bindRowEvents(root, lookup = null) {
+  root.querySelectorAll(".tx-item[data-id]").forEach(el => {
+    el.addEventListener("click", () =>
+      openEditModal(el.dataset.id, lookup?.get(el.dataset.id) ?? null)
+    );
+  });
+}
+
+// ── 상단 툴바 (기간 전환 + 필터 버튼) ─────────────────────────
+
+function renderToolbar() {
+  const activeCount = Object.values(filters).filter(v => v !== "").length;
+  const badge = activeCount > 0 ? `<span class="filter-badge">${activeCount}</span>` : "";
+
+  return `
+    <div class="list-toolbar">
+      <div class="scope-toggle">
+        <button class="scope-btn ${scope === "month" ? "active" : ""}" data-scope="month">이번 달</button>
+        <button class="scope-btn ${scope === "all" ? "active" : ""}" data-scope="all">전체 기간</button>
+      </div>
+      <button id="filterToggleBtn" class="filter-toggle-btn ${activeCount > 0 ? "has-filter" : ""}">
+        필터 ${badge}
+      </button>
+    </div>`;
+}
+
+function bindScopeEvents(container) {
+  container.querySelectorAll(".scope-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.scope === scope) return;
+      scope = btn.dataset.scope;
+      renderListView();
+    });
   });
 }
 
@@ -58,6 +116,8 @@ function applyFilters(txs) {
 // ── 필터 패널 UI ──────────────────────────────────────────────
 
 function renderFilterPanel() {
+  if (!filterOpen) return "";
+
   const catOptions = [
     `<optgroup label="지출">${CATEGORIES.expense.map(c =>
       `<option value="${c.id}" ${filters.category === c.id ? "selected" : ""}>${c.name}</option>`
@@ -67,10 +127,7 @@ function renderFilterPanel() {
     ).join("")}</optgroup>`,
   ].join("");
 
-  const activeCount = Object.values(filters).filter(v => v !== "").length;
-  const badge = activeCount > 0 ? `<span class="filter-badge">${activeCount}</span>` : "";
-
-  const panel = filterOpen ? `
+  return `
     <div class="filter-panel">
       <div class="filter-row">
         <label>이름</label>
@@ -103,15 +160,7 @@ function renderFilterPanel() {
         <button id="filterResetBtn" class="filter-reset-btn">초기화</button>
         <button id="filterApplyBtn" class="filter-apply-btn">적용</button>
       </div>
-    </div>` : "";
-
-  return `
-    <div class="filter-toggle-row">
-      <button id="filterToggleBtn" class="filter-toggle-btn ${activeCount > 0 ? "has-filter" : ""}">
-        필터 ${badge}
-      </button>
-    </div>
-    ${panel}`;
+    </div>`;
 }
 
 function bindFilterEvents(container) {
@@ -193,14 +242,18 @@ function renderGrouped(sorted) {
   }, {});
 
   return Object.entries(grouped).map(([date, items]) => {
-    const [, , dd]  = date.split("-");
+    const [yy, mm, dd] = date.split("-");
+    // 전체 기간 모드에서는 연도까지 표기해 어느 달인지 구분되게 한다
+    const label = scope === "all"
+      ? `${yy}년 ${parseInt(mm)}월 ${parseInt(dd)}일`
+      : `${parseInt(mm)}월 ${parseInt(dd)}일`;
     const dayTotal  = items.reduce((s, t) => t.type === "income" ? s + t.amount : s - t.amount, 0);
     const color     = dayTotal >= 0 ? "var(--income)" : "var(--expense)";
     const sign      = dayTotal > 0 ? "+" : dayTotal < 0 ? "-" : "";
     return `
       <div class="list-group">
         <div class="list-date-header">
-          <span>${state.currentMonth}월 ${parseInt(dd)}일</span>
+          <span>${label}</span>
           <span class="date-total" style="color:${color}">${sign}${fmtMoney(dayTotal)}</span>
         </div>
         ${items.map(renderTxRow).join("")}
@@ -220,14 +273,17 @@ function renderTxRow(t) {
     ? `<span class="tag fixed">고정</span>`
     : `<span class="tag variable">변동</span>`;
   // 이름이 메모에서 파생되므로(txModal) 동일하면 중복 표시하지 않음
-  const memoTag = t.memo && t.memo !== t.name ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
+  const memoTag  = t.memo && t.memo !== t.name ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
+  const ownerTag = t.owner ? `<span class="tx-owner">${escapeHtml(ownerName(t.owner))}</span>` : "";
+  // 전체 기간 + 날짜 외 정렬이면 그룹 헤더가 없어 날짜를 행에 표기
+  const dateTag  = scope === "all" && sortKey !== "date" ? `<span>${t.date}</span>` : "";
 
   return `
     <div class="tx-item" data-id="${t.id}">
       <div class="tx-cat-dot" style="background:${cat.color}"></div>
       <div class="tx-info">
         <div class="tx-name">${escapeHtml(t.name)}</div>
-        <div class="tx-meta"><span>${cat.name}</span>${kindTag}${memoTag}</div>
+        <div class="tx-meta">${dateTag}<span>${cat.name}</span>${kindTag}${ownerTag}${memoTag}</div>
       </div>
       <div class="tx-amount ${amtCls}">${sign}${fmtMoney(t.amount)}</div>
     </div>`;

@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort, escapeHtml } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName } from "../utils.js";
 import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { fetchMonthlySummary } from "../db.js";
 import { setMonth } from "../app.js";
@@ -26,6 +26,7 @@ export function renderStatsView() {
       ${renderCategoryBars(expTxs)}
       ${renderFixedVsVariable(expTxs)}
       ${renderIncomeVsExpense(incTxs, expTxs)}
+      ${renderOwnerSplit(expTxs)}
     </div>`;
 
   // 카테고리 막대 클릭 → 세부 내역 모달
@@ -70,6 +71,7 @@ function renderMonthlyChart(summary) {
         </div>
         <div class="mc-label">${s.month}월</div>
         <div class="mc-amounts">
+          ${s.income > 0 ? `<span class="mc-inc">+${fmtMoneyShort(s.income)}</span>` : ""}
           <span class="mc-exp">-${fmtMoneyShort(s.expense)}</span>
         </div>
       </div>`;
@@ -205,6 +207,43 @@ function renderFixedVsVariable(expTxs) {
           <div class="pfill" style="width:${varPct}%;background:var(--var-text)"></div>
         </div>
       </div>
+    </div>`;
+}
+
+// ── 사람별 지출 ───────────────────────────────────────────────
+// owner 필드가 있는 거래가 하나라도 있을 때만 표시.
+// owner가 없는 거래(과거 데이터·고정비 자동생성)는 '함께'로 묶는다.
+
+function renderOwnerSplit(expTxs) {
+  if (!expTxs.some(t => t.owner)) return "";
+
+  const totals = {};
+  expTxs.forEach(t => {
+    const key = t.owner ?? "";
+    totals[key] = (totals[key] ?? 0) + t.amount;
+  });
+  const total  = Object.values(totals).reduce((s, v) => s + v, 0) || 1;
+  const COLORS = ["#4da3f5", "#f272b6", "#9aa5b1", "#35c08e"];
+
+  const bars = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([email, amt], i) => {
+    const label = email ? ownerName(email) : "함께";
+    const pct   = Math.round(amt / total * 100);
+    return `
+      <div class="cat-bar-item">
+        <div class="cat-bar-row">
+          <span class="cat-bar-label">${escapeHtml(label)}</span>
+          <span class="cat-bar-val">${fmtMoney(amt)}원 (${pct}%)</span>
+        </div>
+        <div class="pbar">
+          <div class="pfill" style="width:${pct}%;background:${COLORS[i % COLORS.length]}"></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="stats-card">
+      <h4>사람별 지출</h4>
+      ${bars}
     </div>`;
 }
 

@@ -4,6 +4,7 @@
 
 import { db } from "../../firebase.js";
 import { doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import state from "../state.js";
 import { showToast, todayStr, fmtMoney, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { fetchTransactions, invalidateBalanceCache } from "../db.js";
@@ -38,7 +39,7 @@ function buildImportOps(rows) {
     seen.set(baseKey, occ + 1);
     return {
       id:   `csv_${baseKey}_${occ}`,
-      data: { ...row, year: y, month: m },
+      data: { ...row, year: y, month: m, owner: state.currentUser?.email ?? null },
     };
   });
 }

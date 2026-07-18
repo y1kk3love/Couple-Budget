@@ -8,6 +8,8 @@
   <!-- Pretendard는 Google Fonts에 없어 기존 링크는 무효였음 — jsdelivr CDN에서 로드 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" />
   <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#17171c" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💑</text></svg>">
 </head>
 <body>
@@ -83,9 +85,13 @@
           </div>
         </div>
         <div class="header-right">
+          <button id="csvExportBtn" class="icon-btn" title="전체 내역 CSV 내보내기">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>내보내기</span>
+          </button>
           <button id="csvImportBtn" class="icon-btn" title="CSV 가져오기">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            CSV
+            <span>가져오기</span>
           </button>
           <button id="addTxBtn" class="add-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -298,7 +304,11 @@
             <button type="button" class="preset-btn preset-clear" data-clear="1">지우기</button>
           </div>
         </div>
-        <p class="budget-note">예산은 매달 동일하게 적용되며, 요약 바에서 지출 진행률을 보여줍니다.</p>
+        <label class="check-row">
+          <input type="checkbox" id="budgetMonthOnly" />
+          <span id="budgetMonthOnlyText">이번 달에만 적용</span>
+        </label>
+        <p class="budget-note">기본 예산은 매달 동일하게 적용됩니다. '이번 달에만 적용'을 선택하면 이번 달만 다른 예산을 쓸 수 있어요. 요약 바에서 지출 진행률을 보여줍니다.</p>
       </div>
       <div class="modal-footer">
         <button id="budgetDeleteBtn" class="delete-btn">설정 해제</button>
