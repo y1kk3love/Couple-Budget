@@ -11,6 +11,7 @@ import {
   fetchBudgetPlans, fetchAllTransactions
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
+import { setupThemeToggle } from "./theme.js";
 import { setupTxModal }   from "./modals/txModal.js";
 import { setupFixedModal } from "./modals/fixedModal.js";
 import { setupCsvModal }  from "./modals/csvModal.js";
@@ -236,6 +237,7 @@ async function exportAllCsv() {
 // ── 앱 부트스트랩 ─────────────────────────────────────────────
 
 setupAuth();
+setupThemeToggle();
 document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
 setupTxModal();
 setupFixedModal();

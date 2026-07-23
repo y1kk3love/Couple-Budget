@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <!-- Pretendard는 Google Fonts에 없어 기존 링크는 무효였음 — jsdelivr CDN에서 로드 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" />
+  <!-- 저장된 테마를 첫 페인트 전에 적용 (깜빡임 방지) — 토글 로직은 js/theme.js -->
+  <script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
   <link rel="stylesheet" href="style.css" />
   <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#17171c" media="(prefers-color-scheme: dark)" />
@@ -85,6 +87,7 @@
           </div>
         </div>
         <div class="header-right">
+          <button id="themeToggleBtn" class="icon-btn theme-btn" title="테마 전환"></button>
           <button id="csvExportBtn" class="icon-btn" title="전체 내역 CSV 내보내기">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>내보내기</span>

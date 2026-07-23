@@ -38,9 +38,12 @@
   --mono: 'Pretendard', -apple-system, sans-serif;
 }
 
-/* 다크 모드 — 시스템 설정을 따른다 */
+/* 다크 모드 — 기본은 시스템 설정을 따르고, 헤더 토글 버튼(js/theme.js)이
+   <html data-theme="light|dark">를 달면 그 값이 우선한다.
+   ⚠ 아래 미디어쿼리 블록과 :root[data-theme="dark"] 블록은 같은 토큰 사본 —
+   다크 토큰을 고칠 때는 반드시 두 곳을 함께 수정할 것 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #17171c;
     --surface: #202027;
     --surface-hover: #26262e;
@@ -68,6 +71,39 @@
     --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.5);
   }
 }
+
+/* 수동 다크 강제 — 위 미디어쿼리 블록과 동일한 토큰 사본 (함께 수정할 것) */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17171c;
+  --surface: #202027;
+  --surface-hover: #26262e;
+  --surface2: #2c2c35;
+  --surface3: #3a3a45;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #eceff4;
+  --text-2: #b0b8c1;
+  --text-3: #7d8794;
+  --accent: #4593fc;
+  --accent-bg: rgba(49, 130, 246, 0.18);
+  --income: #5c9eff;
+  --income-bg: rgba(49, 130, 246, 0.18);
+  --expense: #ff6b70;
+  --expense-bg: rgba(240, 68, 82, 0.18);
+  --warn: #ffa938;
+  --saturday: #5c9eff;
+  --fixed-bg: rgba(122, 133, 240, 0.2);
+  --fixed-text: #a5aeff;
+  --var-bg: rgba(255, 149, 0, 0.16);
+  --var-text: #ffb65c;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow-card: none;
+  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* 수동 라이트 강제 — 토큰은 :root 기본값 그대로, 폼 컨트롤 색만 고정 */
+:root[data-theme="light"] { color-scheme: light; }
 
 html { font-size: 15px; }
 body {
@@ -180,6 +216,8 @@ button:active { transform: scale(0.96); }
   transition: background 0.15s, transform 0.12s ease;
 }
 .icon-btn:hover { background: var(--surface3); }
+.theme-btn { padding: 0.5rem 0.6rem; } /* 아이콘 전용 */
+.theme-btn svg { display: block; }
 .add-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 0.5rem 1rem; border-radius: 10px;
