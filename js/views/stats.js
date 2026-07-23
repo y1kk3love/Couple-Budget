@@ -114,7 +114,7 @@ function openCategoryDetail(catId) {
 
   const body = document.getElementById("categoryDetailBody");
   if (!txs.length) {
-    body.innerHTML = `<p class="cd-empty">내역이 없습니다</p>`;
+    body.innerHTML = `<p class="cd-empty">내역이 없어요</p>`;
   } else {
     body.innerHTML = txs.map(t => {
       const memo = t.memo && t.memo !== t.name ? `<span class="cd-memo">${escapeHtml(t.memo)}</span>` : "";
@@ -170,7 +170,7 @@ function renderCategoryBars(expTxs) {
           <div class="pfill" style="width:${pct}%;background:${cat.color}"></div>
         </div>
       </div>`;
-  }).join("") || `<p style="color:var(--text-3);font-size:0.85rem">지출 내역이 없습니다</p>`;
+  }).join("") || `<p style="color:var(--text-3);font-size:0.85rem">지출 내역이 없어요</p>`;
 
   return `
     <div class="stats-card full">

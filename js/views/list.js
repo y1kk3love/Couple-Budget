@@ -217,7 +217,7 @@ function bindSortEvents(container) {
 // ── 콘텐츠 렌더 ──────────────────────────────────────────────
 
 function renderContent(filtered) {
-  if (!filtered.length) return emptyStateHTML("조건에 맞는 내역이 없습니다");
+  if (!filtered.length) return emptyStateHTML("조건에 맞는 내역이 없어요");
   const sorted = sortTransactions([...filtered]);
   return sortKey === "date" ? renderGrouped(sorted) : renderFlat(sorted);
 }

@@ -83,22 +83,20 @@ async function renderSummary() {
   const balanceSign  = balance > 0 ? "+" : balance < 0 ? "-" : "";
   const accumSign    = accumTotal > 0 ? "+" : accumTotal < 0 ? "-" : "";
 
+  // 토스식 위계: 이번달 잔액을 주인공으로 크게, 수입·지출은 한 카드에 2줄로
   document.getElementById("summaryBar").innerHTML = `
-    <div class="sum-card">
-      <div class="lbl">수입</div>
-      <div class="val income">${fmtMoney(totalIncome)}</div>
-    </div>
-    <div class="sum-card">
-      <div class="lbl">지출</div>
-      <div class="val expense">${fmtMoney(totalExpense)}</div>
-    </div>
-    <div class="sum-card">
+    <div class="sum-card hero">
       <div class="lbl">이번달 잔액</div>
-      <div class="val ${balanceClass}">${balanceSign}${fmtMoney(balance)}</div>
+      <div class="val ${balanceClass}">${balanceSign}${fmtMoney(balance)}원</div>
+      <div class="sub">${state.currentMonth}월 수입 − 지출</div>
+    </div>
+    <div class="sum-card duo">
+      <div class="duo-row"><span class="lbl">수입</span><span class="duo-val income">${totalIncome > 0 ? "+" : ""}${fmtMoney(totalIncome)}원</span></div>
+      <div class="duo-row"><span class="lbl">지출</span><span class="duo-val expense">${totalExpense > 0 ? "-" : ""}${fmtMoney(totalExpense)}원</span></div>
     </div>
     <div class="sum-card">
       <div class="lbl">누적 잔액</div>
-      <div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}</div>
+      <div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}원</div>
       <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>
     </div>
     ${renderBudgetCard(totalExpense)}`;
@@ -131,13 +129,13 @@ function renderBudgetCard(totalExpense) {
   const isOverride = state.budgetMonths?.[ym] != null;
   const subText    = (over
     ? `예산 초과! (${pct}%)`
-    : `예산 ${fmtMoney(state.budget)} 중 ${pct}% 사용`)
+    : `예산 ${fmtMoney(state.budget)}원 중 ${pct}% 사용`)
     + (isOverride ? " · 이번 달 전용" : "");
 
   return `
     <div class="sum-card budget-card" id="budgetCard" title="클릭해서 월 예산 수정">
       <div class="lbl">예산 ${over ? "초과" : "남음"}</div>
-      <div class="val ${valClass}">${over ? "-" : ""}${fmtMoney(remaining)}</div>
+      <div class="val ${valClass}">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
       <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
       <div class="sub">${subText}</div>
     </div>`;

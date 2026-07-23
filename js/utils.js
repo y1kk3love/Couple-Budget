@@ -112,15 +112,11 @@ export function downloadCSV(filename, rows) {
   URL.revokeObjectURL(a.href);
 }
 
-/** 빈 상태 HTML 반환 */
-export function emptyStateHTML(msg) {
+/** 빈 상태 HTML 반환 — 토스식 이모지 + 부드러운 문구 */
+export function emptyStateHTML(msg, emoji = "🧾") {
   return `
     <div class="empty-state">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
+      <span class="empty-emoji">${emoji}</span>
       <p>${msg}</p>
     </div>`;
 }

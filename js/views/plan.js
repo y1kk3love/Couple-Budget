@@ -116,7 +116,7 @@ function renderCard(email, isMine) {
       <div class="plan-card">
         <div class="plan-head"><span class="plan-title">${title}${meTag}</span><span class="plan-sub">${sub}</span></div>
         <div class="plan-empty">
-          <p>아직 예산안이 없습니다</p>
+          <p>아직 예산안이 없어요</p>
           ${isMine ? `<button class="save-btn" id="planCreateBtn">예산안 만들기</button>` : ""}
         </div>
       </div>`;
