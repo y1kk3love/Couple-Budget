@@ -29,7 +29,8 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 
 ```
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
-js/state.js              ← single shared mutable state (currentYear/Month/View, transactions[], fixedItems[], currentUser)
+js/state.js              ← single shared mutable state (currentYear/Month/View, currentUser, transactions[],
+                            fixedItems[], skippedFixedIds:Set, budget/budgetDefault/budgetMonths, budgetPlans[])
 js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo()
 js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
@@ -90,7 +91,7 @@ The `settings/budget` Firestore doc holds `{amount, months}`: `amount` is the de
 
 ### Personal budget plans (예산안)
 
-The `plan` view is a per-person salary allocation planner, independent of actual transactions and month navigation. Each of the two users has at most one plan in the `budget_plans` collection (doc ID = their email): `{owner, name(표시 이름, optional), income, items: [{name, amount}]}`. Card titles show `<name>의 예산안` when `name` is set, falling back to 내/상대 예산안; the owner's card is marked with a "나" tag. Both users can see both plans; the client only allows editing your own (Firestore rules allow either — enforcement is UI-level only). Item colors are auto-assigned by cycling `CATEGORIES.expense` colors; the donut chart shows allocations plus remaining (or over-allocation in red). `fetchBudgetPlans()` swallows permission errors so the app still works if `budget_plans` is missing from the deployed rules — but the view will look empty; re-paste `firestore.rules` into the console when deploying this feature.
+The `plan` view is a per-person salary allocation planner, independent of actual transactions and month navigation. Each of the two users has at most one plan in the `budget_plans` collection (doc ID = their email): `{owner, name(표시 이름, optional), income, items: [{name, amount}]}`. Card titles show `<name>의 예산안` when `name` is set, falling back to 내/상대 예산안; the owner's card is marked with a "나" tag. Both users can see both plans; the client only allows editing your own (Firestore rules allow either — enforcement is UI-level only). Item colors are auto-assigned by cycling `CATEGORIES.expense` colors; the donut chart shows allocations plus remaining (or over-allocation in red). The partner's card is found by taking the other entry in `ALLOWED_EMAILS`, so the view assumes exactly two allowlisted accounts. Edit mode re-renders the whole view on every row add/remove, so it first calls `syncDraft()` to harvest the live inputs back into `draft` — any new field added to the edit card must also be read there or it is lost on the next re-render. `fetchBudgetPlans()` swallows permission errors so the app still works if `budget_plans` is missing from the deployed rules — but the view will look empty; re-paste `firestore.rules` into the console when deploying this feature.
 
 ### CSV import
 
