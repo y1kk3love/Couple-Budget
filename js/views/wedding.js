@@ -8,11 +8,12 @@ import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML } from "
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
-  itemSpent, weddingTotals
+  fetchWeddingGuests, itemSpent, weddingTotals
 } from "../weddingDb.js";
 import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
+import { renderGuestsSegment } from "./weddingGuests.js";
 
 // 현재 세그먼트 — 재렌더·뷰 전환에도 유지 (모듈 레벨 UI 상태 패턴)
 let segment = "budget"; // "budget" | "checklist" | "vendors" | "guests"
@@ -24,8 +25,8 @@ const SEGMENTS = [
   { id: "vendors",   label: "업체" },
   { id: "guests",    label: "하객" },
 ];
-// 단계 출시 — 아직 구현 전인 세그먼트는 비활성
-const ENABLED = new Set(["budget", "checklist", "vendors"]);
+// 네 세그먼트 모두 출시 완료
+const ENABLED = new Set(["budget", "checklist", "vendors", "guests"]);
 
 // ── D-day 계산 (자정 기준 날짜 차이) ──────────────────────────
 
@@ -58,7 +59,10 @@ export function renderWeddingView() {
 }
 
 async function ensureLoaded() {
-  await Promise.all([fetchWeddingConfig(), fetchWeddingItems(), fetchWeddingTasks(), fetchWeddingVendors()]);
+  await Promise.all([
+    fetchWeddingConfig(), fetchWeddingItems(), fetchWeddingTasks(),
+    fetchWeddingVendors(), fetchWeddingGuests(),
+  ]);
   loaded = true;
 }
 
@@ -129,6 +133,7 @@ function renderSegmentBody(body) {
     case "budget":    body.innerHTML = renderBudgetSegment(); break;
     case "checklist": renderChecklistSegment(body); break;
     case "vendors":   renderVendorsSegment(body); break;
+    case "guests":    renderGuestsSegment(body); break;
     default:          body.innerHTML = "";
   }
 }

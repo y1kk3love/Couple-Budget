@@ -104,6 +104,26 @@ export async function deleteWeddingVendor(id) {
   await deleteDoc(doc(db, "wedding_vendors", id));
 }
 
+// ── 하객 (wedding_guests) ─────────────────────────────────────
+
+export async function fetchWeddingGuests() {
+  try {
+    const snap = await getDocs(collection(db, "wedding_guests"));
+    state.wedding.guests = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "ko"));
+  } catch { state.wedding.loadError = true; }
+}
+
+export async function saveWeddingGuest(data, id = null) {
+  if (id) await updateDoc(doc(db, "wedding_guests", id), data);
+  else    await addDoc(collection(db, "wedding_guests"), data);
+}
+
+export async function deleteWeddingGuest(id) {
+  await deleteDoc(doc(db, "wedding_guests", id));
+}
+
 // ── 파생 합계 — payments 배열이 지출의 유일한 원본 ─────────────
 
 export function itemSpent(item) {

@@ -33,15 +33,18 @@ js/state.js              ← single shared mutable state (currentYear/Month/View
                             fixedItems[], skippedFixedIds:Set, budget/budgetDefault/budgetMonths, budgetPlans[])
 js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo()
 js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
-js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
+js/db.js                 ← 가계부 Firestore reads/writes; mutates state.transactions / state.fixedItems
+js/weddingDb.js          ← 결혼 탭 전용 Firestore reads/writes (wedding_* + settings/wedding); mutates state.wedding
 js/auth.js               ← Google sign-in; on success calls initApp()
 js/theme.js              ← dark/light toggle (setupThemeToggle); see Design system section
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
 js/views/{calendar,list,stats,fixed,plan}.js     ← each exports render<Name>View() that fills its #view-<name> div
-js/modals/{txModal,fixedModal,csvModal,budgetModal}.js  ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
+js/views/wedding.js      ← 결혼 탭 셸 (D-day 헤더 + 세그먼트 전환 + 예산 세그먼트)
+js/views/wedding{Checklist,Vendors,Guests}.js    ← 세그먼트 렌더러 — render<Seg>Segment(container)
+js/modals/{txModal,fixedModal,csvModal,budgetModal,weddingModal}.js  ← setup<Name>Modal(s)() wires DOM events; open<Name>Modal() opens it
 ```
 
-Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, `setupThemeToggle()`, the 내보내기 button binding, the four modal `setup*` calls, and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click.
+Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, `setupThemeToggle()`, the 내보내기 button binding, the five modal `setup*` calls (tx/fixed/csv/budget/wedding), and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click.
 
 ### The render cycle
 
@@ -97,6 +100,18 @@ The `settings/budget` Firestore doc holds `{amount, months}`: `amount` is the de
 ### Personal budget plans (예산안)
 
 The `plan` view is a per-person salary allocation planner, independent of actual transactions and month navigation. Each of the two users has at most one plan in the `budget_plans` collection (doc ID = their email): `{owner, name(표시 이름, optional), income, items: [{name, amount}]}`. Card titles show `<name>의 예산안` when `name` is set, falling back to 내/상대 예산안; the owner's card is marked with a "나" tag. Both users can see both plans; the client only allows editing your own (Firestore rules allow either — enforcement is UI-level only). Item colors are auto-assigned by cycling `CATEGORIES.expense` colors in **saved order** (the view's sort bar reorders rows without reshuffling colors); the donut chart shows allocations plus remaining (or over-allocation in red). Edit-mode rows can be drag-reordered via pointer events — the handlers live on `document`, not `setPointerCapture`, because re-inserting the row mid-drag would release the capture — and the final DOM order is harvested by `syncDraft()`. The partner's card is found by taking the other entry in `ALLOWED_EMAILS`, so the view assumes exactly two allowlisted accounts. Edit mode re-renders the whole view on every row add/remove, so it first calls `syncDraft()` to harvest the live inputs back into `draft` — any new field added to the edit card must also be read there or it is lost on the next re-render. `fetchBudgetPlans()` swallows permission errors so the app still works if `budget_plans` is missing from the deployed rules — but the view will look empty; re-paste `firestore.rules` into the console when deploying this feature.
+
+### 결혼 준비 탭 (wedding)
+
+A fully **separate ledger** from the daily budget — wedding data never touches `transactions`, the aggregation caches, or `loadAllData()`. Four Firestore collections (`wedding_items/tasks/vendors/guests`, all in `firestore.rules` — re-paste to console when deploying) plus `settings/wedding` (`{date, totalBudget}`). All reads/writes live in `js/weddingDb.js`; fetches swallow permission errors into `state.wedding.loadError` (budget_plans strategy).
+
+`js/views/wedding.js` is the shell: D-day header (`dDayInfo()` exported for testing), segment bar (예산|체크리스트|업체|하객, current segment in a module variable), and the budget segment; the other three segments live in `weddingChecklist/Vendors/Guests.js` as `render<Seg>Segment(container)`. Data loads **once on first tab entry** (`loaded` flag + `ensureLoaded()`), not per month — after a mutation, call the relevant `fetchWedding*()` then `renderWeddingView()`.
+
+Key invariants:
+- An item's spend is **derived** from its `payments` array (`itemSpent()`); never store a spent total. `payments` is saved wholesale from the modal's `draftPayments` copy — concurrent edits to one item are last-write-wins (accepted trade-off).
+- `payer` is an email or `"both"`; guest `side` is an email (absolute — whose side the guest belongs to). Labels resolve via `ownerName()`.
+- Checklist template seeding uses fixed doc IDs `tpl_<n>` + `setDoc` (idempotent, same strategy as fixed-item materialization) and is only offered from the empty state.
+- Choosing a vendor (`status: "chosen"`) offers to write its price/`vendorId` into the same-category budget item, or create one.
 
 ### CSV import
 
