@@ -43,7 +43,7 @@ function renderFixedRow(item) {
   const sign      = item.type === "income" ? "+" : "-";
 
   return `
-    <div class="fixed-item" data-id="${item.id}">
+    <div class="fixed-item" data-id="${item.id}" role="button" tabindex="0">
       <div class="fixed-cat-dot" style="background:${cat.color}"></div>
       <div class="fixed-info">
         <div class="fixed-name">${escapeHtml(item.name)} ${renderStatusTag(item)}</div>

@@ -293,7 +293,14 @@ function bindEvents(container, myEmail) {
     const items  = draft.items.filter(i => i.name && i.amount > 0);
     if (!income || income <= 0) { showToast("월급을 입력하세요"); return; }
 
-    await saveBudgetPlan(myEmail, { owner: myEmail, name: draft.name, income, items });
+    // 쓰기 성공 후에만 수정 모드를 닫는다 — 실패 시 입력값을 보존하고 알린다
+    try {
+      await saveBudgetPlan(myEmail, { owner: myEmail, name: draft.name, income, items });
+    } catch (err) {
+      console.error("예산안 저장 실패:", err);
+      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
     editing = false;
     draft = null;
     await fetchBudgetPlans();

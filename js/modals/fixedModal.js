@@ -5,7 +5,10 @@
 import state from "../state.js";
 import { showToast, showConfirm, setupAmountPresets } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
-import { saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions } from "../db.js";
+import {
+  saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions,
+  applyFixedItemsToCurrentMonth, fetchTransactions
+} from "../db.js";
 import { renderAll } from "../app.js";
 
 // ── 열기 ──────────────────────────────────────────────────────
@@ -13,6 +16,8 @@ import { renderAll } from "../app.js";
 export function openFixedEditModal(id) {
   const item = id ? state.fixedItems.find(f => f.id === id) : null;
 
+  document.getElementById("fixedEditTitle").textContent = id ? "고정비 수정" : "고정비 추가";
+  document.getElementById("fixedDeleteBtn").classList.toggle("hidden", !id);
   document.getElementById("fixedEditId").value     = id ?? "";
   document.getElementById("fixedEditName").value   = item?.name   ?? "";
   document.getElementById("fixedEditAmount").value = item?.amount ?? "";
@@ -36,9 +41,11 @@ export function openFixedEditModal(id) {
 // ── 내부 헬퍼 ─────────────────────────────────────────────────
 
 function setFixedType(type) {
-  document.querySelectorAll("#fixedTypeToggle .kind-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.kind === type)
-  );
+  document.querySelectorAll("#fixedTypeToggle .kind-btn").forEach(b => {
+    const on = b.dataset.kind === type;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on);
+  });
   populateFixedCategorySelect(type);
 }
 
@@ -99,11 +106,22 @@ export function setupFixedModal() {
       day:        Math.min(Math.max(day, 1), 31),
     };
 
+    // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
+    try {
+      await saveFixedItem(data, id);
+      if (id) await syncFixedItemTransactions(id, data);
+    } catch (err) {
+      console.error("고정비 저장 실패:", err);
+      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+
     closeModal();
-    await saveFixedItem(data, id);
-    if (id) await syncFixedItemTransactions(id, data);
     showToast(id ? "수정되었습니다" : "고정비가 추가되었습니다");
     await fetchFixedItems();
+    // 저장 즉시 이번 달에 반영 — 예전에는 월 이동/새로고침 전까지 보이지 않았다
+    await applyFixedItemsToCurrentMonth();
+    await fetchTransactions();
     renderAll();
   });
 
@@ -112,8 +130,14 @@ export function setupFixedModal() {
     const id = document.getElementById("fixedEditId").value;
     if (!id) return;
     if (!(await showConfirm("이 고정비를 삭제할까요?\n이미 기록된 달의 내역은 유지됩니다.", { confirmText: "삭제" }))) return;
+    try {
+      await deleteFixedItem(id);
+    } catch (err) {
+      console.error("고정비 삭제 실패:", err);
+      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
     closeModal();
-    await deleteFixedItem(id);
     showToast("삭제되었습니다");
     await fetchFixedItems();
     renderAll();

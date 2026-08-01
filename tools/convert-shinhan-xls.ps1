@@ -10,10 +10,9 @@
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
-  $ProjectRoot = 'C:\Users\jongj\Documents\Gits\Couple-Budget'
-} else {
-  $ProjectRoot = Split-Path -Parent $PSScriptRoot
+  throw "이 스크립트는 파일로 실행해야 합니다 (예: .\tools\convert-shinhan-xls.ps1). 복사-붙여넣기 실행은 지원하지 않습니다."
 }
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 $XlsDir = Join-Path $ProjectRoot 'excel'
 $OutDir = Join-Path $XlsDir 'converted'
 

@@ -64,21 +64,29 @@ export function openEditModal(id, tx = null) {
 
 // ── 내부 헬퍼 ─────────────────────────────────────────────────
 
+// ⚠ 셀렉터는 반드시 #txModal 범위로 한정 — .kind-btn은 고정비 모달의
+// 지출/수입 토글에도 쓰이는 클래스라, 전역 셀렉터를 쓰면 서로 상태를 오염시킨다.
+const modalEl = () => document.getElementById("txModal");
+
 function setType(type) {
-  document.querySelectorAll(".type-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.type === type)
-  );
+  modalEl().querySelectorAll(".type-btn").forEach(b => {
+    const on = b.dataset.type === type;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on);
+  });
   populateCategorySelect(type);
 }
 
 function setKind(kind) {
-  document.querySelectorAll(".kind-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.kind === kind)
-  );
+  modalEl().querySelectorAll(".kind-btn").forEach(b => {
+    const on = b.dataset.kind === kind;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on);
+  });
 }
 
-function getType() { return document.querySelector(".type-btn.active").dataset.type; }
-function getKind() { return document.querySelector(".kind-btn.active").dataset.kind; }
+function getType() { return modalEl().querySelector(".type-btn.active").dataset.type; }
+function getKind() { return modalEl().querySelector(".kind-btn.active").dataset.kind; }
 
 function populateCategorySelect(type) {
   const sel = document.getElementById("txCategory");
@@ -97,10 +105,10 @@ function renderContextPanel(title, txs) {
   const panel = document.getElementById("txContextPanel");
   if (!title || !txs.length) { panel.classList.add("hidden"); return; }
 
-  const rows = txs.map(t => {
+  const rows = txs.map((t, i) => {
     const sign  = t.type === "income" ? "+" : "-";
     const color = t.type === "income" ? "var(--income)" : "var(--expense)";
-    return `<div class="ctx-row">
+    return `<div class="ctx-row" role="button" tabindex="0" data-i="${i}" title="클릭해서 이 내역 수정">
       <span class="ctx-date">${t.date.slice(5).replace("-", "/")}</span>
       <span class="ctx-name">${escapeHtml(t.name)}</span>
       <span class="ctx-amt" style="color:${color}">${sign}${fmtMoney(t.amount)}</span>
@@ -108,6 +116,14 @@ function renderContextPanel(title, txs) {
   }).join("");
 
   panel.innerHTML = `<div class="ctx-title">${title}</div><div class="ctx-list">${rows}</div>`;
+
+  // 행 클릭 → 해당 내역 수정으로 전환 (다른 달 거래일 수 있어 객체를 직접 넘긴다)
+  panel.querySelectorAll(".ctx-row").forEach(el => {
+    el.addEventListener("click", () => {
+      const t = txs[Number(el.dataset.i)];
+      openEditModal(t.id, t);
+    });
+  });
   panel.classList.remove("hidden");
 }
 
@@ -117,13 +133,13 @@ export function setupTxModal() {
   // 금액 빠른 입력 버튼
   document.querySelectorAll('.amount-presets[data-target="txAmount"]').forEach(setupAmountPresets);
 
-  // 타입 토글
-  document.querySelectorAll(".type-btn").forEach(b =>
+  // 타입 토글 (#txModal 범위로 한정 — 고정비 모달의 .kind-btn과 충돌 방지)
+  document.querySelectorAll("#txModal .type-btn").forEach(b =>
     b.addEventListener("click", () => setType(b.dataset.type))
   );
 
   // 고정/변동 토글
-  document.querySelectorAll(".kind-btn").forEach(b =>
+  document.querySelectorAll("#txModal .kind-btn").forEach(b =>
     b.addEventListener("click", () => setKind(b.dataset.kind))
   );
 
@@ -160,23 +176,31 @@ export function setupTxModal() {
     // 새 내역에만 작성자를 기록 — 수정 시에는 원래 작성자를 보존한다
     if (!editingTxId) data.owner = state.currentUser?.email ?? null;
 
-    closeModal();
+    // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
+    let toastMsg;
+    try {
+      if (editingTxId) {
+        const prev = state.transactions.find(t => t.id === editingTxId);
+        await updateTransaction(editingTxId, data);
 
-    if (editingTxId) {
-      const prev = state.transactions.find(t => t.id === editingTxId);
-      await updateTransaction(editingTxId, data);
-
-      // 카테고리를 바꿨으면 같은 이름의 거래 전체(전 기간)에 전파
-      let synced = 0;
-      if (prev && prev.category !== data.category) {
-        synced = await updateCategoryByName(data.name, data.type, data.category, editingTxId);
+        // 카테고리를 바꿨으면 같은 이름의 거래 전체(전 기간)에 전파
+        let synced = 0;
+        if (prev && prev.category !== data.category) {
+          synced = await updateCategoryByName(data.name, data.type, data.category, editingTxId);
+        }
+        toastMsg = synced > 0 ? `수정되었습니다 · 같은 이름 ${synced}건 카테고리 변경` : "수정되었습니다";
+      } else {
+        await addTransaction(data);
+        toastMsg = "추가되었습니다";
       }
-      showToast(synced > 0 ? `수정되었습니다 · 같은 이름 ${synced}건 카테고리 변경` : "수정되었습니다");
-    } else {
-      await addTransaction(data);
-      showToast("추가되었습니다");
+    } catch (err) {
+      console.error("거래 저장 실패:", err);
+      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
+      return;
     }
 
+    closeModal();
+    showToast(toastMsg);
     await fetchTransactions();
     renderAll();
   });
@@ -184,8 +208,14 @@ export function setupTxModal() {
   // 삭제
   document.getElementById("deleteTxBtn").addEventListener("click", async () => {
     if (!(await showConfirm("이 내역을 삭제할까요?", { confirmText: "삭제" }))) return;
+    try {
+      await deleteTransaction(editingTxId);
+    } catch (err) {
+      console.error("거래 삭제 실패:", err);
+      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
     closeModal();
-    await deleteTransaction(editingTxId);
     showToast("삭제되었습니다");
     await fetchTransactions();
     renderAll();

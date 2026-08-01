@@ -28,13 +28,18 @@ export function invalidateBalanceCache() {
 // ── 거래 내역 ──────────────────────────────────────────────────
 
 export async function fetchTransactions() {
+  const y = state.currentYear, m = state.currentMonth;
   const q = query(
     collection(db, "transactions"),
-    where("year",  "==", state.currentYear),
-    where("month", "==", state.currentMonth),
+    where("year",  "==", y),
+    where("month", "==", m),
     orderBy("date", "desc")
   );
   const snap = await getDocs(q);
+
+  // 응답을 기다리는 사이 다른 달로 이동했으면 낡은 결과로 state를 덮지 않는다
+  if (y !== state.currentYear || m !== state.currentMonth) return;
+
   const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   // skip 마커(고정비 자동생성 거래를 사용자가 삭제한 흔적)는 화면에서 제외하고,
@@ -315,10 +320,14 @@ export async function deleteMonthBudget() {
 }
 
 export async function deleteBudget() {
-  await deleteDoc(doc(db, "settings", "budget"));
+  // 다른 달의 월별 전용 예산이 남아 있으면 문서를 통째로 지우지 않고 기본 예산만 제거한다
+  if (Object.keys(state.budgetMonths).length > 0) {
+    await updateDoc(doc(db, "settings", "budget"), { amount: deleteField() });
+  } else {
+    await deleteDoc(doc(db, "settings", "budget"));
+  }
   state.budgetDefault = null;
-  state.budgetMonths  = {};
-  state.budget        = null;
+  resolveBudget();
 }
 
 // ── 개인 예산안 (budget_plans, 문서 ID = 이메일) ───────────────
@@ -357,12 +366,12 @@ export async function calcAccumulatedBalance() {
   const cacheKey = `${state.currentYear}-${state.currentMonth}`;
   if (balanceCache.has(cacheKey)) return balanceCache.get(cacheKey);
 
-  const snap = await getDocs(collection(db, "transactions"));
+  // 전체 거래 캐시(allTxCache)를 재사용해 별도의 전체 스캔을 피한다.
+  // fetchAllTransactions가 skip 마커를 이미 걸러준다.
+  const txs = await fetchAllTransactions();
   let total = 0;
 
-  for (const d of snap.docs) {
-    const t = d.data();
-    if (t.skipped) continue; // skip 마커는 금액이 없음
+  for (const t of txs) {
     // 현재 달 이전 데이터만 합산
     if (t.year > state.currentYear) continue;
     if (t.year === state.currentYear && t.month >= state.currentMonth) continue;

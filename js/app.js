@@ -35,21 +35,28 @@ export async function initApp() {
     setupMonthNav();
     setupViewNav();
     setupMobileMenu();
+    setupGlobalKeys();
     listenersBound = true;
   }
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────
+// 월 이동을 연타하면 이전 달 로드가 나중에 끝나 최신 화면을 덮을 수 있어,
+// 순번을 매겨 낡은 로드는 렌더하지 않는다 (fetchTransactions도 자체 방어함).
+let loadSeq = 0;
 
 async function loadAllData() {
+  const seq = ++loadSeq;
   await Promise.all([
     fetchTransactions(),
     fetchFixedItems(),
     fetchBudget(),
     fetchBudgetPlans(),
   ]);
+  if (seq !== loadSeq) return; // 그 사이 더 최신 로드가 시작됨
   await applyFixedItemsToCurrentMonth();
   await fetchTransactions(); // 고정비 적용 후 재조회
+  if (seq !== loadSeq) return;
   renderAll();
 }
 
@@ -68,7 +75,10 @@ export function renderAll() {
 
 // ── 요약 카드 ─────────────────────────────────────────────────
 
+let summarySeq = 0;
+
 async function renderSummary() {
+  const seq = ++summarySeq;
   const totalIncome  = state.transactions
     .filter(t => t.type === "income")
     .reduce((s, t) => s + t.amount, 0);
@@ -77,6 +87,7 @@ async function renderSummary() {
     .reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
   const accum   = await calcAccumulatedBalance();
+  if (seq !== summarySeq) return; // 더 최신 렌더가 시작됨 — 낡은 결과로 덮지 않는다
   const accumTotal = accum + balance;
 
   const balanceClass = balance > 0 ? "income" : balance < 0 ? "expense" : "neutral";
@@ -111,7 +122,7 @@ async function renderSummary() {
 function renderBudgetCard(totalExpense) {
   if (state.budget == null) {
     return `
-      <div class="sum-card budget-card unset" id="budgetCard" title="클릭해서 월 예산 설정">
+      <div class="sum-card budget-card unset" id="budgetCard" role="button" tabindex="0" title="클릭해서 월 예산 설정">
         <div class="lbl">예산</div>
         <div class="val neutral budget-unset-val">설정하기</div>
         <div class="sub">클릭해서 월 예산 설정</div>
@@ -134,7 +145,7 @@ function renderBudgetCard(totalExpense) {
     + (isOverride ? " · 이번 달 전용" : "");
 
   return `
-    <div class="sum-card budget-card" id="budgetCard" title="클릭해서 월 예산 수정">
+    <div class="sum-card budget-card" id="budgetCard" role="button" tabindex="0" title="클릭해서 월 예산 수정">
       <div class="lbl">예산 ${over ? "초과" : "남음"}</div>
       <div class="val ${valClass}">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
       <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
@@ -147,6 +158,11 @@ function renderBudgetCard(totalExpense) {
 function setupMonthNav() {
   document.getElementById("prevMonth").addEventListener("click", () => changeMonth(-1));
   document.getElementById("nextMonth").addEventListener("click", () => changeMonth(+1));
+  // 월 라벨 클릭 → 이번 달로 복귀
+  document.getElementById("currentMonthLabel").addEventListener("click", () => {
+    const now = new Date();
+    setMonth(now.getFullYear(), now.getMonth() + 1);
+  });
 }
 
 async function changeMonth(delta) {
@@ -193,6 +209,26 @@ function switchView(view) {
   );
 
   renderAll();
+}
+
+// ── 전역 키보드 (접근성) ──────────────────────────────────────
+
+function setupGlobalKeys() {
+  document.addEventListener("keydown", e => {
+    // Esc → 열려 있는 모달 닫기 (확인 다이얼로그는 utils.js에서 자체 처리)
+    if (e.key === "Escape" && !document.querySelector(".confirm-overlay")) {
+      const open = document.querySelector(".modal-overlay:not(.hidden)");
+      // 각 모달의 닫기 버튼을 눌러 모달별 정리 로직(초기화 등)을 그대로 태운다
+      open?.querySelector(".modal-close")?.click();
+      return;
+    }
+    // role="button"인 div/행을 Enter·Space로 활성화 (키보드 접근성)
+    if ((e.key === "Enter" || e.key === " ") && e.target instanceof HTMLElement
+        && e.target.getAttribute("role") === "button") {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
 }
 
 // ── 모바일 사이드바 토글 ──────────────────────────────────────

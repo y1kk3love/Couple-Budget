@@ -113,7 +113,19 @@ Firebase 콘솔 → Firestore → 규칙 탭에서 `firestore.rules` 내용을 �
 
 > ⚠️ **이메일은 두 곳에서 따로 관리됩니다.** `firebase.js`의 `ALLOWED_EMAILS`(클라이언트 차단)와 `firestore.rules`의 `isAllowed()` 함수(서버 차단)는 자동 동기화되지 않습니다. 사용자를 추가/변경/제거할 때마다 **두 파일 모두** 갱신하고, rules는 Firebase 콘솔에 다시 게시해야 합니다.
 
-**5. 로컬 실행**
+**5. Firestore 복합 인덱스 생성**
+
+거래 조회 쿼리(`year` == + `month` == + `date` 내림차순 정렬)에 복합 인덱스가 필요합니다. Firebase 콘솔 → Firestore → 색인 탭에서 `transactions` 컬렉션에 아래 인덱스를 만들어 주세요:
+
+| 필드 | 순서 |
+|---|---|
+| `year` | 오름차순 |
+| `month` | 오름차순 |
+| `date` | 내림차순 |
+
+> 인덱스 없이 앱을 처음 실행하면 브라우저 콘솔에 `failed-precondition` 오류와 함께 인덱스 생성 링크가 출력됩니다. 그 링크를 눌러 만들어도 됩니다.
+
+**6. 로컬 실행**
 ```bash
 # Python
 python -m http.server 8000

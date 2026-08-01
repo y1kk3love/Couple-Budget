@@ -4,7 +4,7 @@
 
 import state from "../state.js";
 import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName } from "../utils.js";
-import { getCategoryInfo, CATEGORIES } from "../constants.js";
+import { getCategoryInfo, CATEGORIES, OWNER_COLORS } from "../constants.js";
 import { fetchMonthlySummary } from "../db.js";
 import { setMonth } from "../app.js";
 import { openEditModal } from "../modals/txModal.js";
@@ -65,7 +65,8 @@ function renderMonthlyChart(summary) {
 
     const isCurrent = s.year === state.currentYear && s.month === state.currentMonth;
     return `
-      <div class="mc-col${isCurrent ? " current" : ""}" data-year="${s.year}" data-month="${s.month}">
+      <div class="mc-col${isCurrent ? " current" : ""}" data-year="${s.year}" data-month="${s.month}"
+        role="button" tabindex="0" aria-label="${s.year}년 ${s.month}월로 이동">
         <div class="mc-stack-wrap">
           <div class="mc-stack" style="height:${totalH}%">${segments}</div>
         </div>
@@ -120,7 +121,7 @@ function openCategoryDetail(catId) {
       const memo = t.memo && t.memo !== t.name ? `<span class="cd-memo">${escapeHtml(t.memo)}</span>` : "";
       const kind = t.kind === "fixed" ? `<span class="tag fixed">고정</span>` : "";
       return `
-        <div class="cd-row" data-tx-id="${t.id}">
+        <div class="cd-row" data-tx-id="${t.id}" role="button" tabindex="0">
           <span class="cd-date">${t.date.slice(5).replace("-", "/")}</span>
           <span class="cd-name">${escapeHtml(t.name)}${kind}${memo}</span>
           <span class="cd-amt">-${fmtMoney(t.amount)}원</span>
@@ -161,7 +162,8 @@ function renderCategoryBars(expTxs) {
     const cat = getCategoryInfo(catId, "expense");
     const pct = Math.round(amt / max * 100);
     return `
-      <div class="cat-bar-item clickable" data-cat-id="${catId}">
+      <div class="cat-bar-item clickable" data-cat-id="${catId}" role="button" tabindex="0"
+        aria-label="${cat.name} 세부 내역 보기">
         <div class="cat-bar-row">
           <span class="cat-bar-label">${cat.name}</span>
           <span class="cat-bar-val">${fmtMoney(amt)}원</span>
@@ -222,8 +224,7 @@ function renderOwnerSplit(expTxs) {
     const key = t.owner ?? "";
     totals[key] = (totals[key] ?? 0) + t.amount;
   });
-  const total  = Object.values(totals).reduce((s, v) => s + v, 0) || 1;
-  const COLORS = ["#4da3f5", "#f272b6", "#9aa5b1", "#35c08e"];
+  const total = Object.values(totals).reduce((s, v) => s + v, 0) || 1;
 
   const bars = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([email, amt], i) => {
     const label = email ? ownerName(email) : "함께";
@@ -235,7 +236,7 @@ function renderOwnerSplit(expTxs) {
           <span class="cat-bar-val">${fmtMoney(amt)}원 (${pct}%)</span>
         </div>
         <div class="pbar">
-          <div class="pfill" style="width:${pct}%;background:${COLORS[i % COLORS.length]}"></div>
+          <div class="pfill" style="width:${pct}%;background:${OWNER_COLORS[i % OWNER_COLORS.length]}"></div>
         </div>
       </div>`;
   }).join("");

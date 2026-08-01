@@ -53,13 +53,17 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 
 `renderAll()` always rebuilds the summary bar plus the currently active view only. Views are not memoized — they `innerHTML =` their container each call and rebind listeners.
 
+Race protection: rapid month-nav clicks used to let a stale fetch overwrite a newer one. Guards now exist in three places — `loadAllData()` and `renderSummary()` each carry a sequence counter and abort if a newer call started, and `fetchTransactions()` discards its result if the month changed mid-flight. Keep these intact when touching the load path.
+
+Firestore writes in modal save/delete handlers are wrapped in try/catch and the modal closes **only after the write succeeds** (failure keeps the modal open with inputs preserved and shows an error toast). Follow this pattern for any new write flow.
+
 Because re-rendering wipes all DOM state, transient UI state lives in **module-level variables** inside the owning view/modal module: `list.js` keeps its sort key/direction and filter values, `plan.js` keeps its sort state plus the edit-mode `draft` object, `txModal.js` keeps `editingTxId`. New UI state that must survive a re-render follows this pattern (note it also survives view switches and logout/login, since modules are never reloaded — reset it explicitly if that's not wanted).
 
 A view that needs async data after its synchronous render (e.g. `stats.js` filling the monthly-compare card from `fetchMonthlySummary()`) renders a loading placeholder, then in the `.then()` re-checks that its target element still exists — the user may have switched views or months before the fetch resolved.
 
 ### Aggregation caches
 
-`db.js` keeps three module-level caches — `balanceCache` (for `calcAccumulatedBalance()`), `monthlySummaryCache` (for `fetchMonthlySummary()`, stats view), and `allTxCache` (for `fetchAllTransactions()`, used by the list view's 전체 기간 mode and CSV export). All are cleared only through `invalidateBalanceCache()`. **Any code that writes to the `transactions` collection must call `invalidateBalanceCache()` afterwards** — the `db.js` mutation helpers already do, but code writing directly to Firestore (e.g. `csvModal.js`) must call it explicitly, or the summary bar / stats will show stale numbers until reload.
+`db.js` keeps three module-level caches — `balanceCache` (for `calcAccumulatedBalance()`), `monthlySummaryCache` (for `fetchMonthlySummary()`, stats view), and `allTxCache` (for `fetchAllTransactions()`, used by the list view's 전체 기간 mode, CSV export, **and** `calcAccumulatedBalance()`, which sums from it instead of running its own full scan). All are cleared only through `invalidateBalanceCache()`. **Any code that writes to the `transactions` collection must call `invalidateBalanceCache()` afterwards** — the `db.js` mutation helpers already do, but code writing directly to Firestore (e.g. `csvModal.js`) must call it explicitly, or the summary bar / stats will show stale numbers until reload.
 
 ### Transaction names and category propagation
 
@@ -73,13 +77,13 @@ Transactions additionally carry an optional `owner` (email of who entered it), w
 
 ### Month scoping
 
-`state.currentYear` / `state.currentMonth` define the active month. `fetchTransactions()` queries Firestore filtered by `year` and `month` fields, so transactions written elsewhere **must** include both fields or they will be invisible to the month view. Only four `db.js` functions look beyond the current month: `calcAccumulatedBalance()` (scans all transactions), `fetchAllTransactions()` (full scan; list view 전체 기간 mode + CSV export), `fetchMonthlySummary()` (last N months, stats view), and `fetchRecentTransactionsByName()` (last N months, tx modal suggestions).
+`state.currentYear` / `state.currentMonth` define the active month. `fetchTransactions()` queries Firestore filtered by `year` and `month` fields (equality + `orderBy date desc` — requires the composite index documented in README § 복합 인덱스; a fresh Firebase project fails with `failed-precondition` until it exists), so transactions written elsewhere **must** include both fields or they will be invisible to the month view. Only four `db.js` functions look beyond the current month: `calcAccumulatedBalance()` (scans all transactions), `fetchAllTransactions()` (full scan; list view 전체 기간 mode + CSV export), `fetchMonthlySummary()` (last N months, stats view), and `fetchRecentTransactionsByName()` (last N months, tx modal suggestions).
 
 The list view has a scope toggle (이번 달/전체 기간). In 전체 기간 mode rows may reference transactions outside `state.transactions`, so `openEditModal(id, tx)` accepts the tx object directly, and `deleteTransaction()` falls back to a `getDoc` read when the id isn't in current-month state (needed to detect materialized fixed transactions and write the skip marker instead of a plain delete).
 
 ### Fixed items → transactions materialization
 
-`fixed_items` are templates; they are materialized into the `transactions` collection on demand by `applyFixedItemsToCurrentMonth()` (called from `loadAllData()` every time the month changes). Each generated transaction uses the deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` written with `setDoc`, so concurrent sessions overwrite the same doc instead of duplicating it, and is tagged `fromFixed: true` / `fixedId` so it is skipped on re-apply. Important consequences:
+`fixed_items` are templates; they are materialized into the `transactions` collection on demand by `applyFixedItemsToCurrentMonth()` (called from `loadAllData()` every time the month changes, and from `fixedModal.js` right after saving so a new/edited fixed item shows up in the current month immediately). Each generated transaction uses the deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` written with `setDoc`, so concurrent sessions overwrite the same doc instead of duplicating it, and is tagged `fromFixed: true` / `fixedId` so it is skipped on re-apply. Important consequences:
 
 - Editing a fixed item must call `syncFixedItemTransactions()` to propagate changes to already-materialized transactions — but it deliberately only touches the current month and later; past months are preserved as historical record.
 - The day-of-month is clamped against the target month's last day (e.g. day 31 in February becomes 28/29).
@@ -88,7 +92,7 @@ The list view has a scope toggle (이번 달/전체 기간). In 전체 기간 mo
 
 ### Monthly budget
 
-The `settings/budget` Firestore doc holds `{amount, months}`: `amount` is the default expense budget applied to every month, `months` is an optional `{"YYYY-MM": amount}` map of per-month overrides (set via the 이번 달에만 적용 checkbox in `budgetModal.js`). `fetchBudget()` loads both into `state.budgetDefault` / `state.budgetMonths` and resolves `state.budget` for the current month (override wins). The summary bar is a 4-card hierarchy (`renderSummary()` in `js/app.js`): 이번달 잔액 hero card (`.sum-card.hero`, enlarged value), a combined 수입/지출 card (`.sum-card.duo`, two rows), 누적 잔액, and the budget card (`renderBudgetCard()`) with a progress bar (blue → orange at ≥80% → red over budget); clicking the budget card opens `js/modals/budgetModal.js`. All summary amounts carry the `원` suffix. The 설정 해제 button removes only the current month's override when one exists, otherwise deletes the whole doc. The `settings` collection must be allowed in `firestore.rules` (already included — re-paste rules into the console when deploying).
+The `settings/budget` Firestore doc holds `{amount, months}`: `amount` is the default expense budget applied to every month, `months` is an optional `{"YYYY-MM": amount}` map of per-month overrides (set via the 이번 달에만 적용 checkbox in `budgetModal.js`). `fetchBudget()` loads both into `state.budgetDefault` / `state.budgetMonths` and resolves `state.budget` for the current month (override wins). The summary bar is a 4-card hierarchy (`renderSummary()` in `js/app.js`): 이번달 잔액 hero card (`.sum-card.hero`, enlarged value), a combined 수입/지출 card (`.sum-card.duo`, two rows), 누적 잔액, and the budget card (`renderBudgetCard()`) with a progress bar (blue → orange at ≥80% → red over budget); clicking the budget card opens `js/modals/budgetModal.js`. All summary amounts carry the `원` suffix. The 설정 해제 button removes only the current month's override when one exists, otherwise removes just the default `amount` — `deleteBudget()` deletes the whole doc only when no per-month overrides remain, so other months' overrides survive. Saving with the checkbox **unchecked** while the current month has an override also clears that override (otherwise the override would keep winning and the save would look ignored). The `settings` collection must be allowed in `firestore.rules` (already included — re-paste rules into the console when deploying).
 
 ### Personal budget plans (예산안)
 
@@ -115,6 +119,9 @@ The UI follows a Toss-like look: light-gray page (`--bg`), white borderless card
 ## Conventions
 
 - Comments and UI strings are Korean. New code should match.
+- Clickable non-`<button>` elements (transaction rows, calendar cells, stat bars, …) carry `role="button" tabindex="0"`; a global keydown handler in `js/app.js` (`setupGlobalKeys`) translates Enter/Space on `[role="button"]` into a click, and Escape closes the topmost open modal by clicking its `.modal-close`. New clickable divs must follow this pattern or they are keyboard-inaccessible.
+- The list view's 전체 기간 mode renders at most 300 rows at a time (`LIST_CHUNK` + 더 보기 button in `list.js`) — don't regress it to a full render.
+- `.kind-btn` is used by both the tx modal (변동/고정) and the fixed modal (지출/수입) — selectors touching it must stay scoped (`#txModal .kind-btn` / `#fixedTypeToggle .kind-btn`), never document-wide.
 - All rendering is via `innerHTML` template strings, so any user-originated string (transaction name, memo, CSV merchant name) must be wrapped in `escapeHtml()` from `js/utils.js` before interpolation.
 - Currency formatting goes through `fmtMoney()` (uses `toLocaleString("ko-KR")` on the absolute value) — sign is added by the caller.
 - Categories live in `js/constants.js`. Always resolve via `getCategoryInfo(id, type)` so `type` (`"income"` vs `"expense"`) is honored — IDs are not unique across types (e.g. both lists could collide).

@@ -31,7 +31,8 @@ export function renderCalendarView() {
     const isToday = isThisMonth && d === today.getDate();
     const dd      = dayMap[d];
     return `
-      <div class="cal-cell${isToday ? " today" : ""}" data-day="${d}">
+      <div class="cal-cell${isToday ? " today" : ""}" data-day="${d}" role="button" tabindex="0"
+        aria-label="${state.currentMonth}월 ${d}일 내역 추가">
         <div class="day-num-wrap">
           <div class="day-num">${d}</div>
         </div>

@@ -9,12 +9,18 @@ export function fmtMoney(n) {
   return Math.abs(n).toLocaleString("ko-KR");
 }
 
-/** 숫자를 축약 형식으로 포맷 (예: 1.2M, 500K) */
+/** 숫자를 한국식 축약 형식으로 포맷 (예: 1.5만, 125만, 1.2억) */
 export function fmtMoneyShort(n) {
   const abs = Math.abs(n);
-  if (abs >= 1_000_000) return (abs / 1_000_000).toFixed(1) + "M";
-  if (abs >= 1_000)     return (abs / 1_000).toFixed(0) + "K";
-  return abs.toLocaleString();
+  // 10 미만은 소수 첫째 자리까지, 그 이상은 반올림 정수
+  const short = (v, unit) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10) + unit;
+  if (abs >= 100_000_000) return short(abs / 100_000_000, "억");
+  if (abs >= 10_000) {
+    const man = abs / 10_000;
+    if (Math.round(man) >= 10_000) return short(abs / 100_000_000, "억"); // 9,999.6만 → 1억
+    return short(man, "만");
+  }
+  return abs.toLocaleString("ko-KR");
 }
 
 /** 사용자 입력 문자열을 innerHTML에 안전하게 넣기 위해 HTML 특수문자 이스케이프.
@@ -82,25 +88,39 @@ export function showConfirm(message, { confirmText = "확인", danger = true } =
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay confirm-overlay";
     overlay.innerHTML = `
-      <div class="confirm-box">
+      <div class="confirm-box" role="alertdialog" aria-modal="true" aria-label="${escapeHtml(message)}">
         <p class="confirm-msg">${escapeHtml(message)}</p>
         <div class="confirm-actions">
           <button type="button" class="confirm-cancel">취소</button>
           <button type="button" class="confirm-ok${danger ? " danger" : ""}">${escapeHtml(confirmText)}</button>
         </div>
       </div>`;
-    const done = ok => { overlay.remove(); resolve(ok); };
+    const prevFocus = document.activeElement;
+    const done = ok => {
+      document.removeEventListener("keydown", onKey, true);
+      overlay.remove();
+      if (prevFocus instanceof HTMLElement) prevFocus.focus(); // 원래 위치로 포커스 복원
+      resolve(ok);
+    };
+    // Esc → 취소 (capture 단계에서 가로채 app.js의 전역 Esc 핸들러보다 먼저 처리)
+    const onKey = e => {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(false); }
+    };
+    document.addEventListener("keydown", onKey, true);
     overlay.querySelector(".confirm-cancel").addEventListener("click", () => done(false));
     overlay.querySelector(".confirm-ok").addEventListener("click", () => done(true));
     overlay.addEventListener("click", e => { if (e.target === overlay) done(false); });
     document.body.appendChild(overlay);
+    overlay.querySelector(".confirm-ok").focus(); // Enter로 바로 확인 가능
   });
 }
 
 /** 2차원 배열을 CSV 파일로 다운로드. BOM을 붙여 엑셀에서 한글이 깨지지 않게 한다. */
 export function downloadCSV(filename, rows) {
   const esc = v => {
-    const s = String(v ?? "");
+    let s = String(v ?? "");
+    // 엑셀 수식 주입 방지 — 수식으로 해석될 수 있는 선행 문자는 텍스트로 고정
+    if (/^[=+\-@]/.test(s)) s = "'" + s;
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const csv  = "\uFEFF" + rows.map(r => r.map(esc).join(",")).join("\r\n");

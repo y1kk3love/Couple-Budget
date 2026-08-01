@@ -15,6 +15,9 @@ let parsedRows = [];
 const categoryNameToId = Object.fromEntries(
   CATEGORIES.expense.map(c => [c.name, c.id])
 );
+const incomeNameToId = Object.fromEntries(
+  CATEGORIES.income.map(c => [c.name, c.id])
+);
 
 // 문자열을 안정적인 짧은 해시로 (FNV-1a 32bit). 가맹점명을 문서 ID에
 // 안전하게 끼워넣기 위한 용도라 암호학적 강도는 필요 없음.
@@ -61,11 +64,33 @@ function resetModal() {
 
 // ── CSV 파싱 ──────────────────────────────────────────────────
 
+// 한 줄을 필드 배열로 분해 — 따옴표로 감싼 필드 안의 쉼표("ABC, DEF")와
+// 이중 따옴표 이스케이프("")를 처리한다. (필드 내 줄바꿈은 미지원)
+function parseCsvLine(line) {
+  const out = [];
+  let cur = "", inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      out.push(cur); cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out.map(v => v.trim());
+}
+
 function parseCSV(text) {
-  const lines   = text.split("\n").filter(l => l.trim());
+  const lines   = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+  const headers = parseCsvLine(lines[0]);
 
   // 신한카드 주요 컬럼명 자동 감지
   const dateKey = headers.find(h => /날짜|일자|거래일/.test(h));
@@ -75,7 +100,7 @@ function parseCSV(text) {
   const catKey  = headers.find(h => /카테고리/.test(h));
 
   return lines.slice(1).reduce((acc, line) => {
-    const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+    const vals = parseCsvLine(line);
     if (vals.length < 2) return acc;
 
     const row    = Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
@@ -92,7 +117,10 @@ function parseCSV(text) {
     const type    = /입금|수입/.test(rawType) ? "income" : "expense";
 
     const rawCat  = row[catKey] ?? "";
-    const category = type === "income" ? "salary" : (categoryNameToId[rawCat] ?? "etc");
+    // 카테고리 이름이 있으면 타입에 맞는 목록에서 찾고, 없으면 기타로
+    const category = type === "income"
+      ? (incomeNameToId[rawCat] ?? "etc_in")
+      : (categoryNameToId[rawCat] ?? "etc");
 
     acc.push({
       name:     row[nameKey] || "내역",
@@ -209,12 +237,23 @@ export function setupCsvModal() {
 
     // writeBatch는 한 번에 최대 500개 쓰기. 여유를 두고 450개씩 끊어 커밋.
     const CHUNK = 450;
-    for (let i = 0; i < ops.length; i += CHUNK) {
-      const batch = writeBatch(db);
-      for (const { id, data } of ops.slice(i, i + CHUNK)) {
-        batch.set(doc(db, "transactions", id), data);
+    try {
+      for (let i = 0; i < ops.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        for (const { id, data } of ops.slice(i, i + CHUNK)) {
+          batch.set(doc(db, "transactions", id), data);
+        }
+        await batch.commit();
       }
-      await batch.commit();
+    } catch (err) {
+      // 청크 일부만 커밋됐을 수 있다 — 문서 ID가 결정적이라 같은 파일을
+      // 다시 가져오면 중복 없이 이어서 채워진다
+      console.error("CSV 가져오기 실패:", err);
+      invalidateBalanceCache();
+      showToast("가져오기에 실패했습니다. 같은 파일로 다시 시도하면 이어서 가져옵니다");
+      await fetchTransactions();
+      renderAll();
+      return;
     }
     invalidateBalanceCache();
 

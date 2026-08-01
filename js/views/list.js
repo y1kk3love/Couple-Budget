@@ -20,6 +20,12 @@ let sortDir = "desc";
 let filters = { name: "", category: "", minAmount: "", maxAmount: "", dateFrom: "", dateTo: "" };
 let filterOpen = false;
 
+// ── 전체 기간 점진 렌더 ───────────────────────────────────────
+// 수천 건을 한 번에 innerHTML로 그리면 모바일에서 버벅여서,
+// 전체 기간 모드는 LIST_CHUNK건씩 끊어 보여주고 '더 보기'로 늘린다.
+const LIST_CHUNK = 300;
+let visibleCount = LIST_CHUNK;
+
 export function renderListView() {
   const container = document.getElementById("view-list");
 
@@ -48,8 +54,16 @@ export function renderListView() {
       const filtered = applyFilters(txs);
       content.innerHTML = renderContent(filtered);
       bindRowEvents(content, new Map(filtered.map(t => [t.id, t])));
+      bindMoreBtn(content);
     });
   }
+}
+
+function bindMoreBtn(root) {
+  root.querySelector("#listMoreBtn")?.addEventListener("click", () => {
+    visibleCount += LIST_CHUNK;
+    renderListView(); // fetchAllTransactions는 캐시라 재조회 비용 없음
+  });
 }
 
 // 행 클릭 → 수정 모달. 전체 기간 모드에서는 현재 달 state에 없는 거래일 수
@@ -85,6 +99,7 @@ function bindScopeEvents(container) {
     btn.addEventListener("click", () => {
       if (btn.dataset.scope === scope) return;
       scope = btn.dataset.scope;
+      visibleCount = LIST_CHUNK; // 범위 전환 시 점진 렌더 초기화
       renderListView();
     });
   });
@@ -175,10 +190,12 @@ function bindFilterEvents(container) {
     filters.maxAmount  = container.querySelector("#f-max").value;
     filters.dateFrom   = container.querySelector("#f-from").value;
     filters.dateTo     = container.querySelector("#f-to").value;
+    visibleCount = LIST_CHUNK;
     renderListView();
   });
   container.querySelector("#filterResetBtn")?.addEventListener("click", () => {
     filters = { name: "", category: "", minAmount: "", maxAmount: "", dateFrom: "", dateTo: "" };
+    visibleCount = LIST_CHUNK;
     renderListView();
   });
 }
@@ -218,8 +235,13 @@ function bindSortEvents(container) {
 
 function renderContent(filtered) {
   if (!filtered.length) return emptyStateHTML("조건에 맞는 내역이 없어요");
-  const sorted = sortTransactions([...filtered]);
-  return sortKey === "date" ? renderGrouped(sorted) : renderFlat(sorted);
+  const sorted  = sortTransactions([...filtered]);
+  const limited = scope === "all" ? sorted.slice(0, visibleCount) : sorted;
+  const rest    = sorted.length - limited.length;
+  const moreBtn = rest > 0
+    ? `<button id="listMoreBtn" class="list-more-btn">더 보기 (${rest.toLocaleString("ko-KR")}건 남음)</button>`
+    : "";
+  return (sortKey === "date" ? renderGrouped(limited) : renderFlat(limited)) + moreBtn;
 }
 
 function sortTransactions(txs) {
@@ -279,7 +301,7 @@ function renderTxRow(t) {
   const dateTag  = scope === "all" && sortKey !== "date" ? `<span>${t.date}</span>` : "";
 
   return `
-    <div class="tx-item" data-id="${t.id}">
+    <div class="tx-item" data-id="${t.id}" role="button" tabindex="0">
       <div class="tx-cat-dot" style="background:${cat.color}"></div>
       <div class="tx-info">
         <div class="tx-name">${escapeHtml(t.name)}</div>

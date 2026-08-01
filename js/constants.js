@@ -27,6 +27,10 @@ export const CATEGORIES = {
   ]
 };
 
+// 사람별 지출 카드 등 사용자 구분용 색 — 카테고리 색과 같은 '데이터 색'이라
+// 테마와 무관하게 고정 (JS/HTML 템플릿에 hex를 흩뿌리지 않도록 여기서만 정의)
+export const OWNER_COLORS = ["#4da3f5", "#f272b6", "#9aa5b1", "#35c08e"];
+
 export function getCategoryInfo(id, type) {
   const list = type === "income" ? CATEGORIES.income : CATEGORIES.expense;
   return list.find(c => c.id === id) ?? { name: id, color: "#95a5a6" };
