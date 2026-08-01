@@ -4,16 +4,19 @@
 
 import state from "../state.js";
 import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName } from "../utils.js";
-import { WEDDING_CATEGORIES, WEDDING_PERIODS } from "../constants.js";
+import { WEDDING_CATEGORIES, WEDDING_PERIODS, getWeddingCategory } from "../constants.js";
 import {
   saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
-  saveWeddingTask, deleteWeddingTask, fetchWeddingTasks
+  saveWeddingTask, deleteWeddingTask, fetchWeddingTasks,
+  saveWeddingVendor, deleteWeddingVendor, fetchWeddingVendors
 } from "../weddingDb.js";
 import { renderWeddingView } from "../views/wedding.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
 
-let editingItemId = null;
-let editingTaskId = null;
+let editingItemId   = null;
+let editingTaskId   = null;
+let editingVendorId = null;
+let editingVendorStatus = "candidate";
 let draftPayments = []; // 편집 중 결제 내역 — 저장 시 통째로 기록 (마지막 저장 승리, 스펙에 명시된 트레이드오프)
 
 const PAY_LABELS = ["계약금", "중도금", "잔금"];
@@ -95,6 +98,44 @@ function closeTask() {
   document.getElementById("weddingTaskModal").classList.add("hidden");
 }
 
+// ── 업체 모달 ─────────────────────────────────────────────────
+
+export function openWeddingVendorModal(vendor) {
+  editingVendorId     = vendor?.id ?? null;
+  editingVendorStatus = vendor?.status ?? "candidate";
+
+  document.getElementById("wdVendorModalTitle").textContent = vendor ? "업체 수정" : "업체 추가";
+  document.getElementById("wdVendorDelete").classList.toggle("hidden", !vendor);
+  // 확정 버튼은 저장된 업체이면서 아직 확정 전일 때만
+  document.getElementById("wdVendorChoose").classList.toggle("hidden", !vendor || vendor.status === "chosen");
+  document.getElementById("wdVendorId").value = vendor?.id ?? "";
+
+  const sel = document.getElementById("wdVendorCategory");
+  sel.innerHTML = WEDDING_CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  sel.value = vendor?.category ?? WEDDING_CATEGORIES[0].id;
+
+  document.getElementById("wdVendorName").value    = vendor?.name ?? "";
+  document.getElementById("wdVendorPrice").value   = vendor?.price || "";
+  document.getElementById("wdVendorContact").value = vendor?.contact ?? "";
+  document.getElementById("wdVendorMemo").value    = vendor?.memo ?? "";
+  document.getElementById("weddingVendorModal").classList.remove("hidden");
+}
+
+function closeVendor() {
+  document.getElementById("weddingVendorModal").classList.add("hidden");
+}
+
+// 모달 입력값을 업체 데이터로 수집
+function readVendorForm() {
+  return {
+    category: document.getElementById("wdVendorCategory").value,
+    name:     document.getElementById("wdVendorName").value.trim(),
+    price:    parseInt(document.getElementById("wdVendorPrice").value) || 0,
+    contact:  document.getElementById("wdVendorContact").value.trim(),
+    memo:     document.getElementById("wdVendorMemo").value,
+  };
+}
+
 // ── 결제 내역 (모달 안 동적 렌더) ─────────────────────────────
 
 function renderPayments() {
@@ -155,6 +196,7 @@ function renderPayInput(label) {
 export function setupWeddingModals() {
   document.querySelectorAll('.amount-presets[data-target="wdTotalBudget"]').forEach(setupAmountPresets);
   document.querySelectorAll('.amount-presets[data-target="wdItemPlanned"]').forEach(setupAmountPresets);
+  document.querySelectorAll('.amount-presets[data-target="wdVendorPrice"]').forEach(setupAmountPresets);
 
   // 닫기
   document.getElementById("wdSettingsClose").addEventListener("click", closeSettings);
@@ -168,6 +210,10 @@ export function setupWeddingModals() {
   document.getElementById("wdTaskClose").addEventListener("click", closeTask);
   document.getElementById("weddingTaskModal").addEventListener("click", e => {
     if (e.target.id === "weddingTaskModal") closeTask();
+  });
+  document.getElementById("wdVendorClose").addEventListener("click", closeVendor);
+  document.getElementById("weddingVendorModal").addEventListener("click", e => {
+    if (e.target.id === "weddingVendorModal") closeVendor();
   });
 
   // 설정 저장 — 쓰기 성공 후에만 닫는다
@@ -261,6 +307,80 @@ export function setupWeddingModals() {
     closeTask();
     showToast("삭제되었습니다");
     await fetchWeddingTasks();
+    renderWeddingView();
+  });
+
+  // 업체 저장
+  document.getElementById("wdVendorSave").addEventListener("click", async () => {
+    const data = readVendorForm();
+    if (!data.name) { showToast("업체명을 입력하세요"); return; }
+    if (!editingVendorId) data.status = "candidate";
+
+    try {
+      await saveWeddingVendor(data, editingVendorId);
+    } catch (err) {
+      console.error("업체 저장 실패:", err);
+      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+    closeVendor();
+    showToast(editingVendorId ? "수정되었습니다" : "추가되었습니다");
+    await fetchWeddingVendors();
+    renderWeddingView();
+  });
+
+  // 업체 삭제
+  document.getElementById("wdVendorDelete").addEventListener("click", async () => {
+    if (!editingVendorId) return;
+    if (!(await showConfirm("이 업체를 삭제할까요?", { confirmText: "삭제" }))) return;
+    try {
+      await deleteWeddingVendor(editingVendorId);
+    } catch (err) {
+      console.error("업체 삭제 실패:", err);
+      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+    closeVendor();
+    showToast("삭제되었습니다");
+    await fetchWeddingVendors();
+    renderWeddingView();
+  });
+
+  // 업체 확정 — 같은 카테고리 예산 항목에 견적 반영/생성까지 이어지는 흐름
+  document.getElementById("wdVendorChoose").addEventListener("click", async () => {
+    if (!editingVendorId) return;
+    const v = readVendorForm();
+    if (!v.name) { showToast("업체명을 입력하세요"); return; }
+    if (!(await showConfirm(`'${v.name}'을(를) 확정 업체로 표시할까요?`, { confirmText: "확정", danger: false }))) return;
+
+    try {
+      await saveWeddingVendor({ ...v, status: "chosen" }, editingVendorId);
+
+      const catName = getWeddingCategory(v.category).name;
+      const item    = state.wedding.items.find(i => i.category === v.category);
+      if (item) {
+        if (v.price > 0 &&
+            await showConfirm(`예산 항목 '${item.name}'의 계획 금액을 견적가 ${fmtMoney(v.price)}원으로 바꿀까요?`, { confirmText: "반영", danger: false })) {
+          await saveWeddingItem({ planned: v.price, vendorId: editingVendorId }, item.id);
+        } else {
+          await saveWeddingItem({ vendorId: editingVendorId }, item.id);
+        }
+      } else if (await showConfirm(`'${catName}' 예산 항목을 새로 만들까요?`, { confirmText: "만들기", danger: false })) {
+        await saveWeddingItem({
+          name: catName, category: v.category, planned: v.price || 0,
+          payer: "both", payments: [], memo: v.name,
+          order: state.wedding.items.length, vendorId: editingVendorId,
+        });
+      }
+    } catch (err) {
+      console.error("업체 확정 실패:", err);
+      showToast("확정에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+
+    closeVendor();
+    showToast("확정했습니다 💍");
+    await Promise.all([fetchWeddingVendors(), fetchWeddingItems()]);
     renderWeddingView();
   });
 

@@ -846,6 +846,10 @@ a:focus-visible {
 .wd-task-memo { font-size: 0.75rem; color: var(--text-3); }
 .wd-empty-actions { display: flex; gap: 8px; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
 
+/* 업체 세그먼트 */
+.wd-choose-btn { width: 100%; background: var(--accent-bg); color: var(--accent); }
+.wd-choose-btn:hover { filter: none; background: var(--accent); color: #fff; }
+
 /* ── 토스트 ── */
 .toast {
   position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);

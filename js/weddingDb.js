@@ -82,6 +82,28 @@ export async function seedWeddingChecklist() {
   ));
 }
 
+// ── 업체 후보 (wedding_vendors) ───────────────────────────────
+
+export async function fetchWeddingVendors() {
+  try {
+    const snap = await getDocs(collection(db, "wedding_vendors"));
+    state.wedding.vendors = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.category ?? "").localeCompare(b.category ?? "") || (a.name ?? "").localeCompare(b.name ?? "", "ko"));
+  } catch { state.wedding.loadError = true; }
+}
+
+// 신규 저장 시 생성된 문서 ID를 반환한다 (확정 → 예산 항목 연결에 필요)
+export async function saveWeddingVendor(data, id = null) {
+  if (id) { await updateDoc(doc(db, "wedding_vendors", id), data); return id; }
+  const ref = await addDoc(collection(db, "wedding_vendors"), data);
+  return ref.id;
+}
+
+export async function deleteWeddingVendor(id) {
+  await deleteDoc(doc(db, "wedding_vendors", id));
+}
+
 // ── 파생 합계 — payments 배열이 지출의 유일한 원본 ─────────────
 
 export function itemSpent(item) {
