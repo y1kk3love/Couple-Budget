@@ -35,12 +35,13 @@ js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryIn
 js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
 js/db.js                 ← all Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/auth.js               ← Google sign-in; on success calls initApp()
+js/theme.js              ← dark/light toggle (setupThemeToggle); see Design system section
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
 js/views/{calendar,list,stats,fixed,plan}.js     ← each exports render<Name>View() that fills its #view-<name> div
 js/modals/{txModal,fixedModal,csvModal,budgetModal}.js  ← setup<Name>Modal() wires DOM events; open<Name>Modal() opens it
 ```
 
-Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, the four modal `setup*` calls, and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click.
+Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, `setupThemeToggle()`, the 내보내기 button binding, the four modal `setup*` calls, and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click.
 
 ### The render cycle
 
@@ -66,7 +67,7 @@ The tx modal has no name input: a transaction's `name` is the trimmed memo, fall
 
 ### Firestore document shapes
 
-The field-by-field schemas for `transactions` and `fixed_items` docs are documented in `README.md` (§ Firestore 데이터 구조). Note `fixed_items` also carry an optional `day` (day-of-month, defaulting to 1) used by the materialization described below.
+The field-by-field schemas for `transactions` and `fixed_items` docs are documented in `README.md` (§ Firestore 데이터 구조) — but those tables predate the newer optional fields (`owner` on transactions, `day` on fixed_items, the skip-marker shape), so treat the sections below as the authority on them. `day` is the day-of-month a fixed item materializes on, defaulting to 1 and clamped to 1–31 on save (`fixedModal.js`).
 
 Transactions additionally carry an optional `owner` (email of who entered it), written on manual add (`txModal.js`) and CSV import, but **not** on fixed-item materialization and never overwritten on edit. Legacy docs lack it — always treat missing `owner` as "함께/미지정" (the list view's 작성자 tag and the stats 사람별 지출 card both do). Display names resolve through `ownerName()` in `utils.js` (예산안 표시 이름 → email prefix fallback).
 
@@ -91,7 +92,7 @@ The `settings/budget` Firestore doc holds `{amount, months}`: `amount` is the de
 
 ### Personal budget plans (예산안)
 
-The `plan` view is a per-person salary allocation planner, independent of actual transactions and month navigation. Each of the two users has at most one plan in the `budget_plans` collection (doc ID = their email): `{owner, name(표시 이름, optional), income, items: [{name, amount}]}`. Card titles show `<name>의 예산안` when `name` is set, falling back to 내/상대 예산안; the owner's card is marked with a "나" tag. Both users can see both plans; the client only allows editing your own (Firestore rules allow either — enforcement is UI-level only). Item colors are auto-assigned by cycling `CATEGORIES.expense` colors; the donut chart shows allocations plus remaining (or over-allocation in red). The partner's card is found by taking the other entry in `ALLOWED_EMAILS`, so the view assumes exactly two allowlisted accounts. Edit mode re-renders the whole view on every row add/remove, so it first calls `syncDraft()` to harvest the live inputs back into `draft` — any new field added to the edit card must also be read there or it is lost on the next re-render. `fetchBudgetPlans()` swallows permission errors so the app still works if `budget_plans` is missing from the deployed rules — but the view will look empty; re-paste `firestore.rules` into the console when deploying this feature.
+The `plan` view is a per-person salary allocation planner, independent of actual transactions and month navigation. Each of the two users has at most one plan in the `budget_plans` collection (doc ID = their email): `{owner, name(표시 이름, optional), income, items: [{name, amount}]}`. Card titles show `<name>의 예산안` when `name` is set, falling back to 내/상대 예산안; the owner's card is marked with a "나" tag. Both users can see both plans; the client only allows editing your own (Firestore rules allow either — enforcement is UI-level only). Item colors are auto-assigned by cycling `CATEGORIES.expense` colors in **saved order** (the view's sort bar reorders rows without reshuffling colors); the donut chart shows allocations plus remaining (or over-allocation in red). Edit-mode rows can be drag-reordered via pointer events — the handlers live on `document`, not `setPointerCapture`, because re-inserting the row mid-drag would release the capture — and the final DOM order is harvested by `syncDraft()`. The partner's card is found by taking the other entry in `ALLOWED_EMAILS`, so the view assumes exactly two allowlisted accounts. Edit mode re-renders the whole view on every row add/remove, so it first calls `syncDraft()` to harvest the live inputs back into `draft` — any new field added to the edit card must also be read there or it is lost on the next re-render. `fetchBudgetPlans()` swallows permission errors so the app still works if `budget_plans` is missing from the deployed rules — but the view will look empty; re-paste `firestore.rules` into the console when deploying this feature.
 
 ### CSV import
 
