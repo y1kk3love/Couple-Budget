@@ -55,3 +55,53 @@ export const WEDDING_CATEGORIES = [
 export function getWeddingCategory(id) {
   return WEDDING_CATEGORIES.find(c => c.id === id) ?? { id, name: id ?? "기타", color: "#9aa5b1" };
 }
+
+// 체크리스트 시기 그룹 — 배열 순서가 곧 표시 순서
+export const WEDDING_PERIODS = [
+  { id: "d12_9", label: "D-12~9개월" },
+  { id: "d8_6",  label: "D-8~6개월" },
+  { id: "d5_4",  label: "D-5~4개월" },
+  { id: "d3_2",  label: "D-3~2개월" },
+  { id: "d1",    label: "D-1개월" },
+  { id: "dweek", label: "D-week" },
+  { id: "dday",  label: "D-day" },
+  { id: "after", label: "식후" },
+];
+
+// 표준 결혼 준비 체크리스트 — '불러오기' 버튼으로 시딩 (문서 ID tpl_<index> 고정, 멱등)
+export const WEDDING_CHECKLIST_TEMPLATE = [
+  { title: "상견례",                      period: "d12_9" },
+  { title: "결혼식 날짜·예산 협의",        period: "d12_9" },
+  { title: "예식장 투어·계약",             period: "d12_9" },
+  { title: "스드메 계약",                  period: "d12_9" },
+  { title: "신혼집 예산·지역 결정",        period: "d12_9" },
+  { title: "신혼집 계약",                  period: "d8_6" },
+  { title: "신혼여행지 결정·항공 예약",    period: "d8_6" },
+  { title: "웨딩 촬영 컨셉 결정",          period: "d8_6" },
+  { title: "예물·예단 협의",               period: "d8_6" },
+  { title: "드레스 투어",                  period: "d8_6" },
+  { title: "웨딩 촬영",                    period: "d5_4" },
+  { title: "한복·예복 맞춤",               period: "d5_4" },
+  { title: "혼수·가전 리스트 작성",        period: "d5_4" },
+  { title: "청첩장 시안 결정",             period: "d5_4" },
+  { title: "본식 스냅·DVD 예약",           period: "d5_4" },
+  { title: "청첩장 인쇄·발송 시작",        period: "d3_2" },
+  { title: "식전 영상 제작",               period: "d3_2" },
+  { title: "혼수·가전 구매",               period: "d3_2" },
+  { title: "부케·꽃장식 결정",             period: "d3_2" },
+  { title: "사회자·주례·축가 섭외",        period: "d3_2" },
+  { title: "청첩장 모임",                  period: "d1" },
+  { title: "최종 하객 인원 확인",          period: "d1" },
+  { title: "식순·좌석 배치 확정",          period: "d1" },
+  { title: "메이크업 리허설",              period: "d1" },
+  { title: "예식장 최종 미팅",             period: "dweek" },
+  { title: "피부 관리·컨디션 조절",        period: "dweek" },
+  { title: "축의금 접수 담당 지정",        period: "dweek" },
+  { title: "결혼식 물품 준비 (방명록 등)", period: "dweek" },
+  { title: "결혼식 🎉",                    period: "dday" },
+  { title: "축의금 정산",                  period: "dday" },
+  { title: "신혼여행",                     period: "after" },
+  { title: "혼인신고",                     period: "after" },
+  { title: "감사 인사·답례",               period: "after" },
+  { title: "축의금 내역 정리",             period: "after" },
+];

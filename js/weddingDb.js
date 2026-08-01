@@ -10,6 +10,7 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
+import { WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE } from "./constants.js";
 
 // ── 설정 (settings/wedding) ───────────────────────────────────
 
@@ -43,6 +44,42 @@ export async function saveWeddingItem(data, id = null) {
 
 export async function deleteWeddingItem(id) {
   await deleteDoc(doc(db, "wedding_items", id));
+}
+
+// ── 체크리스트 (wedding_tasks) ────────────────────────────────
+
+const periodOrder = id => WEDDING_PERIODS.findIndex(p => p.id === id);
+
+export async function fetchWeddingTasks() {
+  try {
+    const snap = await getDocs(collection(db, "wedding_tasks"));
+    state.wedding.tasks = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) =>
+        (periodOrder(a.period) - periodOrder(b.period)) || ((a.order ?? 0) - (b.order ?? 0)));
+  } catch { state.wedding.loadError = true; }
+}
+
+export async function saveWeddingTask(data, id = null) {
+  if (id) await updateDoc(doc(db, "wedding_tasks", id), data);
+  else    await addDoc(collection(db, "wedding_tasks"), data);
+}
+
+export async function deleteWeddingTask(id) {
+  await deleteDoc(doc(db, "wedding_tasks", id));
+}
+
+export async function toggleWeddingTask(id, done) {
+  await updateDoc(doc(db, "wedding_tasks", id), { done });
+}
+
+// 표준 템플릿 시딩 — 문서 ID 고정(tpl_n) + setDoc → 두 명이 동시에 눌러도 중복 없음.
+// UI에서 빈 목록일 때만 노출되므로 완료 상태를 덮어쓸 일도 없다.
+export async function seedWeddingChecklist() {
+  await Promise.all(WEDDING_CHECKLIST_TEMPLATE.map((t, i) =>
+    setDoc(doc(db, "wedding_tasks", `tpl_${i}`),
+      { title: t.title, period: t.period, done: false, memo: "", order: i })
+  ));
 }
 
 // ── 파생 합계 — payments 배열이 지출의 유일한 원본 ─────────────

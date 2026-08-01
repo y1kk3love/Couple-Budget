@@ -4,12 +4,16 @@
 
 import state from "../state.js";
 import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName } from "../utils.js";
-import { WEDDING_CATEGORIES } from "../constants.js";
-import { saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems } from "../weddingDb.js";
+import { WEDDING_CATEGORIES, WEDDING_PERIODS } from "../constants.js";
+import {
+  saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
+  saveWeddingTask, deleteWeddingTask, fetchWeddingTasks
+} from "../weddingDb.js";
 import { renderWeddingView } from "../views/wedding.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
 
 let editingItemId = null;
+let editingTaskId = null;
 let draftPayments = []; // 편집 중 결제 내역 — 저장 시 통째로 기록 (마지막 저장 승리, 스펙에 명시된 트레이드오프)
 
 const PAY_LABELS = ["계약금", "중도금", "잔금"];
@@ -67,6 +71,28 @@ function populatePayerSelect(selected) {
     .map(o => `<option value="${escapeHtml(o.v)}">${escapeHtml(o.label)}</option>`)
     .join("");
   sel.value = selected;
+}
+
+// ── 할 일 모달 ────────────────────────────────────────────────
+
+export function openWeddingTaskModal(task) {
+  editingTaskId = task?.id ?? null;
+
+  document.getElementById("wdTaskModalTitle").textContent = task ? "할 일 수정" : "할 일 추가";
+  document.getElementById("wdTaskDelete").classList.toggle("hidden", !task);
+  document.getElementById("wdTaskId").value    = task?.id ?? "";
+  document.getElementById("wdTaskTitle").value = task?.title ?? "";
+
+  const sel = document.getElementById("wdTaskPeriod");
+  sel.innerHTML = WEDDING_PERIODS.map(p => `<option value="${p.id}">${p.label}</option>`).join("");
+  sel.value = task?.period ?? WEDDING_PERIODS[0].id;
+
+  document.getElementById("wdTaskMemo").value = task?.memo ?? "";
+  document.getElementById("weddingTaskModal").classList.remove("hidden");
+}
+
+function closeTask() {
+  document.getElementById("weddingTaskModal").classList.add("hidden");
 }
 
 // ── 결제 내역 (모달 안 동적 렌더) ─────────────────────────────
@@ -139,6 +165,10 @@ export function setupWeddingModals() {
   document.getElementById("weddingItemModal").addEventListener("click", e => {
     if (e.target.id === "weddingItemModal") closeItem();
   });
+  document.getElementById("wdTaskClose").addEventListener("click", closeTask);
+  document.getElementById("weddingTaskModal").addEventListener("click", e => {
+    if (e.target.id === "weddingTaskModal") closeTask();
+  });
 
   // 설정 저장 — 쓰기 성공 후에만 닫는다
   document.getElementById("wdSettingsSave").addEventListener("click", async () => {
@@ -186,6 +216,51 @@ export function setupWeddingModals() {
     closeItem();
     showToast(editingItemId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingItems();
+    renderWeddingView();
+  });
+
+  // 할 일 저장
+  document.getElementById("wdTaskSave").addEventListener("click", async () => {
+    const title = document.getElementById("wdTaskTitle").value.trim();
+    if (!title) { showToast("할 일을 입력하세요"); return; }
+
+    const data = {
+      title,
+      period: document.getElementById("wdTaskPeriod").value,
+      memo:   document.getElementById("wdTaskMemo").value,
+    };
+    if (!editingTaskId) {
+      data.done  = false;
+      data.order = 1000 + state.wedding.tasks.length; // 직접 추가한 항목은 템플릿 뒤에
+    }
+
+    try {
+      await saveWeddingTask(data, editingTaskId);
+    } catch (err) {
+      console.error("할 일 저장 실패:", err);
+      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+    closeTask();
+    showToast(editingTaskId ? "수정되었습니다" : "추가되었습니다");
+    await fetchWeddingTasks();
+    renderWeddingView();
+  });
+
+  // 할 일 삭제
+  document.getElementById("wdTaskDelete").addEventListener("click", async () => {
+    if (!editingTaskId) return;
+    if (!(await showConfirm("이 할 일을 삭제할까요?", { confirmText: "삭제" }))) return;
+    try {
+      await deleteWeddingTask(editingTaskId);
+    } catch (err) {
+      console.error("할 일 삭제 실패:", err);
+      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+    closeTask();
+    showToast("삭제되었습니다");
+    await fetchWeddingTasks();
     renderWeddingView();
   });
 

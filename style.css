@@ -829,6 +829,23 @@ a:focus-visible {
 .wd-pay-input input:focus { border-color: var(--accent); }
 .wd-pay-input .save-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; flex-shrink: 0; }
 
+/* 체크리스트 세그먼트 */
+.wd-progress {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 1rem 1.125rem; box-shadow: var(--shadow-card); margin-bottom: 12px;
+}
+.wd-task-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0.7rem 1rem; cursor: pointer; transition: background 0.15s;
+}
+.wd-task-row + .wd-task-row { border-top: 1px solid var(--border); }
+.wd-task-row:hover { background: var(--surface-hover); }
+.wd-task-chk { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.wd-task-title { font-size: 0.88rem; color: var(--text); }
+.wd-task-row.done .wd-task-title { text-decoration: line-through; color: var(--text-3); }
+.wd-task-memo { font-size: 0.75rem; color: var(--text-3); }
+.wd-empty-actions { display: flex; gap: 8px; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
+
 /* ── 토스트 ── */
 .toast {
   position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);
