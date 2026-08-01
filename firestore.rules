@@ -33,5 +33,11 @@ service cloud.firestore {
     match /budget_plans/{docId} {
       allow read, write: if isAllowed();
     }
+
+    // 결혼 준비 (예산 항목 / 체크리스트 / 업체 / 하객)
+    match /wedding_items/{docId}   { allow read, write: if isAllowed(); }
+    match /wedding_tasks/{docId}   { allow read, write: if isAllowed(); }
+    match /wedding_vendors/{docId} { allow read, write: if isAllowed(); }
+    match /wedding_guests/{docId}  { allow read, write: if isAllowed(); }
   }
 }

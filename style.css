@@ -786,6 +786,49 @@ a:focus-visible {
 .pe-add:hover { border-color: var(--accent); color: var(--accent); }
 .plan-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
+/* ── 결혼 준비 탭 ── */
+.wd-header {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 1.25rem; box-shadow: var(--shadow-card); margin-bottom: 1rem;
+  cursor: pointer; transition: background 0.15s, transform 0.12s ease;
+}
+.wd-header:hover { background: var(--surface-hover); }
+.wd-header:active { transform: scale(0.99); }
+.wd-dday { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; color: var(--accent); font-family: var(--mono); }
+.wd-date { font-size: 0.85rem; color: var(--text-2); margin-top: 2px; }
+.wd-budget-line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-2); margin: 10px 0 5px; }
+.wd-budget-line strong { font-family: var(--mono); }
+.wd-payer-sum { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-3); margin-top: 8px; }
+.wd-payer-sum strong { color: var(--text-2); font-family: var(--mono); font-weight: 600; }
+.wd-seg { margin-bottom: 1rem; }
+.scope-btn:disabled { opacity: 0.45; cursor: default; }
+.wd-item-plan { font-size: 0.75rem; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+.wd-empty-note { font-size: 0.82rem; color: var(--text-3); padding: 8px 0; }
+
+/* 결제 내역 (항목 모달) */
+.wd-pay-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.wd-pay-row:last-of-type { border-bottom: none; }
+.wd-pay-label { color: var(--text-2); min-width: 52px; }
+.wd-pay-date { font-size: 0.75rem; color: var(--text-3); }
+.wd-pay-amt { margin-left: auto; font-family: var(--mono); font-weight: 600; color: var(--text); }
+.wd-pay-del {
+  background: none; border: none; color: var(--text-3); cursor: pointer;
+  font-size: 1rem; width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+}
+.wd-pay-del:hover { color: var(--expense); }
+.wd-pay-presets { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.wd-pay-input { display: flex; gap: 6px; margin-top: 8px; }
+.wd-pay-input input {
+  flex: 1; min-width: 0; padding: 0.45rem 0.6rem;
+  border: 1.5px solid transparent; border-radius: 8px; font-size: 0.82rem;
+  background: var(--surface2); color: var(--text); outline: none; font-family: var(--font);
+}
+.wd-pay-input input:focus { border-color: var(--accent); }
+.wd-pay-input .save-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; flex-shrink: 0; }
+
 /* ── 토스트 ── */
 .toast {
   position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);
@@ -799,7 +842,7 @@ a:focus-visible {
 .mobile-tabs {
   display: none; position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--surface); border-top: 1px solid var(--border);
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   z-index: 100; padding-bottom: env(safe-area-inset-bottom);
 }
 .mob-tab {

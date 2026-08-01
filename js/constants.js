@@ -35,3 +35,23 @@ export function getCategoryInfo(id, type) {
   const list = type === "income" ? CATEGORIES.income : CATEGORIES.expense;
   return list.find(c => c.id === id) ?? { name: id, color: "#95a5a6" };
 }
+
+// ── 결혼 준비 탭 ──────────────────────────────────────────────
+
+// 결혼 준비 예산 카테고리 — 지출 카테고리와 같은 '데이터 색' (테마 무관)
+export const WEDDING_CATEGORIES = [
+  { id: "venue",     name: "예식장",         color: "#f272b6" },
+  { id: "sdm",       name: "스드메",         color: "#9b7df0" },
+  { id: "jewelry",   name: "예물·예단",      color: "#ff9e45" },
+  { id: "attire",    name: "한복·예복",      color: "#4da3f5" },
+  { id: "honeymoon", name: "신혼여행",       color: "#35c08e" },
+  { id: "appliance", name: "혼수·가전",      color: "#2fb8ac" },
+  { id: "house",     name: "신혼집",         color: "#c29063" },
+  { id: "invite",    name: "청첩장·식전영상", color: "#7a85f0" },
+  { id: "flower",    name: "부케·꽃장식",    color: "#ff8a66" },
+  { id: "etc_w",     name: "기타",           color: "#9aa5b1" },
+];
+
+export function getWeddingCategory(id) {
+  return WEDDING_CATEGORIES.find(c => c.id === id) ?? { id, name: id ?? "기타", color: "#9aa5b1" };
+}

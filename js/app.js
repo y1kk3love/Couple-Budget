@@ -21,6 +21,8 @@ import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
 import { renderPlanView }     from "./views/plan.js";
+import { renderWeddingView }  from "./views/wedding.js";
+import { setupWeddingModals } from "./modals/weddingModal.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -70,6 +72,7 @@ export function renderAll() {
     case "stats":    renderStatsView();    break;
     case "fixed":    renderFixedView();    break;
     case "plan":     renderPlanView();     break;
+    case "wedding":  renderWeddingView();  break;
   }
 }
 
@@ -279,4 +282,5 @@ setupTxModal();
 setupFixedModal();
 setupCsvModal();
 setupBudgetModal();
+setupWeddingModals();
 setupCategoryDetailModal();

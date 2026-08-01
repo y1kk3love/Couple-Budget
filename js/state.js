@@ -20,6 +20,8 @@ const state = {
   budgetMonths:  {},
   // 개인 예산안 (budget_plans 컬렉션, 문서 ID = 이메일)
   budgetPlans:   [],
+  // 결혼 준비 탭 (settings/wedding + wedding_* 컬렉션) — 월과 무관, 탭 진입 시 로드
+  wedding: { config: null, items: [], tasks: [], vendors: [], guests: [], loadError: false },
 };
 
 export default state;

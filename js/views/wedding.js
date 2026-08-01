@@ -1,0 +1,180 @@
+// ================================================================
+// js/views/wedding.js — 결혼 준비 뷰 (셸: D-day 헤더 + 세그먼트 전환 + 예산)
+// 기존 가계부와 완전 분리된 장부 — 월 이동과 무관, 탭 최초 진입 시 1회 로드.
+// ================================================================
+
+import state from "../state.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML } from "../utils.js";
+import { getWeddingCategory } from "../constants.js";
+import { fetchWeddingConfig, fetchWeddingItems, itemSpent, weddingTotals } from "../weddingDb.js";
+import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
+
+// 현재 세그먼트 — 재렌더·뷰 전환에도 유지 (모듈 레벨 UI 상태 패턴)
+let segment = "budget"; // "budget" | "checklist" | "vendors" | "guests"
+let loaded  = false;    // 탭 최초 진입 시 1회 로드 플래그
+
+const SEGMENTS = [
+  { id: "budget",    label: "예산" },
+  { id: "checklist", label: "체크리스트" },
+  { id: "vendors",   label: "업체" },
+  { id: "guests",    label: "하객" },
+];
+// 단계 출시 — 아직 구현 전인 세그먼트는 비활성
+const ENABLED = new Set(["budget"]);
+
+// ── D-day 계산 (자정 기준 날짜 차이) ──────────────────────────
+
+export function dDayInfo(dateStr, today = new Date()) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diff = Math.round((target - t0) / 86400000);
+  const label = diff > 0 ? `D-${diff}` : diff === 0 ? "D-day 🎉" : `D+${-diff} 🎉`;
+  const dow = "일월화수목금토"[target.getDay()];
+  return { label, pretty: `${y}년 ${m}월 ${d}일 (${dow})` };
+}
+
+// ── 렌더 ──────────────────────────────────────────────────────
+
+export function renderWeddingView() {
+  const container = document.getElementById("view-wedding");
+
+  if (!loaded) {
+    container.innerHTML = `<p class="list-loading">결혼 준비 데이터를 불러오는 중…</p>`;
+    ensureLoaded().then(() => {
+      if (state.currentView === "wedding") renderWeddingView(); // 뷰 이탈 시 무시
+    });
+    return;
+  }
+
+  container.innerHTML = `${renderHeader()}${renderSegBar()}<div id="wdSegBody"></div>`;
+  renderSegmentBody(container.querySelector("#wdSegBody"));
+  bindEvents(container);
+}
+
+async function ensureLoaded() {
+  await Promise.all([fetchWeddingConfig(), fetchWeddingItems()]);
+  loaded = true;
+}
+
+// ── 헤더 (D-day + 총예산 진행 + 사람별 부담) ──────────────────
+
+function renderHeader() {
+  const cfg = state.wedding.config;
+  if (!cfg?.date) {
+    return `
+      <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="클릭해서 설정">
+        <div class="wd-dday">💍 결혼 준비</div>
+        <div class="wd-date">결혼식 날짜를 설정해주세요 — 클릭해서 시작</div>
+      </div>`;
+  }
+
+  const { label, pretty } = dDayInfo(cfg.date);
+  const totals = weddingTotals(state.wedding.items);
+
+  // 총예산 진행 바 (기존 예산 카드와 같은 색 규칙: 80% 경고, 초과 빨강)
+  let budgetLine = "";
+  if (cfg.totalBudget > 0) {
+    const pct    = Math.round(totals.spent / cfg.totalBudget * 100);
+    const barPct = Math.min(100, pct);
+    const over   = totals.spent > cfg.totalBudget;
+    const color  = over ? "var(--expense)" : pct >= 80 ? "var(--warn)" : "var(--accent)";
+    budgetLine = `
+      <div class="wd-budget-line">
+        <span>지출 <strong>${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(cfg.totalBudget)}원</span>
+        <span>${pct}%</span>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${barPct}%;background:${color}"></div></div>`;
+  } else if (totals.spent > 0) {
+    budgetLine = `<div class="wd-budget-line"><span>지금까지 지출 <strong>${fmtMoney(totals.spent)}원</strong></span></div>`;
+  }
+
+  // 사람별 부담 요약 (payer 이메일 → 표시 이름, "both" → 공동)
+  const payerSum = Object.entries(totals.byPayer)
+    .filter(([, v]) => v > 0)
+    .map(([key, v]) => `<span>${escapeHtml(key === "both" ? "공동" : ownerName(key))} <strong>${fmtMoneyShort(v)}</strong></span>`)
+    .join("");
+
+  return `
+    <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="클릭해서 설정 변경">
+      <div class="wd-dday">${label}</div>
+      <div class="wd-date">${pretty}</div>
+      ${budgetLine}
+      ${payerSum ? `<div class="wd-payer-sum">${payerSum}</div>` : ""}
+    </div>`;
+}
+
+// ── 세그먼트 바 ───────────────────────────────────────────────
+
+function renderSegBar() {
+  const btns = SEGMENTS.map(s => {
+    const enabled = ENABLED.has(s.id);
+    return `<button class="scope-btn ${segment === s.id ? "active" : ""}" data-seg="${s.id}"
+      aria-pressed="${segment === s.id}" ${enabled ? "" : `disabled title="준비 중"`}>${s.label}</button>`;
+  }).join("");
+  return `<div class="scope-toggle wd-seg">${btns}</div>`;
+}
+
+function renderSegmentBody(body) {
+  if (state.wedding.loadError) {
+    body.innerHTML = `<p class="wd-empty-note">데이터를 불러오지 못했어요. firestore.rules에 결혼 컬렉션(wedding_*)이 게시되어 있는지 확인해주세요.</p>`;
+    return;
+  }
+  switch (segment) {
+    case "budget": body.innerHTML = renderBudgetSegment(); break;
+    default:       body.innerHTML = "";
+  }
+}
+
+// ── 예산 세그먼트 ─────────────────────────────────────────────
+
+function renderBudgetSegment() {
+  const items = state.wedding.items;
+
+  const rows = items.map(it => {
+    const cat   = getWeddingCategory(it.category);
+    const spent = itemSpent(it);
+    const pct   = it.planned > 0 ? Math.min(100, Math.round(spent / it.planned * 100)) : 0;
+    const over  = it.planned > 0 && spent > it.planned;
+    const payer = it.payer === "both" ? "공동" : ownerName(it.payer);
+    return `
+      <div class="fixed-item" data-wd-item="${it.id}" role="button" tabindex="0">
+        <div class="fixed-cat-dot" style="background:${cat.color}"></div>
+        <div class="fixed-info">
+          <div class="fixed-name">${escapeHtml(it.name)} <span class="tag ${it.payer === "both" ? "fixed" : "variable"}">${escapeHtml(payer)}</span></div>
+          <div class="wd-item-plan">${fmtMoney(spent)} / ${fmtMoney(it.planned ?? 0)}원 · ${cat.name}</div>
+          <div class="pbar" style="margin-top:5px"><div class="pfill" style="width:${pct}%;background:${over ? "var(--expense)" : cat.color}"></div></div>
+        </div>
+        <div class="fixed-amount">${fmtMoneyShort(spent)}</div>
+      </div>`;
+  }).join("");
+
+  const empty = items.length ? "" : emptyStateHTML("아직 예산 항목이 없어요", "💐");
+  return `
+    <div class="fixed-list">
+      ${rows}${empty}
+      <button class="add-fixed-btn" id="wdItemAddBtn">+ 예산 항목 추가</button>
+    </div>`;
+}
+
+// ── 이벤트 ────────────────────────────────────────────────────
+
+function bindEvents(container) {
+  container.querySelector("#wdHeader")?.addEventListener("click", openWeddingSettingsModal);
+
+  container.querySelectorAll(".scope-btn[data-seg]").forEach(b =>
+    b.addEventListener("click", () => {
+      if (b.disabled || b.dataset.seg === segment) return;
+      segment = b.dataset.seg;
+      renderWeddingView();
+    })
+  );
+
+  container.querySelector("#wdItemAddBtn")?.addEventListener("click", () => openWeddingItemModal(null));
+  container.querySelectorAll("[data-wd-item]").forEach(el =>
+    el.addEventListener("click", () => {
+      const it = state.wedding.items.find(i => i.id === el.dataset.wdItem);
+      if (it) openWeddingItemModal(it);
+    })
+  );
+}
