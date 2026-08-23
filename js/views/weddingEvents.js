@@ -29,7 +29,12 @@ function fmtEventDate(e) {
 }
 
 export function renderEventsSegment(container) {
-  container.innerHTML = `${renderMiniCal()}${renderEventList()}`;
+  // 좌: 일정 목록(자체 스크롤) / 우: 미니 달력 — 모바일에서는 달력이 위로 스택
+  container.innerHTML = `
+    <div class="wd-events-layout">
+      <div class="wd-events-list">${renderEventList()}</div>
+      <div class="wd-events-cal">${renderMiniCal()}</div>
+    </div>`;
   bindEvents(container);
 }
 

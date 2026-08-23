@@ -870,8 +870,21 @@ a:focus-visible {
   margin-bottom: 2px;
 }
 
-/* 일정 세그먼트 — 미니 달력 */
+/* 일정 세그먼트 — 좌: 목록 스크롤 / 우: 달력 */
 .wd-seg { flex-wrap: wrap; }
+.wd-events-layout {
+  display: grid; grid-template-columns: 1fr 320px;
+  gap: 1rem; align-items: start;
+}
+.wd-events-list { min-width: 0; max-height: 65vh; overflow-y: auto; padding-right: 2px; }
+.wd-events-cal { position: sticky; top: 0; }
+.wd-events-cal .wd-minical { margin-bottom: 0; }
+@media (max-width: 768px) {
+  .wd-events-layout { grid-template-columns: 1fr; }
+  .wd-events-cal { position: static; order: -1; } /* 모바일: 달력을 위로 */
+  .wd-events-list { max-height: none; overflow: visible; padding-right: 0; }
+}
+
 .wd-minical {
   background: var(--surface); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card); padding: 1rem; margin-bottom: 12px;
