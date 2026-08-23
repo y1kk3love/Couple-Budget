@@ -11,6 +11,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
 import { WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE } from "./constants.js";
+import { ALLOWED_EMAILS } from "../firebase.js";
 
 // ── 설정 (settings/wedding) ───────────────────────────────────
 
@@ -165,6 +166,58 @@ export async function deleteWeddingEvent(id) {
 
 export function itemSpent(item) {
   return (item.payments ?? []).reduce((s, p) => s + (p.amount || 0), 0);
+}
+
+// ── 두 사람 정산 ──────────────────────────────────────────────
+// 결제(payments 항목)마다 부담 주체(item.payer)와 결제자(p.paidBy)가 다르면
+// 정산 대상이 된다. paidBy가 없는 과거 기록은 정산 불필요로 본다.
+
+const otherOf = email => ALLOWED_EMAILS.find(e => e !== email) ?? null;
+
+// 결제 1건의 정산 필요액 — 필요 없으면 null
+export function paymentSettlement(item, p) {
+  if (!p.paidBy || p.settled) return null;
+  const burden = item.payer ?? "both";
+  if (burden === p.paidBy) return null; // 자기 부담을 자기 카드로 결제
+  const owed   = burden === "both" ? Math.round((p.amount || 0) / 2) : (p.amount || 0);
+  const owedBy = burden === "both" ? otherOf(p.paidBy) : burden;
+  if (!owed || !owedBy) return null;
+  return { owedBy, owedTo: p.paidBy, owed };
+}
+
+// 미정산 목록: [{itemId, itemName, payIndex, label, amount, owedBy, owedTo, owed}]
+export function unsettledPayments(items) {
+  const rows = [];
+  for (const it of items) {
+    (it.payments ?? []).forEach((p, i) => {
+      const s = paymentSettlement(it, p);
+      if (s) rows.push({
+        itemId: it.id, itemName: it.name, payIndex: i,
+        label: p.label, amount: p.amount || 0, ...s,
+      });
+    });
+  }
+  return rows;
+}
+
+// 미정산 rows를 정산 완료로 표시 — 항목별로 payments 배열을 복제해 batch 갱신
+export async function settleWeddingPayments(rows) {
+  if (!rows.length) return;
+  const byItem = new Map();
+  rows.forEach(r => {
+    if (!byItem.has(r.itemId)) byItem.set(r.itemId, []);
+    byItem.get(r.itemId).push(r.payIndex);
+  });
+
+  const batch = writeBatch(db);
+  for (const [itemId, indexes] of byItem) {
+    const item = state.wedding.items.find(x => x.id === itemId);
+    if (!item) continue;
+    const payments = (item.payments ?? []).map((p, i) =>
+      indexes.includes(i) ? { ...p, settled: true } : p);
+    batch.update(doc(db, "wedding_items", itemId), { payments });
+  }
+  await batch.commit();
 }
 
 export function weddingTotals(items) {

@@ -805,6 +805,44 @@ a:focus-visible {
 .wd-item-plan { font-size: 0.75rem; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
 .fixed-item.dragging { opacity: 0.55; }
 .fixed-item.dragging * { pointer-events: none; }
+
+/* 정산 현황 카드 (예산 세그먼트 상단) */
+.wd-settle-card {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); padding: 1rem 1.125rem;
+  margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.wd-settle-head { font-size: 0.88rem; color: var(--text); font-weight: 600; }
+.wd-settle-head strong { color: var(--accent); }
+.wd-settle-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; color: var(--text-2);
+  border-top: 1px solid var(--border); padding-top: 8px;
+}
+.wd-settle-info { flex: 1; min-width: 0; }
+.wd-settle-info strong { font-family: var(--mono); color: var(--text); }
+.wd-settle-one {
+  border: none; background: var(--accent-bg); color: var(--accent);
+  font-size: 0.75rem; font-weight: 600; padding: 5px 12px; border-radius: 8px;
+  cursor: pointer; flex-shrink: 0; font-family: var(--font);
+  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+}
+.wd-settle-one:hover { background: var(--accent); color: #fff; }
+.wd-settle-all { margin-top: 4px; }
+
+/* 모달 결제 행의 정산 토글 */
+.wd-pay-settle {
+  border: none; font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
+  border-radius: 6px; cursor: pointer; font-family: var(--font); flex-shrink: 0;
+  background: var(--expense-bg); color: var(--expense);
+  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+}
+.wd-pay-settle.on { background: var(--income-bg); color: var(--income); }
+.wd-pay-input .wd-pay-in-payer {
+  flex: 0 0 auto; padding: 0.45rem 0.4rem; border: 1.5px solid transparent;
+  border-radius: 8px; font-size: 0.82rem; background: var(--surface2);
+  color: var(--text); outline: none; font-family: var(--font);
+}
 .wd-empty-note { font-size: 0.82rem; color: var(--text-3); padding: 8px 0; }
 
 /* 결제 내역 (항목 모달) */

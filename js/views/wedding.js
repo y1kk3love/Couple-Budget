@@ -4,12 +4,13 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast, showConfirm } from "../utils.js";
+import { ALLOWED_EMAILS } from "../../firebase.js";
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
   fetchWeddingGuests, fetchWeddingEvents, itemSpent, weddingTotals,
-  saveWeddingItemOrders
+  saveWeddingItemOrders, unsettledPayments, settleWeddingPayments
 } from "../weddingDb.js";
 import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
@@ -174,10 +175,55 @@ function renderBudgetSegment() {
 
   const empty = items.length ? "" : emptyStateHTML("아직 예산 항목이 없어요", "💐");
   return `
+    ${renderSettleCard()}
     <div class="fixed-list">
       ${rows}${empty}
       <button class="add-fixed-btn" id="wdItemAddBtn">+ 예산 항목 추가</button>
     </div>`;
+}
+
+// ── 정산 현황 카드 — 미정산 결제가 있을 때만 표시 ─────────────
+
+function renderSettleCard() {
+  const rows = unsettledPayments(state.wedding.items);
+  if (!rows.length) return "";
+
+  const [A, B] = ALLOWED_EMAILS;
+  const aOwes = rows.filter(r => r.owedBy === A).reduce((s, r) => s + r.owed, 0); // A → B
+  const bOwes = rows.filter(r => r.owedBy === B).reduce((s, r) => s + r.owed, 0); // B → A
+  const net = bOwes - aOwes;
+
+  let headLine;
+  if (net > 0)      headLine = `<strong>${escapeHtml(ownerName(B))}</strong> → <strong>${escapeHtml(ownerName(A))}</strong> ${fmtMoney(net)}원`;
+  else if (net < 0) headLine = `<strong>${escapeHtml(ownerName(A))}</strong> → <strong>${escapeHtml(ownerName(B))}</strong> ${fmtMoney(-net)}원`;
+  else              headLine = "서로 상계되어 보낼 돈 없음";
+
+  const rowHtml = rows.map((r, i) => `
+    <div class="wd-settle-row">
+      <span class="wd-settle-info">${escapeHtml(r.itemName)} · ${escapeHtml(r.label)} —
+        ${escapeHtml(ownerName(r.owedBy))} → ${escapeHtml(ownerName(r.owedTo))} <strong>${fmtMoney(r.owed)}</strong>원</span>
+      <button class="wd-settle-one" data-settle-i="${i}">정산</button>
+    </div>`).join("");
+
+  return `
+    <div class="wd-settle-card">
+      <div class="wd-settle-head">💸 정산 필요 ${rows.length}건 — ${headLine}</div>
+      ${rowHtml}
+      <button class="save-btn wd-settle-all" id="wdSettleAllBtn">모두 정산 완료</button>
+    </div>`;
+}
+
+async function doSettle(rows) {
+  try {
+    await settleWeddingPayments(rows);
+  } catch (err) {
+    console.error("정산 저장 실패:", err);
+    showToast("정산 저장에 실패했습니다. 네트워크를 확인해주세요");
+    return;
+  }
+  showToast("정산 완료로 표시했습니다");
+  await fetchWeddingItems();
+  renderWeddingView();
 }
 
 // ── 이벤트 ────────────────────────────────────────────────────
@@ -201,6 +247,23 @@ function bindEvents(container) {
     })
   );
   bindItemDrag(container);
+
+  // 정산 버튼 (건별 / 일괄) — 클릭 시점의 최신 미정산 목록으로 다시 계산
+  container.querySelectorAll(".wd-settle-one").forEach(btn =>
+    btn.addEventListener("click", async () => {
+      const rows = unsettledPayments(state.wedding.items);
+      const r = rows[Number(btn.dataset.settleI)];
+      if (!r) return;
+      if (!(await showConfirm(`'${r.itemName} ${r.label}' ${fmtMoney(r.owed)}원을 정산 완료로 표시할까요?`, { confirmText: "정산 완료", danger: false }))) return;
+      await doSettle([r]);
+    })
+  );
+  container.querySelector("#wdSettleAllBtn")?.addEventListener("click", async () => {
+    const rows = unsettledPayments(state.wedding.items);
+    if (!rows.length) return;
+    if (!(await showConfirm(`미정산 ${rows.length}건을 모두 정산 완료로 표시할까요?`, { confirmText: "모두 완료", danger: false }))) return;
+    await doSettle(rows);
+  });
 }
 
 // 예산 항목 드래그 정렬 — plan.js와 같은 패턴.

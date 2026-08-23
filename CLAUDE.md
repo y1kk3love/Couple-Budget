@@ -111,6 +111,7 @@ A fully **separate ledger** from the daily budget — wedding data never touches
 
 Key invariants:
 - An item's spend is **derived** from its `payments` array (`itemSpent()`); never store a spent total. `payments` is saved wholesale from the modal's `draftPayments` copy — concurrent edits to one item are last-write-wins (accepted trade-off).
+- A payment entry is `{label, amount, date, paidBy?, settled?}`. **Settlement is derived** (`paymentSettlement()`/`unsettledPayments()` in weddingDb.js): a payment needs settling when the item's `payer` (burden) differs from `paidBy` — "both"+my card → partner owes half, partner's burden+my card → full. Entries without `paidBy` (legacy) never need settling. The budget segment shows a 정산 card (netted direction + per-row/모두 정산 buttons → `settleWeddingPayments()` batch-flips `settled`); the modal shows a 미정산/정산됨 toggle per payment that only commits on 저장.
 - `payer` is an email or `"both"`; guest `side` is an email (absolute — whose side the guest belongs to). Labels resolve via `ownerName()`.
 - Checklist template seeding uses fixed doc IDs `tpl_<n>` + `setDoc` (idempotent, same strategy as fixed-item materialization) and is only offered from the empty state.
 - Choosing a vendor (`status: "chosen"`) offers to write its price/`vendorId` into the same-category budget item, or create one.

@@ -189,12 +189,22 @@ function closeEvent() {
 
 // ── 결제 내역 (모달 안 동적 렌더) ─────────────────────────────
 
+// 이 결제가 정산 대상인지 — 현재 부담 주체 선택값과 결제자가 다르면 대상
+// (paidBy 없는 과거 기록은 대상 아님)
+function needsSettle(p) {
+  if (!p.paidBy) return false;
+  return document.getElementById("wdItemPayer").value !== p.paidBy;
+}
+
 function renderPayments() {
   const box = document.getElementById("wdPayments");
   const rows = draftPayments.map((p, i) => `
     <div class="wd-pay-row">
       <span class="wd-pay-label">${escapeHtml(p.label)}</span>
       <span class="wd-pay-date">${p.date ?? ""}</span>
+      ${p.paidBy ? `<span class="tag variable">${escapeHtml(ownerName(p.paidBy))} 결제</span>` : ""}
+      ${needsSettle(p) ? `<button type="button" class="wd-pay-settle ${p.settled ? "on" : ""}" data-settle-pay="${i}"
+        title="클릭해서 전환">${p.settled ? "정산됨" : "미정산"}</button>` : ""}
       <span class="wd-pay-amt">${fmtMoney(p.amount)}원</span>
       <button type="button" class="wd-pay-del" data-pay-i="${i}" title="삭제">&times;</button>
     </div>`).join("");
@@ -212,6 +222,14 @@ function renderPayments() {
       renderPayments();
     })
   );
+  // 정산됨/미정산 토글 — 저장 버튼을 눌러야 확정된다 (draft 상태)
+  box.querySelectorAll("[data-settle-pay]").forEach(btn =>
+    btn.addEventListener("click", () => {
+      const p = draftPayments[Number(btn.dataset.settlePay)];
+      p.settled = !p.settled;
+      renderPayments();
+    })
+  );
   box.querySelectorAll("[data-pay-label]").forEach(btn =>
     btn.addEventListener("click", () => renderPayInput(btn.dataset.payLabel))
   );
@@ -222,12 +240,18 @@ function renderPayInput(label) {
   const box = document.getElementById("wdPayments");
   box.querySelector(".wd-pay-input")?.remove(); // 입력 행은 하나만
 
+  // 결제자 기본값은 현재 로그인한 사람 — 보통 자기 카드로 긁고 입력하니까
+  const me = state.currentUser?.email;
+  const payerOptions = ALLOWED_EMAILS.map(e =>
+    `<option value="${escapeHtml(e)}" ${e === me ? "selected" : ""}>${escapeHtml(ownerName(e))}</option>`).join("");
+
   const row = document.createElement("div");
   row.className = "wd-pay-input";
   row.innerHTML = `
     <input type="text" class="wd-pay-in-label" placeholder="라벨" maxlength="10" value="${escapeHtml(label)}" />
     <input type="number" class="wd-pay-in-amount" placeholder="금액" min="0" />
     <input type="date" class="wd-pay-in-date" value="${todayStr()}" />
+    <select class="wd-pay-in-payer" title="결제자">${payerOptions}</select>
     <button type="button" class="save-btn wd-pay-in-add">추가</button>`;
   box.appendChild(row);
 
@@ -235,8 +259,9 @@ function renderPayInput(label) {
     const lbl    = row.querySelector(".wd-pay-in-label").value.trim() || "결제";
     const amount = parseInt(row.querySelector(".wd-pay-in-amount").value);
     const date   = row.querySelector(".wd-pay-in-date").value;
+    const paidBy = row.querySelector(".wd-pay-in-payer").value;
     if (!amount || amount <= 0) { showToast("금액을 입력하세요"); return; }
-    draftPayments.push({ label: lbl, amount, date });
+    draftPayments.push({ label: lbl, amount, date, paidBy, settled: false });
     renderPayments();
   });
   row.querySelector(".wd-pay-in-amount").focus();
@@ -246,6 +271,9 @@ function renderPayInput(label) {
 
 export function setupWeddingModals() {
   document.querySelectorAll('.amount-presets[data-target="wdItemPlanned"]').forEach(setupAmountPresets);
+
+  // 부담 주체를 바꾸면 결제별 정산 대상 여부가 달라지므로 결제 목록 재렌더
+  document.getElementById("wdItemPayer").addEventListener("change", renderPayments);
   document.querySelectorAll('.amount-presets[data-target="wdVendorPrice"]').forEach(setupAmountPresets);
   document.querySelectorAll('.amount-presets[data-target="wdGuestGift"]').forEach(setupAmountPresets);
 
