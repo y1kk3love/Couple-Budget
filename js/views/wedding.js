@@ -4,11 +4,12 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast } from "../utils.js";
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
-  fetchWeddingGuests, fetchWeddingEvents, itemSpent, weddingTotals
+  fetchWeddingGuests, fetchWeddingEvents, itemSpent, weddingTotals,
+  saveWeddingItemOrders
 } from "../weddingDb.js";
 import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
@@ -160,6 +161,7 @@ function renderBudgetSegment() {
     const payer = it.payer === "both" ? "공동" : ownerName(it.payer);
     return `
       <div class="fixed-item" data-wd-item="${it.id}" role="button" tabindex="0">
+        <span class="pe-drag wd-item-drag" title="드래그로 순서 변경">⠿</span>
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(it.name)} <span class="tag ${it.payer === "both" ? "fixed" : "variable"}">${escapeHtml(payer)}</span></div>
@@ -198,4 +200,54 @@ function bindEvents(container) {
       if (it) openWeddingItemModal(it);
     })
   );
+  bindItemDrag(container);
+}
+
+// 예산 항목 드래그 정렬 — plan.js와 같은 패턴.
+// 주의: 드래그 중 행을 DOM에서 재배치하면(제거+재삽입) 포인터 캡처가 풀리므로,
+// setPointerCapture 대신 document에 리스너를 걸어 이벤트를 계속 받는다.
+function bindItemDrag(container) {
+  const list = container.querySelector(".fixed-list");
+  if (!list) return;
+
+  container.querySelectorAll(".wd-item-drag").forEach(handle => {
+    // 드래그 종료 직후 발생하는 click이 행 클릭(수정 모달)으로 번지지 않게 차단
+    handle.addEventListener("click", e => e.stopPropagation());
+
+    handle.addEventListener("pointerdown", e => {
+      e.preventDefault(); // 텍스트 선택 방지 (터치 스크롤은 CSS touch-action:none이 차단)
+      const row = handle.closest("[data-wd-item]");
+      row.classList.add("dragging");
+
+      const onMove = ev => {
+        // 포인터 세로 위치가 중간점보다 위인 첫 행 앞에 삽입, 없으면 맨 뒤로
+        const others = [...list.querySelectorAll("[data-wd-item]")].filter(r => r !== row);
+        const next = others.find(o => {
+          const r = o.getBoundingClientRect();
+          return ev.clientY < r.top + r.height / 2;
+        });
+        if (next) next.before(row);
+        else others[others.length - 1]?.after(row);
+      };
+      const onUp = async () => {
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+        document.removeEventListener("pointercancel", onUp);
+        row.classList.remove("dragging");
+
+        const orderedIds = [...list.querySelectorAll("[data-wd-item]")].map(r => r.dataset.wdItem);
+        try {
+          await saveWeddingItemOrders(orderedIds);
+        } catch (err) {
+          console.error("순서 저장 실패:", err);
+          showToast("순서 저장에 실패했습니다. 네트워크를 확인해주세요");
+        }
+        await fetchWeddingItems(); // 성공 시 새 순서, 실패 시 원래 순서로 복원
+        renderWeddingView();
+      };
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+      document.addEventListener("pointercancel", onUp);
+    });
+  });
 }

@@ -7,7 +7,7 @@
 
 import { db } from "../firebase.js";
 import {
-  collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc
+  collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
 import { WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE } from "./constants.js";
@@ -44,6 +44,21 @@ export async function saveWeddingItem(data, id = null) {
 
 export async function deleteWeddingItem(id) {
   await deleteDoc(doc(db, "wedding_items", id));
+}
+
+// 드래그 정렬 결과 저장 — DOM 순서(orderedIds)대로 order를 다시 매기되,
+// 실제로 바뀐 항목만 batch에 담아 커밋한다.
+export async function saveWeddingItemOrders(orderedIds) {
+  const batch = writeBatch(db);
+  let changed = 0;
+  orderedIds.forEach((id, i) => {
+    const item = state.wedding.items.find(x => x.id === id);
+    if (item && (item.order ?? 0) !== i) {
+      batch.update(doc(db, "wedding_items", id), { order: i });
+      changed++;
+    }
+  });
+  if (changed) await batch.commit();
 }
 
 // ── 체크리스트 (wedding_tasks) ────────────────────────────────

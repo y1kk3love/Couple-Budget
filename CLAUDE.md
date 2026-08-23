@@ -114,6 +114,7 @@ Key invariants:
 - `payer` is an email or `"both"`; guest `side` is an email (absolute — whose side the guest belongs to). Labels resolve via `ownerName()`.
 - Checklist template seeding uses fixed doc IDs `tpl_<n>` + `setDoc` (idempotent, same strategy as fixed-item materialization) and is only offered from the empty state.
 - Choosing a vendor (`status: "chosen"`) offers to write its price/`vendorId` into the same-category budget item, or create one.
+- Budget rows drag-reorder via a `.wd-item-drag` handle using the same document-listener pointer pattern as plan.js; `saveWeddingItemOrders()` batch-writes only the changed `order` values, and the handle's click handler stops propagation so a drag doesn't open the row's edit modal.
 
 ### CSV import
 
