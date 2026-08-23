@@ -103,7 +103,7 @@ The `plan` view is a per-person salary allocation planner, independent of actual
 
 ### 결혼 준비 탭 (wedding)
 
-A fully **separate ledger** from the daily budget — wedding data never touches `transactions`, the aggregation caches, or `loadAllData()`. Five Firestore collections (`wedding_items/tasks/vendors/guests/events`, all in `firestore.rules` — re-paste to console when deploying) plus `settings/wedding` (`{date, totalBudget}`). All reads/writes live in `js/weddingDb.js`; fetches swallow permission errors into `state.wedding.loadError` (budget_plans strategy).
+A fully **separate ledger** from the daily budget — wedding data never touches `transactions`, the aggregation caches, or `loadAllData()`. Five Firestore collections (`wedding_items/tasks/vendors/guests/events`, all in `firestore.rules` — re-paste to console when deploying) plus `settings/wedding` (`{date}` — the header's 총예산 is **derived** as the sum of item `planned` amounts, not stored). All reads/writes live in `js/weddingDb.js`; fetches swallow permission errors into `state.wedding.loadError` (budget_plans strategy).
 
 `js/views/wedding.js` is the shell: D-day header (`dDayInfo()` exported for testing), segment bar (예산|일정|체크리스트|업체|하객, current segment in a module variable; `setWeddingSegment()` lets the main-view banner deep-link a segment), and the budget segment; the other segments live in `weddingEvents/Checklist/Vendors/Guests.js` as `render<Seg>Segment(container)`. Data loads **once on first tab entry** (`loaded` flag + `ensureLoaded()`), not per month — after a mutation, call the relevant `fetchWedding*()` then `renderWeddingView()`.
 

@@ -28,7 +28,8 @@
 
 일상 가계부와 **완전히 분리된** 결혼 준비 전용 공간입니다 (월별 통계·누적 잔액에 영향 없음).
 
-- **D-day 헤더**: 결혼식 날짜 카운트다운 + 총예산 대비 지출 진행률 + 사람별 부담 요약
+- **D-day 헤더**: 결혼식 날짜 카운트다운 + 총예산(항목 계획 합계) 대비 지출 진행률 + 사람별 부담 요약
+- **일정**: 체촌·옷 픽업 같은 약속을 미니 달력·D-n 목록으로 관리, 같은 달이면 메인 화면 배너와 달력 마커로 알림
 - **예산**: 항목별 계획 금액·부담 주체(나/상대/공동)·결제 내역(계약금/중도금/잔금) 기록
 - **체크리스트**: 표준 결혼 준비 순서(D-12개월~식후) 템플릿 제공, 시기별 진행률
 - **업체**: 후보 업체 견적 비교, 확정 시 예산 항목에 견적가 자동 반영
@@ -194,13 +195,14 @@ firebase deploy
 
 ### 결혼 준비 컬렉션
 
-`settings/wedding` 문서(`{ date, totalBudget }`)와 네 컬렉션을 사용합니다:
+`settings/wedding` 문서(`{ date }` — 총예산은 항목 계획 금액의 합으로 자동 계산)와 다섯 컬렉션을 사용합니다:
 
 ```
 wedding_items   { name, category, planned, payer(이메일|"both"), payments:[{label,amount,date}], memo, order, vendorId }
 wedding_tasks   { title, period(시기 그룹 ID), done, memo, order }
 wedding_vendors { category, name, price, contact, memo, status("candidate"|"chosen") }
 wedding_guests  { name, side(이메일 — 누구 측 하객인지), relation, count, gift, memo }
+wedding_events  { title, date, time(선택), memo }   // 체촌·픽업 등 일정 — 메인 달력 마커·배너에도 사용
 ```
 
 > ⚠️ 결혼 탭을 쓰려면 `firestore.rules`의 `wedding_*` 블록이 콘솔에 게시되어 있어야 합니다. 규칙을 예전에 붙여넣었다면 최신 파일로 다시 게시하세요.

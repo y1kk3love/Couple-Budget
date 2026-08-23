@@ -359,19 +359,7 @@
           <label>결혼식 날짜</label>
           <input type="date" id="wdDate" />
         </div>
-        <div class="form-row">
-          <label>총예산 (선택)</label>
-          <div class="amount-input-wrap">
-            <input type="number" id="wdTotalBudget" placeholder="0" min="0" />
-            <span class="currency">원</span>
-          </div>
-          <div class="amount-presets" data-target="wdTotalBudget">
-            <button type="button" class="preset-btn" data-add="10000000">+1000만</button>
-            <button type="button" class="preset-btn" data-add="1000000">+100만</button>
-            <button type="button" class="preset-btn" data-add="100000">+10만</button>
-            <button type="button" class="preset-btn preset-clear" data-clear="1">지우기</button>
-          </div>
-        </div>
+        <p class="budget-note">총예산은 예산 세그먼트 항목들의 계획 금액 합계로 자동 계산됩니다.</p>
       </div>
       <div class="modal-footer">
         <button id="wdSettingsSave" class="save-btn">저장</button>

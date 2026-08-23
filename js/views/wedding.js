@@ -88,16 +88,17 @@ function renderHeader() {
   const { label, pretty } = dDayInfo(cfg.date);
   const totals = weddingTotals(state.wedding.items);
 
-  // 총예산 진행 바 (기존 예산 카드와 같은 색 규칙: 80% 경고, 초과 빨강)
+  // 총예산 = 예산 항목들의 계획 금액 합 (별도 저장값 아님 — 목록과 항상 일치)
+  // 진행 바 색 규칙은 기존 예산 카드와 동일: 80% 경고, 초과 빨강
   let budgetLine = "";
-  if (cfg.totalBudget > 0) {
-    const pct    = Math.round(totals.spent / cfg.totalBudget * 100);
+  if (totals.planned > 0) {
+    const pct    = Math.round(totals.spent / totals.planned * 100);
     const barPct = Math.min(100, pct);
-    const over   = totals.spent > cfg.totalBudget;
+    const over   = totals.spent > totals.planned;
     const color  = over ? "var(--expense)" : pct >= 80 ? "var(--warn)" : "var(--accent)";
     budgetLine = `
       <div class="wd-budget-line">
-        <span>지출 <strong>${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(cfg.totalBudget)}원</span>
+        <span>지출 <strong>${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(totals.planned)}원</span>
         <span>${pct}%</span>
       </div>
       <div class="pbar"><div class="pfill" style="width:${barPct}%;background:${color}"></div></div>`;

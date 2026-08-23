@@ -29,8 +29,7 @@ const PAY_LABELS = ["계약금", "중도금", "잔금"];
 
 export function openWeddingSettingsModal() {
   const cfg = state.wedding.config ?? {};
-  document.getElementById("wdDate").value        = cfg.date ?? "";
-  document.getElementById("wdTotalBudget").value = cfg.totalBudget ?? "";
+  document.getElementById("wdDate").value = cfg.date ?? "";
   document.getElementById("weddingSettingsModal").classList.remove("hidden");
 }
 
@@ -246,7 +245,6 @@ function renderPayInput(label) {
 // ── 이벤트 바인딩 ─────────────────────────────────────────────
 
 export function setupWeddingModals() {
-  document.querySelectorAll('.amount-presets[data-target="wdTotalBudget"]').forEach(setupAmountPresets);
   document.querySelectorAll('.amount-presets[data-target="wdItemPlanned"]').forEach(setupAmountPresets);
   document.querySelectorAll('.amount-presets[data-target="wdVendorPrice"]').forEach(setupAmountPresets);
   document.querySelectorAll('.amount-presets[data-target="wdGuestGift"]').forEach(setupAmountPresets);
@@ -278,13 +276,13 @@ export function setupWeddingModals() {
   });
 
   // 설정 저장 — 쓰기 성공 후에만 닫는다
+  // (총예산은 예산 항목 계획 합계로 파생되므로 여기서는 날짜만 저장)
   document.getElementById("wdSettingsSave").addEventListener("click", async () => {
     const date = document.getElementById("wdDate").value;
     if (!date) { showToast("결혼식 날짜를 선택하세요"); return; }
-    const budgetVal = parseInt(document.getElementById("wdTotalBudget").value);
 
     try {
-      await saveWeddingConfig({ date, totalBudget: budgetVal > 0 ? budgetVal : null });
+      await saveWeddingConfig({ date });
     } catch (err) {
       console.error("결혼 설정 저장 실패:", err);
       showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
