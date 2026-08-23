@@ -8,12 +8,13 @@ import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML } from "
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
-  fetchWeddingGuests, itemSpent, weddingTotals
+  fetchWeddingGuests, fetchWeddingEvents, itemSpent, weddingTotals
 } from "../weddingDb.js";
 import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
 import { renderGuestsSegment } from "./weddingGuests.js";
+import { renderEventsSegment } from "./weddingEvents.js";
 
 // 현재 세그먼트 — 재렌더·뷰 전환에도 유지 (모듈 레벨 UI 상태 패턴)
 let segment = "budget"; // "budget" | "checklist" | "vendors" | "guests"
@@ -21,12 +22,18 @@ let loaded  = false;    // 탭 최초 진입 시 1회 로드 플래그
 
 const SEGMENTS = [
   { id: "budget",    label: "예산" },
+  { id: "events",    label: "일정" },
   { id: "checklist", label: "체크리스트" },
   { id: "vendors",   label: "업체" },
   { id: "guests",    label: "하객" },
 ];
-// 네 세그먼트 모두 출시 완료
-const ENABLED = new Set(["budget", "checklist", "vendors", "guests"]);
+// 모든 세그먼트 출시 완료
+const ENABLED = new Set(["budget", "events", "checklist", "vendors", "guests"]);
+
+// 외부(메인 화면 배너)에서 특정 세그먼트를 열도록 지정할 때 사용
+export function setWeddingSegment(seg) {
+  if (ENABLED.has(seg)) segment = seg;
+}
 
 // ── D-day 계산 (자정 기준 날짜 차이) ──────────────────────────
 
@@ -61,7 +68,7 @@ export function renderWeddingView() {
 async function ensureLoaded() {
   await Promise.all([
     fetchWeddingConfig(), fetchWeddingItems(), fetchWeddingTasks(),
-    fetchWeddingVendors(), fetchWeddingGuests(),
+    fetchWeddingVendors(), fetchWeddingGuests(), fetchWeddingEvents(),
   ]);
   loaded = true;
 }
@@ -134,6 +141,7 @@ function renderSegmentBody(body) {
     case "checklist": renderChecklistSegment(body); break;
     case "vendors":   renderVendorsSegment(body); break;
     case "guests":    renderGuestsSegment(body); break;
+    case "events":    renderEventsSegment(body); break;
     default:          body.innerHTML = "";
   }
 }

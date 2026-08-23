@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoneyShort } from "../utils.js";
+import { fmtMoneyShort, escapeHtml } from "../utils.js";
 import { openAddModal } from "../modals/txModal.js";
 
 export function renderCalendarView() {
@@ -24,6 +24,15 @@ export function renderCalendarView() {
     if (t.type === "expense") dayMap[d].exp += t.amount;
   }
 
+  // 이 달의 결혼 일정을 일자별로 모음 (셀에 💍 마커 표시)
+  const ymPrefix = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
+  const weddingByDay = {};
+  for (const e of (state.wedding?.events ?? [])) {
+    if (!e.date.startsWith(ymPrefix)) continue;
+    const d = parseInt(e.date.slice(8));
+    (weddingByDay[d] ??= []).push(e);
+  }
+
   const emptyCells = Array(firstDay).fill(`<div class="cal-cell empty"></div>`).join("");
 
   const dayCells = Array.from({ length: daysInMonth }, (_, i) => {
@@ -36,6 +45,7 @@ export function renderCalendarView() {
         <div class="day-num-wrap">
           <div class="day-num">${d}</div>
         </div>
+        ${weddingByDay[d] ? `<div class="cal-event" title="${escapeHtml(weddingByDay[d].map(e => e.title).join(", "))}">💍 ${escapeHtml(weddingByDay[d][0].title)}${weddingByDay[d].length > 1 ? ` +${weddingByDay[d].length - 1}` : ""}</div>` : ""}
         <div class="cal-amounts">
           ${dd?.inc > 0 ? `<div class="cal-inc">+${fmtMoneyShort(dd.inc)}</div>` : ""}
           ${dd?.exp > 0 ? `<div class="cal-exp">-${fmtMoneyShort(dd.exp)}</div>` : ""}

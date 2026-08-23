@@ -850,6 +850,60 @@ a:focus-visible {
 .wd-choose-btn { width: 100%; background: var(--accent-bg); color: var(--accent); }
 .wd-choose-btn:hover { filter: none; background: var(--accent); color: #fff; }
 
+/* 결혼 일정 배너 (메인 화면, 요약 바 아래) */
+.wd-banner {
+  margin: 10px 1.5rem 0; padding: 0.65rem 1rem;
+  background: var(--accent-bg); color: var(--accent);
+  border-radius: var(--radius); font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; transition: filter 0.15s, transform 0.12s ease;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wd-banner:hover { filter: brightness(0.96); }
+.wd-banner:active { transform: scale(0.99); }
+
+/* 메인 달력의 결혼 일정 마커 */
+.cal-event {
+  font-size: 0.68rem; color: var(--accent); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 2px;
+}
+
+/* 일정 세그먼트 — 미니 달력 */
+.wd-seg { flex-wrap: wrap; }
+.wd-minical {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); padding: 1rem; margin-bottom: 12px;
+}
+.wd-minical-head { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 8px; }
+.wd-minical-title { font-size: 0.9rem; font-weight: 700; min-width: 92px; text-align: center; }
+.wd-minical-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.wd-mc-dayname { text-align: center; font-size: 0.7rem; color: var(--text-3); padding: 4px 0; }
+.wd-mc-cell {
+  position: relative; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; color: var(--text-2); border-radius: 8px; cursor: pointer;
+  transition: background 0.12s;
+}
+.wd-mc-cell:hover { background: var(--surface-hover); }
+.wd-mc-cell.today { background: var(--accent); color: #fff; font-weight: 600; }
+.wd-mc-cell.has-event::after {
+  content: ""; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--expense);
+}
+.wd-mc-cell.today.has-event::after { background: #fff; }
+.wd-mc-cell.empty { cursor: default; }
+.wd-mc-cell.empty:hover { background: none; }
+
+/* 일정 목록 */
+.wd-event-dday {
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-bg);
+  border-radius: 6px; padding: 2px 7px; flex-shrink: 0;
+}
+.wd-event-past { opacity: 0.55; }
+.wd-event-past .wd-event-dday { color: var(--text-3); background: var(--surface2); }
+.wd-past-title { font-size: 0.78rem; color: var(--text-3); margin: 14px 0 6px; }
+
 /* ── 토스트 ── */
 .toast {
   position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);
@@ -912,6 +966,7 @@ a:focus-visible {
   .budget-card { min-width: 230px; }
   .view-container { padding: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
+  .wd-banner { margin: 8px 1rem 0; }
   .add-btn span { display: none; } /* 모바일 헤더에서는 + 아이콘만 */
   .add-btn { padding: 0.5rem 0.65rem; }
   .icon-btn span { display: none; } /* 가져오기/내보내기 라벨 숨김 */

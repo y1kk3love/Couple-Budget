@@ -9,7 +9,8 @@ import {
   saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
   saveWeddingTask, deleteWeddingTask, fetchWeddingTasks,
   saveWeddingVendor, deleteWeddingVendor, fetchWeddingVendors,
-  saveWeddingGuest, deleteWeddingGuest, fetchWeddingGuests
+  saveWeddingGuest, deleteWeddingGuest, fetchWeddingGuests,
+  saveWeddingEvent, deleteWeddingEvent, fetchWeddingEvents
 } from "../weddingDb.js";
 import { renderWeddingView } from "../views/wedding.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
@@ -19,6 +20,7 @@ let editingTaskId   = null;
 let editingVendorId = null;
 let editingVendorStatus = "candidate";
 let editingGuestId  = null;
+let editingEventId  = null;
 let draftPayments = []; // 편집 중 결제 내역 — 저장 시 통째로 기록 (마지막 저장 승리, 스펙에 명시된 트레이드오프)
 
 const PAY_LABELS = ["계약금", "중도금", "잔금"];
@@ -166,6 +168,26 @@ function closeGuest() {
   document.getElementById("weddingGuestModal").classList.add("hidden");
 }
 
+// ── 일정 모달 ─────────────────────────────────────────────────
+
+// prefillDate: 미니 달력에서 날짜를 눌러 추가할 때 미리 채울 날짜
+export function openWeddingEventModal(event, prefillDate = null) {
+  editingEventId = event?.id ?? null;
+
+  document.getElementById("wdEventModalTitle").textContent = event ? "일정 수정" : "일정 추가";
+  document.getElementById("wdEventDelete").classList.toggle("hidden", !event);
+  document.getElementById("wdEventId").value    = event?.id ?? "";
+  document.getElementById("wdEventTitle").value = event?.title ?? "";
+  document.getElementById("wdEventDate").value  = event?.date ?? prefillDate ?? todayStr();
+  document.getElementById("wdEventTime").value  = event?.time ?? "";
+  document.getElementById("wdEventMemo").value  = event?.memo ?? "";
+  document.getElementById("weddingEventModal").classList.remove("hidden");
+}
+
+function closeEvent() {
+  document.getElementById("weddingEventModal").classList.add("hidden");
+}
+
 // ── 결제 내역 (모달 안 동적 렌더) ─────────────────────────────
 
 function renderPayments() {
@@ -249,6 +271,10 @@ export function setupWeddingModals() {
   document.getElementById("wdGuestClose").addEventListener("click", closeGuest);
   document.getElementById("weddingGuestModal").addEventListener("click", e => {
     if (e.target.id === "weddingGuestModal") closeGuest();
+  });
+  document.getElementById("wdEventClose").addEventListener("click", closeEvent);
+  document.getElementById("weddingEventModal").addEventListener("click", e => {
+    if (e.target.id === "weddingEventModal") closeEvent();
   });
 
   // 설정 저장 — 쓰기 성공 후에만 닫는다
@@ -460,6 +486,50 @@ export function setupWeddingModals() {
     closeGuest();
     showToast("삭제되었습니다");
     await fetchWeddingGuests();
+    renderWeddingView();
+  });
+
+  // 일정 저장
+  document.getElementById("wdEventSave").addEventListener("click", async () => {
+    const title = document.getElementById("wdEventTitle").value.trim();
+    const date  = document.getElementById("wdEventDate").value;
+    if (!title) { showToast("일정을 입력하세요"); return; }
+    if (!date)  { showToast("날짜를 선택하세요"); return; }
+
+    const data = {
+      title,
+      date,
+      time: document.getElementById("wdEventTime").value || null,
+      memo: document.getElementById("wdEventMemo").value,
+    };
+
+    try {
+      await saveWeddingEvent(data, editingEventId);
+    } catch (err) {
+      console.error("일정 저장 실패:", err);
+      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+    closeEvent();
+    showToast(editingEventId ? "수정되었습니다" : "추가되었습니다");
+    await fetchWeddingEvents();
+    renderWeddingView();
+  });
+
+  // 일정 삭제
+  document.getElementById("wdEventDelete").addEventListener("click", async () => {
+    if (!editingEventId) return;
+    if (!(await showConfirm("이 일정을 삭제할까요?", { confirmText: "삭제" }))) return;
+    try {
+      await deleteWeddingEvent(editingEventId);
+    } catch (err) {
+      console.error("일정 삭제 실패:", err);
+      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
+      return;
+    }
+    closeEvent();
+    showToast("삭제되었습니다");
+    await fetchWeddingEvents();
     renderWeddingView();
   });
 

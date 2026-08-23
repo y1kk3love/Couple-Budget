@@ -124,6 +124,28 @@ export async function deleteWeddingGuest(id) {
   await deleteDoc(doc(db, "wedding_guests", id));
 }
 
+// ── 일정 (wedding_events) ─────────────────────────────────────
+// 체촌·옷 픽업 같은 날짜 확정 약속. 메인 화면 배너·달력 마커에도 쓰여서
+// 다른 결혼 데이터와 달리 로그인 시 1회 미리 로드된다 (app.js initApp).
+
+export async function fetchWeddingEvents() {
+  try {
+    const snap = await getDocs(collection(db, "wedding_events"));
+    state.wedding.events = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")));
+  } catch { state.wedding.loadError = true; }
+}
+
+export async function saveWeddingEvent(data, id = null) {
+  if (id) await updateDoc(doc(db, "wedding_events", id), data);
+  else    await addDoc(collection(db, "wedding_events"), data);
+}
+
+export async function deleteWeddingEvent(id) {
+  await deleteDoc(doc(db, "wedding_events", id));
+}
+
 // ── 파생 합계 — payments 배열이 지출의 유일한 원본 ─────────────
 
 export function itemSpent(item) {

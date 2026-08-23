@@ -21,7 +21,8 @@ const state = {
   // 개인 예산안 (budget_plans 컬렉션, 문서 ID = 이메일)
   budgetPlans:   [],
   // 결혼 준비 탭 (settings/wedding + wedding_* 컬렉션) — 월과 무관, 탭 진입 시 로드
-  wedding: { config: null, items: [], tasks: [], vendors: [], guests: [], loadError: false },
+  // 예외: events는 메인 화면 배너·달력 마커용으로 로그인 시 1회 미리 로드된다
+  wedding: { config: null, items: [], tasks: [], vendors: [], guests: [], events: [], loadError: false },
 };
 
 export default state;

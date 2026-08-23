@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast, todayStr, downloadCSV } from "./utils.js";
+import { fmtMoney, showToast, todayStr, downloadCSV, escapeHtml } from "./utils.js";
 import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
@@ -21,8 +21,9 @@ import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
 import { renderPlanView }     from "./views/plan.js";
-import { renderWeddingView }  from "./views/wedding.js";
+import { renderWeddingView, setWeddingSegment } from "./views/wedding.js";
 import { setupWeddingModals } from "./modals/weddingModal.js";
+import { fetchWeddingEvents } from "./weddingDb.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -32,12 +33,16 @@ let listenersBound = false;
 
 export async function initApp() {
   updateMonthLabel();
+  // 결혼 일정은 메인 화면 배너·달력 마커에 쓰여 로그인 시 1회 미리 로드
+  // (다른 결혼 데이터는 탭 진입 시 로드 — 이 예외는 CLAUDE.md에 문서화)
+  await fetchWeddingEvents();
   await loadAllData();
   if (!listenersBound) {
     setupMonthNav();
     setupViewNav();
     setupMobileMenu();
     setupGlobalKeys();
+    setupWeddingBanner();
     listenersBound = true;
   }
 }
@@ -66,6 +71,7 @@ async function loadAllData() {
 
 export function renderAll() {
   renderSummary();
+  renderWeddingBanner();
   switch (state.currentView) {
     case "calendar": renderCalendarView(); break;
     case "list":     renderListView();     break;
@@ -154,6 +160,40 @@ function renderBudgetCard(totalExpense) {
       <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
       <div class="sub">${subText}</div>
     </div>`;
+}
+
+// ── 결혼 일정 배너 ────────────────────────────────────────────
+// 보고 있는 달에 오늘 이후 결혼 일정이 있으면 요약 바 아래 한 줄로 알린다.
+// 클릭 → 결혼 탭 일정 세그먼트. 결혼 탭 안에서는 중복이라 숨긴다.
+
+function renderWeddingBanner() {
+  const el = document.getElementById("weddingBanner");
+  const ym = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
+  const today = todayStr();
+  const upcoming = (state.wedding.events ?? [])
+    .filter(e => e.date.startsWith(ym) && e.date >= today);
+
+  if (!upcoming.length || state.currentView === "wedding") {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+    return;
+  }
+
+  const list = upcoming.slice(0, 3).map(e => {
+    const [, m, d] = e.date.split("-").map(Number);
+    return `${escapeHtml(e.title)} ${m}/${d}`;
+  }).join(" · ");
+  const more = upcoming.length > 3 ? ` 외 ${upcoming.length - 3}건` : "";
+
+  el.innerHTML = `💍 이번 달 결혼 일정 ${upcoming.length}건 — ${list}${more}`;
+  el.classList.remove("hidden");
+}
+
+function setupWeddingBanner() {
+  document.getElementById("weddingBanner").addEventListener("click", () => {
+    setWeddingSegment("events");
+    switchView("wedding");
+  });
 }
 
 // ── 월 이동 ───────────────────────────────────────────────────
