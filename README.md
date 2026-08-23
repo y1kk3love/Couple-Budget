@@ -31,7 +31,6 @@
 - **D-day 헤더**: 결혼식 날짜 카운트다운 + 총예산(항목 계획 합계) 대비 지출 진행률 + 사람별 부담 요약
 - **일정**: 체촌·옷 픽업 같은 약속을 미니 달력·D-n 목록으로 관리, 같은 달이면 메인 화면 배너와 달력 마커로 알림
 - **예산**: 항목별 계획 금액·부담 주체(나/상대/공동)·결제 내역(계약금/중도금/잔금) 기록
-- **정산**: 결제자와 부담 주체가 다르면(예: 공동 부담을 한 사람 카드로 결제) 누가 누구에게 얼마를 보내야 하는지 자동 계산, 이체 후 건별/일괄 정산 완료 처리
 - **체크리스트**: 표준 결혼 준비 순서(D-12개월~식후) 템플릿 제공, 시기별 진행률
 - **업체**: 후보 업체 견적 비교, 확정 시 예산 항목에 견적가 자동 반영
 - **하객**: 양측 하객 명단·예상 인원·축의금 기록 (식후 정산용)
@@ -199,8 +198,7 @@ firebase deploy
 `settings/wedding` 문서(`{ date }` — 총예산은 항목 계획 금액의 합으로 자동 계산)와 다섯 컬렉션을 사용합니다:
 
 ```
-wedding_items   { name, category, planned, payer(이메일|"both"), memo, order, vendorId,
-                  payments:[{label, amount, date, paidBy(결제자), settled(정산 여부)}] }
+wedding_items   { name, category, planned, payer(이메일|"both"), payments:[{label,amount,date}], memo, order, vendorId }
 wedding_tasks   { title, period(시기 그룹 ID), done, memo, order }
 wedding_vendors { category, name, price, contact, memo, status("candidate"|"chosen") }
 wedding_guests  { name, side(이메일 — 누구 측 하객인지), relation, count, gift, memo }
