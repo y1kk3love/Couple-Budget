@@ -8,13 +8,12 @@ import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToa
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
-  fetchWeddingGuests, fetchWeddingEvents, itemSpent, weddingTotals,
+  fetchWeddingEvents, itemSpent, weddingTotals,
   saveWeddingItemOrders
 } from "../weddingDb.js";
 import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
-import { renderGuestsSegment } from "./weddingGuests.js";
 import { renderEventsSegment } from "./weddingEvents.js";
 import { renderMemoSegment } from "./weddingMemo.js";
 
@@ -27,11 +26,9 @@ const SEGMENTS = [
   { id: "events",    label: "일정" },
   { id: "checklist", label: "체크리스트" },
   { id: "vendors",   label: "업체" },
-  { id: "guests",    label: "하객" },
   { id: "memo",      label: "메모" },
 ];
-// 모든 세그먼트 출시 완료
-const ENABLED = new Set(["budget", "events", "checklist", "vendors", "guests", "memo"]);
+const ENABLED = new Set(["budget", "events", "checklist", "vendors", "memo"]);
 
 // 외부(메인 화면 배너)에서 특정 세그먼트를 열도록 지정할 때 사용
 export function setWeddingSegment(seg) {
@@ -71,7 +68,7 @@ export function renderWeddingView() {
 async function ensureLoaded() {
   await Promise.all([
     fetchWeddingConfig(), fetchWeddingItems(), fetchWeddingTasks(),
-    fetchWeddingVendors(), fetchWeddingGuests(), fetchWeddingEvents(),
+    fetchWeddingVendors(), fetchWeddingEvents(),
   ]);
   loaded = true;
 }
@@ -144,7 +141,6 @@ function renderSegmentBody(body) {
     case "budget":    body.innerHTML = renderBudgetSegment(); break;
     case "checklist": renderChecklistSegment(body); break;
     case "vendors":   renderVendorsSegment(body); break;
-    case "guests":    renderGuestsSegment(body); break;
     case "events":    renderEventsSegment(body); break;
     case "memo":      renderMemoSegment(body); break;
     default:          body.innerHTML = "";

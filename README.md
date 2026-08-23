@@ -22,7 +22,7 @@
 | **통계** | 카테고리별 지출 비율, 고정/변동 비율, 수입 대비 지출 현황 시각화 |
 | **고정비** | 매월 반복되는 수입/지출 항목 관리. 적용 시작 월 지정 가능 |
 | **예산안** | 1인당 월급 배정 계획표. 도넛 차트로 항목별 배분·잔여 확인 |
-| **결혼** | 결혼 준비 전용 장부 — D-day, 예산·지출(부담 주체), 체크리스트, 업체 비교, 하객·축의금 |
+| **결혼** | 결혼 준비 전용 장부 — D-day, 예산·지출(부담 주체), 일정, 체크리스트, 업체 비교, 메모 |
 
 ### 결혼 준비 탭
 
@@ -33,7 +33,7 @@
 - **예산**: 항목별 계획 금액·부담 주체(나/상대/공동)·결제 내역(계약금/중도금/잔금) 기록
 - **체크리스트**: 표준 결혼 준비 순서(D-12개월~식후) 템플릿 제공, 시기별 진행률
 - **업체**: 후보 업체 견적 비교, 확정 시 예산 항목에 견적가 자동 반영
-- **하객**: 양측 하객 명단·예상 인원·축의금 기록 (식후 정산용)
+- **메모**: 두 사람이 함께 쓰는 공유 메모장
 
 ### 요약 바
 매달 상단에 **수입 합계 / 지출 합계 / 이번 달 잔액 / 누적 잔액** 실시간 표시
@@ -195,13 +195,12 @@ firebase deploy
 
 ### 결혼 준비 컬렉션
 
-`settings/wedding` 문서(`{ date }` — 총예산은 항목 계획 금액의 합으로 자동 계산)와 다섯 컬렉션을 사용합니다:
+`settings/wedding` 문서(`{ date, memo }` — 총예산은 항목 계획 금액의 합으로 자동 계산)와 네 컬렉션을 사용합니다:
 
 ```
 wedding_items   { name, category, planned, payer(이메일|"both"), payments:[{label,amount,date}], memo, order, vendorId }
 wedding_tasks   { title, period(시기 그룹 ID), done, memo, order }
 wedding_vendors { category, name, price, contact, memo, status("candidate"|"chosen") }
-wedding_guests  { name, side(이메일 — 누구 측 하객인지), relation, count, gift, memo }
 wedding_events  { title, date, time(선택), memo }   // 체촌·픽업 등 일정 — 메인 달력 마커·배너에도 사용
 ```
 

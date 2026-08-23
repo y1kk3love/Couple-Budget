@@ -40,7 +40,7 @@ js/theme.js              ← dark/light toggle (setupThemeToggle); see Design sy
 js/app.js                ← initApp(), loadAllData(), renderAll(), month nav, view switch
 js/views/{calendar,list,stats,fixed,plan}.js     ← each exports render<Name>View() that fills its #view-<name> div
 js/views/wedding.js      ← 결혼 탭 셸 (D-day 헤더 + 세그먼트 전환 + 예산 세그먼트)
-js/views/wedding{Checklist,Vendors,Guests}.js    ← 세그먼트 렌더러 — render<Seg>Segment(container)
+js/views/wedding{Events,Checklist,Vendors,Memo}.js  ← 세그먼트 렌더러 — render<Seg>Segment(container)
 js/modals/{txModal,fixedModal,csvModal,budgetModal,weddingModal}.js  ← setup<Name>Modal(s)() wires DOM events; open<Name>Modal() opens it
 ```
 
@@ -103,15 +103,15 @@ The `plan` view is a per-person salary allocation planner, independent of actual
 
 ### 결혼 준비 탭 (wedding)
 
-A fully **separate ledger** from the daily budget — wedding data never touches `transactions`, the aggregation caches, or `loadAllData()`. Five Firestore collections (`wedding_items/tasks/vendors/guests/events`, all in `firestore.rules` — re-paste to console when deploying) plus `settings/wedding` (`{date}` — the header's 총예산 is **derived** as the sum of item `planned` amounts, not stored). All reads/writes live in `js/weddingDb.js`; fetches swallow permission errors into `state.wedding.loadError` (budget_plans strategy).
+A fully **separate ledger** from the daily budget — wedding data never touches `transactions`, the aggregation caches, or `loadAllData()`. Four Firestore collections in active use (`wedding_items/tasks/vendors/events`) plus `settings/wedding` (`{date, memo}` — the header's 총예산 is **derived** as the sum of item `planned` amounts, not stored). `firestore.rules` also still allows `wedding_guests`: the 하객 segment was removed from the UI (2026-08), but the rules block and any existing docs were deliberately left in place so it can be restored. Re-paste rules to console when deploying rule changes. All reads/writes live in `js/weddingDb.js`; fetches swallow permission errors into `state.wedding.loadError` (budget_plans strategy).
 
-`js/views/wedding.js` is the shell: D-day header (`dDayInfo()` exported for testing), segment bar (예산|일정|체크리스트|업체|하객|메모, current segment in a module variable; `setWeddingSegment()` lets the main-view banner deep-link a segment), and the budget segment; the other segments live in `weddingEvents/Checklist/Vendors/Guests/Memo.js` as `render<Seg>Segment(container)`. The 메모 segment is a single shared notepad stored as `settings/wedding.memo` (whole-text last-write-wins). Data loads **once on first tab entry** (`loaded` flag + `ensureLoaded()`), not per month — after a mutation, call the relevant `fetchWedding*()` then `renderWeddingView()`.
+`js/views/wedding.js` is the shell: D-day header (`dDayInfo()` exported for testing), segment bar (예산|일정|체크리스트|업체|메모, current segment in a module variable; `setWeddingSegment()` lets the main-view banner deep-link a segment), and the budget segment; the other segments live in `weddingEvents/Checklist/Vendors/Memo.js` as `render<Seg>Segment(container)`. The 메모 segment is a single shared notepad stored as `settings/wedding.memo` (whole-text last-write-wins). Data loads **once on first tab entry** (`loaded` flag + `ensureLoaded()`), not per month — after a mutation, call the relevant `fetchWedding*()` then `renderWeddingView()`.
 
 **Exception — `wedding_events`** (체촌/픽업 같은 날짜 확정 일정): `initApp()` pre-loads it once per login because the main screen consumes it in two places — `renderWeddingBanner()` in `js/app.js` (shown under the summary bar on every non-wedding view when the viewed month has events dated today-or-later; click → wedding tab 일정 segment) and 💍 markers on the main calendar's day cells (`calendar.js`). The 일정 segment itself has a mini calendar (module-level `calYear/calMonth`, day click pre-fills the add modal's date).
 
 Key invariants:
 - An item's spend is **derived** from its `payments` array (`itemSpent()`); never store a spent total. `payments` is saved wholesale from the modal's `draftPayments` copy — concurrent edits to one item are last-write-wins (accepted trade-off).
-- `payer` is an email or `"both"`; guest `side` is an email (absolute — whose side the guest belongs to). Labels resolve via `ownerName()`.
+- `payer` is an email or `"both"`; labels resolve via `ownerName()`.
 - Checklist template seeding uses fixed doc IDs `tpl_<n>` + `setDoc` (idempotent, same strategy as fixed-item materialization) and is only offered from the empty state.
 - Choosing a vendor (`status: "chosen"`) offers to write its price/`vendorId` into the same-category budget item, or create one.
 - Budget rows drag-reorder via a `.wd-item-drag` handle using the same document-listener pointer pattern as plan.js; `saveWeddingItemOrders()` batch-writes only the changed `order` values, and the handle's click handler stops propagation so a drag doesn't open the row's edit modal.

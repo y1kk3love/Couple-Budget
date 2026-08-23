@@ -9,7 +9,6 @@ import {
   saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
   saveWeddingTask, deleteWeddingTask, fetchWeddingTasks,
   saveWeddingVendor, deleteWeddingVendor, fetchWeddingVendors,
-  saveWeddingGuest, deleteWeddingGuest, fetchWeddingGuests,
   saveWeddingEvent, deleteWeddingEvent, fetchWeddingEvents
 } from "../weddingDb.js";
 import { renderWeddingView } from "../views/wedding.js";
@@ -19,7 +18,6 @@ let editingItemId   = null;
 let editingTaskId   = null;
 let editingVendorId = null;
 let editingVendorStatus = "candidate";
-let editingGuestId  = null;
 let editingEventId  = null;
 let draftPayments = []; // 편집 중 결제 내역 — 저장 시 통째로 기록 (마지막 저장 승리, 스펙에 명시된 트레이드오프)
 
@@ -139,34 +137,6 @@ function readVendorForm() {
   };
 }
 
-// ── 하객 모달 ─────────────────────────────────────────────────
-
-export function openWeddingGuestModal(guest) {
-  editingGuestId = guest?.id ?? null;
-
-  document.getElementById("wdGuestModalTitle").textContent = guest ? "하객 수정" : "하객 추가";
-  document.getElementById("wdGuestDelete").classList.toggle("hidden", !guest);
-  document.getElementById("wdGuestId").value   = guest?.id ?? "";
-  document.getElementById("wdGuestName").value = guest?.name ?? "";
-
-  // 측 선택 — 두 사용자 이메일을 절대 기준으로 저장, 라벨은 표시 이름
-  const sel = document.getElementById("wdGuestSide");
-  sel.innerHTML = ALLOWED_EMAILS
-    .map(e => `<option value="${escapeHtml(e)}">${escapeHtml(ownerName(e))}측</option>`)
-    .join("");
-  sel.value = guest?.side ?? state.currentUser?.email ?? ALLOWED_EMAILS[0];
-
-  document.getElementById("wdGuestRelation").value = guest?.relation ?? "친구";
-  document.getElementById("wdGuestCount").value    = guest?.count ?? 1;
-  document.getElementById("wdGuestGift").value     = guest?.gift || "";
-  document.getElementById("wdGuestMemo").value     = guest?.memo ?? "";
-  document.getElementById("weddingGuestModal").classList.remove("hidden");
-}
-
-function closeGuest() {
-  document.getElementById("weddingGuestModal").classList.add("hidden");
-}
-
 // ── 일정 모달 ─────────────────────────────────────────────────
 
 // prefillDate: 미니 달력에서 날짜를 눌러 추가할 때 미리 채울 날짜
@@ -247,7 +217,6 @@ function renderPayInput(label) {
 export function setupWeddingModals() {
   document.querySelectorAll('.amount-presets[data-target="wdItemPlanned"]').forEach(setupAmountPresets);
   document.querySelectorAll('.amount-presets[data-target="wdVendorPrice"]').forEach(setupAmountPresets);
-  document.querySelectorAll('.amount-presets[data-target="wdGuestGift"]').forEach(setupAmountPresets);
 
   // 닫기
   document.getElementById("wdSettingsClose").addEventListener("click", closeSettings);
@@ -265,10 +234,6 @@ export function setupWeddingModals() {
   document.getElementById("wdVendorClose").addEventListener("click", closeVendor);
   document.getElementById("weddingVendorModal").addEventListener("click", e => {
     if (e.target.id === "weddingVendorModal") closeVendor();
-  });
-  document.getElementById("wdGuestClose").addEventListener("click", closeGuest);
-  document.getElementById("weddingGuestModal").addEventListener("click", e => {
-    if (e.target.id === "weddingGuestModal") closeGuest();
   });
   document.getElementById("wdEventClose").addEventListener("click", closeEvent);
   document.getElementById("weddingEventModal").addEventListener("click", e => {
@@ -440,50 +405,6 @@ export function setupWeddingModals() {
     closeVendor();
     showToast("확정했습니다 💍");
     await Promise.all([fetchWeddingVendors(), fetchWeddingItems()]);
-    renderWeddingView();
-  });
-
-  // 하객 저장
-  document.getElementById("wdGuestSave").addEventListener("click", async () => {
-    const name = document.getElementById("wdGuestName").value.trim();
-    if (!name) { showToast("이름을 입력하세요"); return; }
-
-    const data = {
-      name,
-      side:     document.getElementById("wdGuestSide").value,
-      relation: document.getElementById("wdGuestRelation").value,
-      count:    Math.max(1, parseInt(document.getElementById("wdGuestCount").value) || 1),
-      gift:     parseInt(document.getElementById("wdGuestGift").value) || 0,
-      memo:     document.getElementById("wdGuestMemo").value,
-    };
-
-    try {
-      await saveWeddingGuest(data, editingGuestId);
-    } catch (err) {
-      console.error("하객 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
-    closeGuest();
-    showToast(editingGuestId ? "수정되었습니다" : "추가되었습니다");
-    await fetchWeddingGuests();
-    renderWeddingView();
-  });
-
-  // 하객 삭제
-  document.getElementById("wdGuestDelete").addEventListener("click", async () => {
-    if (!editingGuestId) return;
-    if (!(await showConfirm("이 하객을 삭제할까요?", { confirmText: "삭제" }))) return;
-    try {
-      await deleteWeddingGuest(editingGuestId);
-    } catch (err) {
-      console.error("하객 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
-    closeGuest();
-    showToast("삭제되었습니다");
-    await fetchWeddingGuests();
     renderWeddingView();
   });
 

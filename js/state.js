@@ -22,7 +22,7 @@ const state = {
   budgetPlans:   [],
   // 결혼 준비 탭 (settings/wedding + wedding_* 컬렉션) — 월과 무관, 탭 진입 시 로드
   // 예외: events는 메인 화면 배너·달력 마커용으로 로그인 시 1회 미리 로드된다
-  wedding: { config: null, items: [], tasks: [], vendors: [], guests: [], events: [], loadError: false },
+  wedding: { config: null, items: [], tasks: [], vendors: [], events: [], loadError: false },
 };
 
 export default state;
