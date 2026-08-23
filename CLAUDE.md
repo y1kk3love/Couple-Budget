@@ -110,7 +110,7 @@ A fully **separate ledger** from the daily budget — wedding data never touches
 **Exception — `wedding_events`** (체촌/픽업 같은 날짜 확정 일정): `initApp()` pre-loads it once per login because the main screen consumes it in two places — `renderWeddingBanner()` in `js/app.js` (shown under the summary bar on every non-wedding view when the viewed month has events dated today-or-later; click → wedding tab 일정 segment) and 💍 markers on the main calendar's day cells (`calendar.js`). The 일정 segment itself has a mini calendar (module-level `calYear/calMonth`, day click pre-fills the add modal's date).
 
 Key invariants:
-- An item's spend is **derived** from its `payments` array (`itemSpent()`); never store a spent total. `payments` is saved wholesale from the modal's `draftPayments` copy — concurrent edits to one item are last-write-wins (accepted trade-off).
+- An item's spend is **derived** from its `payments` array (`itemSpent()`); never store a spent total. A payment entry is `{label, amount, date, settled?}` — `settled` is a plain per-payment checkbox in the item modal (정산 완료), summed by `itemSettled()` and shown in the budget row's layered bar (solid = settled, translucent = unsettled) plus a 미정산 amount in the row meta. `payments` is saved wholesale from the modal's `draftPayments` copy — concurrent edits to one item are last-write-wins (accepted trade-off).
 - `payer` is an email or `"both"`; labels resolve via `ownerName()`.
 - Checklist template seeding uses fixed doc IDs `tpl_<n>` + `setDoc` (idempotent, same strategy as fixed-item materialization) and is only offered from the empty state.
 - Choosing a vendor (`status: "chosen"`) offers to write its price/`vendorId` into the same-category budget item, or create one.

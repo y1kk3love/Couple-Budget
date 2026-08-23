@@ -147,6 +147,11 @@ export function itemSpent(item) {
   return (item.payments ?? []).reduce((s, p) => s + (p.amount || 0), 0);
 }
 
+// 정산 완료된 결제 합 — 결제별 settled 체크박스(모달)에서 표시한 금액
+export function itemSettled(item) {
+  return (item.payments ?? []).filter(p => p.settled).reduce((s, p) => s + (p.amount || 0), 0);
+}
+
 export function weddingTotals(items) {
   const totals = { planned: 0, spent: 0, byPayer: {} };
   for (const it of items) {

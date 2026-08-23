@@ -803,6 +803,18 @@ a:focus-visible {
 .wd-seg { margin-bottom: 1rem; }
 .scope-btn:disabled { opacity: 0.45; cursor: default; }
 .wd-item-plan { font-size: 0.75rem; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+.wd-unsettled { color: var(--warn); font-weight: 600; }
+/* 예산 항목 그래프 두 겹 — 진한 색: 정산 완료, 연한 색: 미정산 지출 */
+.wd-pbar-layered { position: relative; }
+.wd-pbar-layered .pfill { position: absolute; left: 0; top: 0; height: 100%; }
+.wd-pbar-layered .wd-fill-spent { opacity: 0.35; }
+/* 결제 내역 정산 체크박스 (항목 모달) */
+.wd-pay-settle {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.75rem; color: var(--text-2); cursor: pointer;
+  user-select: none; flex-shrink: 0;
+}
+.wd-pay-settle input { accent-color: var(--income); width: 15px; height: 15px; cursor: pointer; }
 .fixed-item.dragging { opacity: 0.55; }
 .fixed-item.dragging * { pointer-events: none; }
 .wd-empty-note { font-size: 0.82rem; color: var(--text-3); padding: 8px 0; }

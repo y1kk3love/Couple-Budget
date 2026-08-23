@@ -198,7 +198,7 @@ firebase deploy
 `settings/wedding` 문서(`{ date, memo }` — 총예산은 항목 계획 금액의 합으로 자동 계산)와 네 컬렉션을 사용합니다:
 
 ```
-wedding_items   { name, category, planned, payer(이메일|"both"), payments:[{label,amount,date}], memo, order, vendorId }
+wedding_items   { name, category, planned, payer(이메일|"both"), payments:[{label,amount,date,settled(정산 완료)}], memo, order, vendorId }
 wedding_tasks   { title, period(시기 그룹 ID), done, memo, order }
 wedding_vendors { category, name, price, contact, memo, status("candidate"|"chosen") }
 wedding_events  { title, date, time(선택), memo }   // 체촌·픽업 등 일정 — 메인 달력 마커·배너에도 사용

@@ -8,7 +8,7 @@ import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToa
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
-  fetchWeddingEvents, itemSpent, weddingTotals,
+  fetchWeddingEvents, itemSpent, itemSettled, weddingTotals,
   saveWeddingItemOrders
 } from "../weddingDb.js";
 import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
@@ -153,19 +153,27 @@ function renderBudgetSegment() {
   const items = state.wedding.items;
 
   const rows = items.map(it => {
-    const cat   = getWeddingCategory(it.category);
-    const spent = itemSpent(it);
-    const pct   = it.planned > 0 ? Math.min(100, Math.round(spent / it.planned * 100)) : 0;
+    const cat       = getWeddingCategory(it.category);
+    const spent     = itemSpent(it);
+    const settled   = itemSettled(it);
+    const unsettled = spent - settled;
+    const pctSpent   = it.planned > 0 ? Math.min(100, Math.round(spent / it.planned * 100)) : 0;
+    const pctSettled = it.planned > 0 ? Math.min(100, Math.round(settled / it.planned * 100)) : 0;
     const over  = it.planned > 0 && spent > it.planned;
+    const color = over ? "var(--expense)" : cat.color;
     const payer = it.payer === "both" ? "공동" : ownerName(it.payer);
+    // 그래프 두 겹: 진한 색 = 정산 완료, 연한 색 = 아직 미정산인 지출
     return `
       <div class="fixed-item" data-wd-item="${it.id}" role="button" tabindex="0">
         <span class="pe-drag wd-item-drag" title="드래그로 순서 변경">⠿</span>
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(it.name)} <span class="tag ${it.payer === "both" ? "fixed" : "variable"}">${escapeHtml(payer)}</span></div>
-          <div class="wd-item-plan">${fmtMoney(spent)} / ${fmtMoney(it.planned ?? 0)}원 · ${cat.name}</div>
-          <div class="pbar" style="margin-top:5px"><div class="pfill" style="width:${pct}%;background:${over ? "var(--expense)" : cat.color}"></div></div>
+          <div class="wd-item-plan">${fmtMoney(spent)} / ${fmtMoney(it.planned ?? 0)}원 · ${cat.name}${unsettled > 0 ? ` · <span class="wd-unsettled">미정산 ${fmtMoneyShort(unsettled)}</span>` : ""}</div>
+          <div class="pbar wd-pbar-layered" style="margin-top:5px" title="진한 색: 정산 완료 · 연한 색: 미정산">
+            <div class="pfill wd-fill-spent" style="width:${pctSpent}%;background:${color}"></div>
+            <div class="pfill" style="width:${pctSettled}%;background:${color}"></div>
+          </div>
         </div>
         <div class="fixed-amount">${fmtMoneyShort(spent)}</div>
       </div>`;

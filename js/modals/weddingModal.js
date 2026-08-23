@@ -165,6 +165,9 @@ function renderPayments() {
     <div class="wd-pay-row">
       <span class="wd-pay-label">${escapeHtml(p.label)}</span>
       <span class="wd-pay-date">${p.date ?? ""}</span>
+      <label class="wd-pay-settle" title="정산이 끝났으면 체크하세요">
+        <input type="checkbox" class="wd-pay-settle-chk" data-settle-i="${i}" ${p.settled ? "checked" : ""} /> 정산
+      </label>
       <span class="wd-pay-amt">${fmtMoney(p.amount)}원</span>
       <button type="button" class="wd-pay-del" data-pay-i="${i}" title="삭제">&times;</button>
     </div>`).join("");
@@ -180,6 +183,12 @@ function renderPayments() {
     btn.addEventListener("click", () => {
       draftPayments.splice(Number(btn.dataset.payI), 1);
       renderPayments();
+    })
+  );
+  // 정산 체크 — draft에만 반영, 저장 버튼을 눌러야 확정
+  box.querySelectorAll(".wd-pay-settle-chk").forEach(chk =>
+    chk.addEventListener("change", () => {
+      draftPayments[Number(chk.dataset.settleI)].settled = chk.checked;
     })
   );
   box.querySelectorAll("[data-pay-label]").forEach(btn =>
@@ -206,7 +215,7 @@ function renderPayInput(label) {
     const amount = parseInt(row.querySelector(".wd-pay-in-amount").value);
     const date   = row.querySelector(".wd-pay-in-date").value;
     if (!amount || amount <= 0) { showToast("금액을 입력하세요"); return; }
-    draftPayments.push({ label: lbl, amount, date });
+    draftPayments.push({ label: lbl, amount, date, settled: false });
     renderPayments();
   });
   row.querySelector(".wd-pay-in-amount").focus();
