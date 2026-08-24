@@ -27,7 +27,8 @@ const PAY_LABELS = ["계약금", "중도금", "잔금"];
 
 export function openWeddingSettingsModal() {
   const cfg = state.wedding.config ?? {};
-  document.getElementById("wdDate").value = cfg.date ?? "";
+  document.getElementById("wdDate").value     = cfg.date ?? "";
+  document.getElementById("wdSheetUrl").value = cfg.sheetUrl ?? "";
   document.getElementById("weddingSettingsModal").classList.remove("hidden");
 }
 
@@ -255,8 +256,15 @@ export function setupWeddingModals() {
     const date = document.getElementById("wdDate").value;
     if (!date) { showToast("결혼식 날짜를 선택하세요"); return; }
 
+    // 시트 링크 — http(s)만 허용 (javascript: 등 위험한 스킴 차단)
+    const sheetUrl = document.getElementById("wdSheetUrl").value.trim();
+    if (sheetUrl && !/^https?:\/\//.test(sheetUrl)) {
+      showToast("링크는 http:// 또는 https:// 로 시작해야 해요");
+      return;
+    }
+
     try {
-      await saveWeddingConfig({ date });
+      await saveWeddingConfig({ date, sheetUrl: sheetUrl || null });
     } catch (err) {
       console.error("결혼 설정 저장 실패:", err);
       showToast("저장에 실패했습니다. 네트워크를 확인해주세요");

@@ -195,7 +195,7 @@ firebase deploy
 
 ### 결혼 준비 컬렉션
 
-`settings/wedding` 문서(`{ date, memo }` — 총예산은 항목 계획 금액의 합으로 자동 계산)와 네 컬렉션을 사용합니다:
+`settings/wedding` 문서(`{ date, memo, sheetUrl }` — 총예산은 항목 계획 금액의 합으로 자동 계산, `sheetUrl`은 외부 검증 시트 바로가기)와 네 컬렉션을 사용합니다:
 
 ```
 wedding_items   { name, category, planned, payer(이메일|"both"), payments:[{label,amount,date,settled(정산 완료)}], memo, order, vendorId }

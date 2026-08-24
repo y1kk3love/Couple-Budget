@@ -359,7 +359,11 @@
           <label>결혼식 날짜</label>
           <input type="date" id="wdDate" />
         </div>
-        <p class="budget-note">총예산은 예산 세그먼트 항목들의 계획 금액 합계로 자동 계산됩니다.</p>
+        <div class="form-row">
+          <label>검증 시트 링크 (선택)</label>
+          <input type="url" id="wdSheetUrl" placeholder="https:// 로 시작하는 구글 시트 주소" maxlength="300" />
+        </div>
+        <p class="budget-note">총예산은 예산 세그먼트 항목들의 계획 금액 합계로 자동 계산됩니다. 시트 링크를 넣으면 결혼 탭 상단에 바로가기 버튼이 생겨요.</p>
       </div>
       <div class="modal-footer">
         <button id="wdSettingsSave" class="save-btn">저장</button>

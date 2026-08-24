@@ -791,7 +791,19 @@ a:focus-visible {
   background: var(--surface); border-radius: var(--radius-lg);
   padding: 1.25rem; box-shadow: var(--shadow-card); margin-bottom: 1rem;
   cursor: pointer; transition: background 0.15s, transform 0.12s ease;
+  position: relative; /* 시트 바로가기 칩의 기준 */
 }
+/* 검증 시트 바로가기 칩 — 헤더 오른쪽 위 */
+.wd-sheet-link {
+  position: absolute; top: 1rem; right: 1rem;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 20px;
+  background: var(--accent-bg); color: var(--accent);
+  font-size: 0.78rem; font-weight: 600; text-decoration: none;
+  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+}
+.wd-sheet-link:hover { background: var(--accent); color: #fff; }
+.wd-sheet-link:active { transform: scale(0.96); }
 .wd-header:hover { background: var(--surface-hover); }
 .wd-header:active { transform: scale(0.99); }
 .wd-dday { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; color: var(--accent); font-family: var(--mono); }

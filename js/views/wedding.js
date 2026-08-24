@@ -112,8 +112,15 @@ function renderHeader() {
     .map(([key, v]) => `<span>${escapeHtml(key === "both" ? "공동" : ownerName(key))} <strong>${fmtMoneyShort(v)}</strong></span>`)
     .join("");
 
+  // 검증 시트 바로가기 — 설정에 저장된 링크가 있을 때만 (http/https만 렌더)
+  const sheetOk = /^https?:\/\//.test(cfg.sheetUrl ?? "");
+  const sheetLink = sheetOk
+    ? `<a class="wd-sheet-link" href="${escapeHtml(cfg.sheetUrl)}" target="_blank" rel="noopener" title="검증 시트 열기 (새 탭)">📄 검증 시트</a>`
+    : "";
+
   return `
     <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="클릭해서 설정 변경">
+      ${sheetLink}
       <div class="wd-dday">${label}</div>
       <div class="wd-date">${pretty}</div>
       ${budgetLine}
@@ -191,6 +198,8 @@ function renderBudgetSegment() {
 
 function bindEvents(container) {
   container.querySelector("#wdHeader")?.addEventListener("click", openWeddingSettingsModal);
+  // 시트 링크 클릭이 헤더 클릭(설정 모달)으로 번지지 않게 분리
+  container.querySelector(".wd-sheet-link")?.addEventListener("click", e => e.stopPropagation());
 
   container.querySelectorAll(".scope-btn[data-seg]").forEach(b =>
     b.addEventListener("click", () => {
