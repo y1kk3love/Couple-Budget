@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 There is **no build step**. The app is plain ES modules served as static files; Firebase SDKs are loaded directly from `https://www.gstatic.com/firebasejs/10.12.0/`. Open `index.html` through any static server:
 
 ```powershell
-python -m http.server 8000   # or:  npx http-server
+npx http-server -p 8000
 ```
 
-There are no tests, linters, or package scripts. There is no `package.json`.
+On the owner's machine `python`/`py` are not installed (the `python` command is the Windows Store stub), so use `npx http-server` or a Node one-liner. There are no tests, linters, or package scripts and no `package.json` — verification is `node --check` per file (copy to `.mjs` first; plain `.js` is parsed as CommonJS) plus a browser smoke test against a local server.
 
 ## Deployment
 
@@ -30,8 +30,10 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 ```
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
 js/state.js              ← single shared mutable state (currentYear/Month/View, currentUser, transactions[],
-                            fixedItems[], skippedFixedIds:Set, budget/budgetDefault/budgetMonths, budgetPlans[])
-js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo()
+                            fixedItems[], skippedFixedIds:Set, budget/budgetDefault/budgetMonths, budgetPlans[],
+                            wedding{config, items, tasks, vendors, events, loadError})
+js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo(); OWNER_COLORS;
+                            WEDDING_CATEGORIES/getWeddingCategory, WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE
 js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
 js/db.js                 ← 가계부 Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/weddingDb.js          ← 결혼 탭 전용 Firestore reads/writes (wedding_* + settings/wedding); mutates state.wedding
@@ -107,7 +109,7 @@ A fully **separate ledger** from the daily budget — wedding data never touches
 
 `js/views/wedding.js` is the shell: D-day header (`dDayInfo()` exported for testing), segment bar (예산|일정|체크리스트|업체|메모, current segment in a module variable; `setWeddingSegment()` lets the main-view banner deep-link a segment), and the budget segment; the other segments live in `weddingEvents/Checklist/Vendors/Memo.js` as `render<Seg>Segment(container)`. The 메모 segment is a single shared notepad stored as `settings/wedding.memo` (whole-text last-write-wins). Data loads **once on first tab entry** (`loaded` flag + `ensureLoaded()`), not per month — after a mutation, call the relevant `fetchWedding*()` then `renderWeddingView()`.
 
-**Exception — `wedding_events`** (체촌/픽업 같은 날짜 확정 일정): `initApp()` pre-loads it once per login because the main screen consumes it in two places — `renderWeddingBanner()` in `js/app.js` (shown under the summary bar on every non-wedding view when the viewed month has events dated today-or-later; click → wedding tab 일정 segment) and 💍 markers on the main calendar's day cells (`calendar.js`). The 일정 segment itself has a mini calendar (module-level `calYear/calMonth`, day click pre-fills the add modal's date).
+**Exception — `wedding_events`** (체촌/픽업 같은 날짜 확정 일정): `initApp()` pre-loads it once per login because the main screen consumes it in two places — `renderWeddingBanner()` in `js/app.js` (shown under the summary bar on every non-wedding view when the viewed month has events dated today-or-later; click → wedding tab 일정 segment) and 💍 markers on the main calendar's day cells (`calendar.js`). The 일정 segment lays out as a two-column grid — event list on the left with its own scroll (max-height 65vh), mini calendar on the right (320px, sticky; module-level `calYear/calMonth`, day click pre-fills the add modal's date) — stacking calendar-first on mobile.
 
 Key invariants:
 - An item's spend is **derived** from its `payments` array (`itemSpent()`); never store a spent total. A payment entry is `{label, amount, date, settled?}` — `settled` is a plain per-payment checkbox in the item modal (정산 완료), summed by `itemSettled()` and shown in the budget row's layered bar (solid = settled, translucent = unsettled) plus a 미정산 amount in the row meta. `payments` is saved wholesale from the modal's `draftPayments` copy — concurrent edits to one item are last-write-wins (accepted trade-off).
@@ -141,6 +143,6 @@ The UI follows a Toss-like look: light-gray page (`--bg`), white borderless card
 - The list view's 전체 기간 mode renders at most 300 rows at a time (`LIST_CHUNK` + 더 보기 button in `list.js`) — don't regress it to a full render.
 - `.kind-btn` is used by both the tx modal (변동/고정) and the fixed modal (지출/수입) — selectors touching it must stay scoped (`#txModal .kind-btn` / `#fixedTypeToggle .kind-btn`), never document-wide.
 - All rendering is via `innerHTML` template strings, so any user-originated string (transaction name, memo, CSV merchant name) must be wrapped in `escapeHtml()` from `js/utils.js` before interpolation.
-- Currency formatting goes through `fmtMoney()` (uses `toLocaleString("ko-KR")` on the absolute value) — sign is added by the caller.
+- Currency formatting goes through `fmtMoney()` (uses `toLocaleString("ko-KR")` on the absolute value) — sign is added by the caller. Compact amounts (calendar cells, chart labels, summaries) use `fmtMoneyShort()`, which abbreviates in Korean units (`1.5만`, `125만`, `1.2억`) — never reintroduce K/M notation.
 - Categories live in `js/constants.js`. Always resolve via `getCategoryInfo(id, type)` so `type` (`"income"` vs `"expense"`) is honored — IDs are not unique across types (e.g. both lists could collide).
 - Never use native `confirm()`/`alert()` — use `showConfirm()` from `js/utils.js` (returns a Promise<boolean>) and `showToast()`.
