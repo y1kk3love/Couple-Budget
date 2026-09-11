@@ -815,6 +815,7 @@ a:focus-visible {
 .wd-seg { margin-bottom: 1rem; }
 .scope-btn:disabled { opacity: 0.45; cursor: default; }
 .wd-item-plan { font-size: 0.75rem; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+.wd-settled { color: var(--income); font-weight: 600; }
 .wd-unsettled { color: var(--warn); font-weight: 600; }
 /* 예산 항목 그래프 두 겹 — 진한 색: 정산 완료, 연한 색: 미정산 지출 */
 .wd-pbar-layered { position: relative; }

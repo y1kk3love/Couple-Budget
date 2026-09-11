@@ -169,6 +169,14 @@ function renderBudgetSegment() {
     const over  = it.planned > 0 && spent > it.planned;
     const color = over ? "var(--expense)" : cat.color;
     const payer = it.payer === "both" ? "공동" : ownerName(it.payer);
+    // 메타 줄 정산 표시: 전액 정산이면 '정산 완료', 아니면 정산된 금액(있을 때만)과 미정산 금액을 나란히
+    let settledMeta = "";
+    if (spent > 0 && unsettled <= 0) {
+      settledMeta = ` · <span class="wd-settled">정산 완료</span>`;
+    } else if (spent > 0) {
+      if (settled > 0) settledMeta += ` · <span class="wd-settled">정산 ${fmtMoneyShort(settled)}</span>`;
+      settledMeta += ` · <span class="wd-unsettled">미정산 ${fmtMoneyShort(unsettled)}</span>`;
+    }
     // 그래프 두 겹: 진한 색 = 정산 완료, 연한 색 = 아직 미정산인 지출
     return `
       <div class="fixed-item" data-wd-item="${it.id}" role="button" tabindex="0">
@@ -176,7 +184,7 @@ function renderBudgetSegment() {
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(it.name)} <span class="tag ${it.payer === "both" ? "fixed" : "variable"}">${escapeHtml(payer)}</span></div>
-          <div class="wd-item-plan">${fmtMoney(spent)} / ${fmtMoney(it.planned ?? 0)}원 · ${cat.name}${unsettled > 0 ? ` · <span class="wd-unsettled">미정산 ${fmtMoneyShort(unsettled)}</span>` : ""}</div>
+          <div class="wd-item-plan">${fmtMoney(spent)} / ${fmtMoney(it.planned ?? 0)}원 · ${cat.name}${settledMeta}</div>
           <div class="pbar wd-pbar-layered" style="margin-top:5px" title="진한 색: 정산 완료 · 연한 색: 미정산">
             <div class="pfill wd-fill-spent" style="width:${pctSpent}%;background:${color}"></div>
             <div class="pfill" style="width:${pctSettled}%;background:${color}"></div>
