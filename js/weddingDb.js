@@ -147,9 +147,17 @@ export function itemSpent(item) {
   return (item.payments ?? []).reduce((s, p) => s + (p.amount || 0), 0);
 }
 
-// 정산 완료된 결제 합 — 결제별 settled 체크박스(모달)에서 표시한 금액
+// 결제 한 건의 정산된 금액 — settledAmount(부분 정산)가 원본이며,
+// 그 필드가 없는 과거 기록은 settled 체크(true = 전액)로 해석. 결제 금액을 넘지 않게 클램프.
+export function paymentSettled(p) {
+  const amount = p.amount || 0;
+  const raw = p.settledAmount ?? (p.settled ? amount : 0);
+  return Math.max(0, Math.min(amount, raw || 0));
+}
+
+// 정산된 결제 금액 합 — 항목 모달에서 결제별로 입력한 정산 금액
 export function itemSettled(item) {
-  return (item.payments ?? []).filter(p => p.settled).reduce((s, p) => s + (p.amount || 0), 0);
+  return (item.payments ?? []).reduce((s, p) => s + paymentSettled(p), 0);
 }
 
 export function weddingTotals(items) {

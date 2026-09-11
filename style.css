@@ -820,20 +820,38 @@ a:focus-visible {
 .wd-pbar-layered { position: relative; }
 .wd-pbar-layered .pfill { position: absolute; left: 0; top: 0; height: 100%; }
 .wd-pbar-layered .wd-fill-spent { opacity: 0.35; }
-/* 결제 내역 정산 체크박스 (항목 모달) */
+/* 결제 내역 정산 금액 입력 (항목 모달) — 결제 행 아래 한 줄 전체를 차지 */
 .wd-pay-settle {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 0.75rem; color: var(--text-2); cursor: pointer;
-  user-select: none; flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px; flex-basis: 100%;
+  font-size: 0.75rem; color: var(--text-3); padding-left: 2px;
 }
-.wd-pay-settle input { accent-color: var(--income); width: 15px; height: 15px; cursor: pointer; }
+.wd-pay-settle-lbl { flex-shrink: 0; }
+.wd-pay-settle-amt {
+  width: 110px; padding: 0.3rem 0.5rem;
+  border: 1.5px solid transparent; border-radius: 6px;
+  background: var(--surface2); color: var(--text); outline: none;
+  font-family: var(--mono); font-size: 0.78rem; -moz-appearance: textfield;
+}
+.wd-pay-settle-amt::-webkit-outer-spin-button,
+.wd-pay-settle-amt::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wd-pay-settle-amt:focus { border-color: var(--accent); }
+.wd-pay-settle-of { font-family: var(--mono); flex-shrink: 0; }
+.wd-pay-settle-full {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.2rem 0.55rem; font-size: 0.72rem; color: var(--text-2); cursor: pointer; flex-shrink: 0;
+}
+.wd-pay-settle-full:hover { border-color: var(--accent); color: var(--accent); }
+.wd-pay-settle-done { display: none; color: var(--income); font-weight: 600; flex-shrink: 0; }
+.wd-pay-row.settled .wd-pay-settle-full { display: none; }
+.wd-pay-row.settled .wd-pay-settle-done { display: inline; }
+.wd-pay-row.settled .wd-pay-settle-amt { color: var(--income); }
 .fixed-item.dragging { opacity: 0.55; }
 .fixed-item.dragging * { pointer-events: none; }
 .wd-empty-note { font-size: 0.82rem; color: var(--text-3); padding: 8px 0; }
 
 /* 결제 내역 (항목 모달) */
 .wd-pay-row {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 4px;
   font-size: 0.82rem; padding: 6px 0; border-bottom: 1px solid var(--border);
 }
 .wd-pay-row:last-of-type { border-bottom: none; }

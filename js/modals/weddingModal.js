@@ -9,7 +9,7 @@ import {
   saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
   saveWeddingTask, deleteWeddingTask, fetchWeddingTasks,
   saveWeddingVendor, deleteWeddingVendor, fetchWeddingVendors,
-  saveWeddingEvent, deleteWeddingEvent, fetchWeddingEvents
+  saveWeddingEvent, deleteWeddingEvent, fetchWeddingEvents, paymentSettled
 } from "../weddingDb.js";
 import { renderWeddingView } from "../views/wedding.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
@@ -40,7 +40,8 @@ function closeSettings() {
 
 export function openWeddingItemModal(item) {
   editingItemId = item?.id ?? null;
-  draftPayments = (item?.payments ?? []).map(p => ({ ...p }));
+  // 과거 기록(settled 체크만 있는 결제)도 settledAmount 형태로 정규화해서 편집·저장
+  draftPayments = (item?.payments ?? []).map(p => withSettled({ ...p }, paymentSettled(p)));
 
   document.getElementById("wdItemTitle").textContent = item ? "예산 항목 수정" : "예산 항목 추가";
   document.getElementById("wdItemDelete").classList.toggle("hidden", !item);
@@ -160,18 +161,34 @@ function closeEvent() {
 
 // ── 결제 내역 (모달 안 동적 렌더) ─────────────────────────────
 
+// 결제 한 건에 정산 금액을 기록 — settledAmount가 원본, settled는 전액 여부(과거 형태 호환)
+function withSettled(p, amt) {
+  const amount = p.amount || 0;
+  p.settledAmount = Math.max(0, Math.min(amount, amt || 0));
+  p.settled = amount > 0 && p.settledAmount >= amount;
+  return p;
+}
+
 function renderPayments() {
   const box = document.getElementById("wdPayments");
-  const rows = draftPayments.map((p, i) => `
-    <div class="wd-pay-row">
+  const rows = draftPayments.map((p, i) => {
+    const settledAmt = paymentSettled(p);
+    return `
+    <div class="wd-pay-row${p.settled ? " settled" : ""}" data-pay-row="${i}">
       <span class="wd-pay-label">${escapeHtml(p.label)}</span>
       <span class="wd-pay-date">${p.date ?? ""}</span>
-      <label class="wd-pay-settle" title="정산이 끝났으면 체크하세요">
-        <input type="checkbox" class="wd-pay-settle-chk" data-settle-i="${i}" ${p.settled ? "checked" : ""} /> 정산
-      </label>
       <span class="wd-pay-amt">${fmtMoney(p.amount)}원</span>
       <button type="button" class="wd-pay-del" data-pay-i="${i}" title="삭제">&times;</button>
-    </div>`).join("");
+      <div class="wd-pay-settle" title="상대에게 돌려받은(정산된) 금액을 입력하세요">
+        <span class="wd-pay-settle-lbl">정산</span>
+        <input type="number" class="wd-pay-settle-amt" data-settle-i="${i}" min="0" max="${p.amount || 0}" step="1"
+               placeholder="0" value="${settledAmt || ""}" aria-label="정산 금액" />
+        <span class="wd-pay-settle-of">/ ${fmtMoney(p.amount)}원</span>
+        <button type="button" class="wd-pay-settle-full" data-settle-full="${i}">전액</button>
+        <span class="wd-pay-settle-done">✓ 정산 완료</span>
+      </div>
+    </div>`;
+  }).join("");
 
   box.innerHTML = `
     ${rows || `<p class="wd-empty-note">아직 결제 기록이 없어요</p>`}
@@ -186,10 +203,24 @@ function renderPayments() {
       renderPayments();
     })
   );
-  // 정산 체크 — draft에만 반영, 저장 버튼을 눌러야 확정
-  box.querySelectorAll(".wd-pay-settle-chk").forEach(chk =>
-    chk.addEventListener("change", () => {
-      draftPayments[Number(chk.dataset.settleI)].settled = chk.checked;
+  // 정산 금액 — draft에만 반영, 저장 버튼을 눌러야 확정.
+  // input마다 재렌더하면 포커스가 끊기므로 입력 중에는 클램프+행 스타일만 갱신, 포커스가 빠지면 재렌더로 표시 정리
+  box.querySelectorAll(".wd-pay-settle-amt").forEach(inp =>
+    inp.addEventListener("input", () => {
+      const i = Number(inp.dataset.settleI);
+      const p = withSettled(draftPayments[i], parseInt(inp.value) || 0);
+      if (inp.value !== "" && parseInt(inp.value) !== p.settledAmount) inp.value = p.settledAmount;
+      inp.closest(".wd-pay-row").classList.toggle("settled", p.settled);
+    })
+  );
+  box.querySelectorAll(".wd-pay-settle-amt").forEach(inp =>
+    inp.addEventListener("change", renderPayments)
+  );
+  box.querySelectorAll(".wd-pay-settle-full").forEach(btn =>
+    btn.addEventListener("click", () => {
+      const p = draftPayments[Number(btn.dataset.settleFull)];
+      withSettled(p, p.amount);
+      renderPayments();
     })
   );
   box.querySelectorAll("[data-pay-label]").forEach(btn =>
@@ -216,7 +247,7 @@ function renderPayInput(label) {
     const amount = parseInt(row.querySelector(".wd-pay-in-amount").value);
     const date   = row.querySelector(".wd-pay-in-date").value;
     if (!amount || amount <= 0) { showToast("금액을 입력하세요"); return; }
-    draftPayments.push({ label: lbl, amount, date, settled: false });
+    draftPayments.push({ label: lbl, amount, date, settled: false, settledAmount: 0 });
     renderPayments();
   });
   row.querySelector(".wd-pay-in-amount").focus();
