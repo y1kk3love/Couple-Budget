@@ -4,13 +4,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the app
 
-There is **no build step**. The app is plain ES modules served as static files; Firebase SDKs are loaded directly from `https://www.gstatic.com/firebasejs/10.12.0/`. Open `index.html` through any static server:
+There is **no build step**. The app is plain ES modules served as static files; Firebase SDKs are loaded directly from `https://www.gstatic.com/firebasejs/10.12.0/`. ES modules won't load over `file://`, so `index.html` must be served over HTTP.
+
+**The owner's machine has neither Node nor Python** (verified 2026-09: `node`/`npx` absent from PATH and every usual install location; `python`/`python3`/`py` are the Windows Store stubs). So `npx http-server` and `python -m http.server` (both still mentioned in README) do not work here. Use the dependency-free PowerShell server in the repo:
 
 ```powershell
-npx http-server -p 8000
+powershell -ExecutionPolicy Bypass -File tools/serve.ps1 -Port 8000
 ```
 
-On the owner's machine `python`/`py` are not installed (the `python` command is the Windows Store stub), so use `npx http-server` or a Node one-liner. There are no tests, linters, or package scripts and no `package.json` — verification is `node --check` per file (copy to `.mjs` first; plain `.js` is parsed as CommonJS) plus a browser smoke test against a local server.
+For the Claude desktop Browser pane, `.claude/launch.json` (gitignored — recreate it if missing) points at the same script:
+
+```json
+{ "version": "0.0.1", "configurations": [ { "name": "couple-budget", "runtimeExecutable": "powershell",
+  "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools/serve.ps1", "-Port", "8000"], "port": 8000 } ] }
+```
+
+There are no tests, linters, or package scripts and no `package.json`. **Verification on this machine is the browser smoke test**: load the app through the local server and confirm zero console errors and that the login screen renders — `js/app.js` imports every module eagerly, so a syntax error anywhere fails the whole load and shows in the console. Signing in needs one of the two allowlisted Google accounts, so anything past the login screen is checked by the owner. Where Node *is* available, add a per-file `node --check` (it parses plain `.js` as CommonJS, hence the `.mjs` copy; Git Bash, from the repo root):
+
+```bash
+S=$(mktemp -d); ok=1; for f in js/*.js js/views/*.js js/modals/*.js; do cp "$f" "$S/$(echo $f|tr / _).mjs"; node --check "$S/$(echo $f|tr / _).mjs" || ok=0; done; [ $ok = 1 ] && echo ALL-PASS
+```
+
+⚠ **PowerShell scripts in `tools/` must be saved as UTF-8 *with BOM*.** Windows PowerShell 5.1 reads a BOM-less file as CP949, and a Korean comment can then swallow the line after it — `serve.ps1` without a BOM silently skipped its body write and every GET hung. Both scripts carry the BOM; keep it when editing (the Write tool emits no BOM — re-save with `[IO.File]::WriteAllText(path, text, (New-Object Text.UTF8Encoding $true))`).
+
+`.claude/` (session settings, `launch.json`) and `excel/` (personal card statements) are gitignored — don't commit either.
+
+Design specs and implementation plans for larger features live in `docs/superpowers/specs/` and `docs/superpowers/plans/` (currently only the 2026-08 wedding tab). They record the *original* design and are not updated afterwards — the wedding spec still describes a stored `totalBudget` and a 하객 segment, both since replaced (see the wedding section below). When a spec and this file disagree, this file wins.
 
 ## Deployment
 
@@ -18,8 +37,8 @@ The app is served by **GitHub Pages** (deploy-from-branch; there is no workflow 
 
 ## Configuration that must exist before the app works
 
-- `firebase.js` exports `firebaseConfig` (Firebase project keys) and `ALLOWED_EMAILS` (the only two Google accounts allowed to log in). The auth check is enforced both client-side (`js/auth.js`) and server-side (`firestore.rules`). When changing the allowlist, update **both** files — they are not derived from each other.
-- `firestore.rules` must be pasted into the Firebase console; it is not deployed by anything in this repo.
+- `firebase.js` exports `firebaseConfig` (Firebase project keys) and `ALLOWED_EMAILS` (the only two Google accounts allowed to log in). The auth check is enforced both client-side (`js/auth.js`) and server-side (`firestore.rules`). When changing the allowlist, update **both** places — they are not derived from each other.
+- `firestore.rules` must be pasted into the Firebase console; it is not deployed by anything in this repo. The committed file deliberately keeps **placeholder emails** (`your_email@gmail.com` / `partner_email@gmail.com`) in `isAllowed()` — the real addresses (the ones in `firebase.js`) are substituted only when pasting into the console. Don't "fix" the placeholders in the repo, and remember that any re-paste needs that substitution or both users get locked out.
 
 ## Architecture
 
