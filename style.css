@@ -280,7 +280,7 @@ a:focus-visible {
 
 /* ── 요약바 ── */
 .summary-bar {
-  display: grid; grid-template-columns: 1.25fr 1fr 1fr 1.25fr;
+  display: grid; grid-template-columns: 1.25fr 1.25fr 1fr 1fr; /* 잔액·예산(넓게) → 수입·지출 → 누적 */
   gap: 12px; padding: 1.25rem 1.5rem 0;
 }
 .sum-card {
@@ -1118,9 +1118,11 @@ a:focus-visible {
   .summary-bar {
     display: flex; overflow-x: auto; gap: 10px; padding: 1rem 1rem 2px;
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    /* 넘길 때 카드 단위로 멈춤 — 둘째 카드(예산)가 오른쪽에 걸쳐 보여 넘길 수 있음을 알린다 */
+    scroll-snap-type: x mandatory; scroll-padding-inline: 1rem;
   }
   .summary-bar::-webkit-scrollbar { display: none; }
-  .sum-card { flex: 0 0 auto; min-width: 146px; }
+  .sum-card { flex: 0 0 auto; min-width: 146px; scroll-snap-align: start; }
   .sum-card.hero { min-width: 200px; }
   .budget-card { min-width: 230px; }
   .view-container { padding: 1rem; }

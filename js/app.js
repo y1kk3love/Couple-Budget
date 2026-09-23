@@ -211,13 +211,16 @@ async function renderSummary() {
   const balanceSign  = balance > 0 ? "+" : balance < 0 ? "-" : "";
   const accumSign    = accumTotal > 0 ? "+" : accumTotal < 0 ? "-" : "";
 
-  // 토스식 위계: 이번달 잔액을 주인공으로 크게, 수입·지출은 한 카드에 2줄로
+  // 토스식 위계: 이번달 잔액을 주인공으로 크게, 수입·지출은 한 카드에 2줄로.
+  // 순서: 잔액 → 예산 → 수입·지출 → 누적 — 가장 행동을 부르는 예산 카드를 둘째로.
+  // 예전에는 예산이 마지막이라 모바일 가로 스크롤에서 화면 밖(네 번째 칸)에 숨어 있었다
   document.getElementById("summaryBar").innerHTML = `
     <div class="sum-card hero">
       <div class="lbl">이번달 잔액</div>
       <div class="val ${balanceClass}">${balanceSign}${fmtMoney(balance)}원</div>
       <div class="sub">${state.currentMonth}월 수입 − 지출</div>
     </div>
+    ${renderBudgetCard(totalExpense)}
     <div class="sum-card duo">
       <div class="duo-row"><span class="lbl">수입</span><span class="duo-val income">${totalIncome > 0 ? "+" : ""}${fmtMoney(totalIncome)}원</span></div>
       <div class="duo-row"><span class="lbl">지출</span><span class="duo-val expense">${totalExpense > 0 ? "-" : ""}${fmtMoney(totalExpense)}원</span></div>
@@ -228,8 +231,7 @@ async function renderSummary() {
         ? `<div class="val neutral">—</div><div class="sub">불러오지 못함</div>`
         : `<div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}원</div>
       <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>`}
-    </div>
-    ${renderBudgetCard(totalExpense)}`;
+    </div>`;
 
   // 예산 카드 클릭 → 설정 모달 (innerHTML 재생성이므로 매번 다시 바인딩)
   document.getElementById("budgetCard").addEventListener("click", openBudgetModal);
