@@ -585,9 +585,39 @@ a:focus-visible {
 .modal-close { background: none; border: none; cursor: pointer; color: var(--text-3); display: flex; padding: 8px; margin: -6px; border-radius: 8px; }
 .modal-close:hover { color: var(--text); }
 .modal-body { padding: 0.25rem 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+/* 모달 하단 — 주 버튼(저장)은 넓게, 내용이 길어도 스크롤 없이 누를 수 있게 아래에 고정.
+   삭제 버튼은 왼쪽에 작게 둔다 */
 .modal-footer {
-  padding: 0 1.5rem 1.5rem;
-  display: flex; justify-content: flex-end; gap: 8px;
+  position: sticky; bottom: 0; z-index: 1;
+  background: var(--surface);
+  padding: 0.75rem 1.5rem 1.5rem;
+  display: flex; gap: 8px;
+}
+.modal-footer .save-btn { flex: 1; padding: 0.85rem 1rem; font-size: 0.95rem; }
+/* 버튼이 모두 숨겨진 하단(CSV 미리보기 전)은 빈 띠가 남지 않게 숨김 */
+.modal-footer:not(:has(> :not(.hidden))) { display: none; }
+.modal-footer .delete-btn { margin-right: 0; flex-shrink: 0; }
+
+/* 거래 카테고리 칩 (txModal) — 색 점 + 이름, 4열 */
+.cat-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cat-chip {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  min-width: 0; padding: 0.55rem 0.25rem;
+  border: 1.5px solid transparent; border-radius: 10px;
+  background: var(--surface2); color: var(--text-2);
+  font-family: var(--font); font-size: 0.8rem; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s ease;
+}
+.cat-chip i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cat-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-chip:hover { color: var(--text); }
+.cat-chip.active {
+  background: var(--accent-bg); border-color: var(--accent);
+  color: var(--text); font-weight: 600;
+}
+/* 아주 좁은 폰(≤360px)에선 4열이면 "의료/건강"이 잘려 3열로 */
+@media (max-width: 360px) {
+  .cat-chips { grid-template-columns: repeat(3, 1fr); }
 }
 .tx-context-panel {
   border-top: 1px solid var(--border);

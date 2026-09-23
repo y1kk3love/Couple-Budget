@@ -29,6 +29,8 @@ export function openAddModal(dateStr = null) {
   setType("expense");
   setKind("variable");
   document.getElementById("txModal").classList.remove("hidden");
+  // 가장 먼저 입력하는 금액 칸에 바로 포커스 (모바일에선 숫자 키패드가 뜬다)
+  document.getElementById("txAmount").focus();
 
   // 해당 날 기존 내역 패널
   const dayTxs = state.transactions.filter(t => t.date === date);
@@ -52,9 +54,8 @@ export function openEditModal(id, tx = null) {
   document.getElementById("txMemo").value = t.memo ?? "";
   document.getElementById("deleteTxBtn").classList.remove("hidden");
 
-  setType(t.type);
-  populateCategorySelect(t.type);
-  document.getElementById("txCategory").value = t.category;
+  setType(t.type); // 칩도 이 타입으로 다시 그린다
+  setCategory(t.category);
   setKind(t.kind ?? "variable");
   document.getElementById("txModal").classList.remove("hidden");
 
@@ -93,11 +94,27 @@ function setKind(kind) {
 function getType() { return modalEl().querySelector(".type-btn.active").dataset.type; }
 function getKind() { return modalEl().querySelector(".kind-btn.active").dataset.kind; }
 
+// 카테고리 칩을 타입(지출/수입)에 맞게 다시 그리고 첫 카테고리를 고른다.
+// 선택값은 숨은 입력 #txCategory에 둔다 — 저장 흐름은 그 값을 읽는다.
 function populateCategorySelect(type) {
-  const sel = document.getElementById("txCategory");
-  sel.innerHTML = CATEGORIES[type]
-    .map(c => `<option value="${c.id}">${c.name}</option>`)
-    .join("");
+  const box = document.getElementById("txCategoryChips");
+  box.innerHTML = CATEGORIES[type].map(c => `
+    <button type="button" class="cat-chip" data-cat="${c.id}" aria-pressed="false" title="${c.name}">
+      <i style="background:${c.color}"></i><span>${c.name}</span>
+    </button>`).join("");
+  box.querySelectorAll(".cat-chip").forEach(chip =>
+    chip.addEventListener("click", () => setCategory(chip.dataset.cat))
+  );
+  setCategory(CATEGORIES[type][0].id);
+}
+
+function setCategory(id) {
+  document.getElementById("txCategory").value = id;
+  document.querySelectorAll("#txCategoryChips .cat-chip").forEach(chip => {
+    const on = chip.dataset.cat === id;
+    chip.classList.toggle("active", on);
+    chip.setAttribute("aria-pressed", on);
+  });
 }
 
 function closeModal() {

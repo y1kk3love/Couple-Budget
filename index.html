@@ -185,7 +185,7 @@
         <div class="form-row">
           <label>금액</label>
           <div class="amount-input-wrap">
-            <input type="number" id="txAmount" placeholder="0" min="0" />
+            <input type="number" id="txAmount" placeholder="0" min="0" inputmode="numeric" />
             <span class="currency">원</span>
           </div>
           <div class="amount-presets" data-target="txAmount">
@@ -196,8 +196,10 @@
           </div>
         </div>
         <div class="form-row">
-          <label>카테고리</label>
-          <select id="txCategory"></select>
+          <label id="txCategoryLabel">카테고리</label>
+          <!-- 12개 드롭다운 대신 한 번에 고르는 칩 — 값은 숨은 입력에 둔다 (txModal.setCategory) -->
+          <input type="hidden" id="txCategory" />
+          <div id="txCategoryChips" class="cat-chips" role="group" aria-labelledby="txCategoryLabel"></div>
         </div>
         <div class="form-row">
           <label>날짜</label>
@@ -215,11 +217,11 @@
           <input type="text" id="txMemo" placeholder="메모 (선택)" maxlength="100" />
         </div>
       </div>
+      <div id="txContextPanel" class="tx-context-panel hidden"></div>
       <div class="modal-footer">
         <button id="deleteTxBtn" class="delete-btn hidden">삭제</button>
         <button id="saveTxBtn" class="save-btn">저장</button>
       </div>
-      <div id="txContextPanel" class="tx-context-panel hidden"></div>
     </div>
   </div>
 
