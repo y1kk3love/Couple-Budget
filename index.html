@@ -213,8 +213,9 @@
           </div>
         </div>
         <div class="form-row">
-          <label>메모</label>
-          <input type="text" id="txMemo" placeholder="메모 (선택)" maxlength="100" />
+          <!-- 이 값이 목록·달력에 보이는 이름이 된다 (비우면 카테고리 이름) — placeholder는 txModal.setType이 타입별로 바꾼다 -->
+          <label for="txMemo">내용</label>
+          <input type="text" id="txMemo" placeholder="예: 스타벅스 (비우면 카테고리 이름)" maxlength="100" />
         </div>
       </div>
       <div id="txContextPanel" class="tx-context-panel hidden"></div>

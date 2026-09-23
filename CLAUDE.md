@@ -102,7 +102,7 @@ A view that needs async data after its synchronous render (e.g. `stats.js` filli
 
 ### Transaction names and category propagation
 
-The tx modal has no name input: a transaction's `name` is the trimmed memo, falling back to the category label (`txModal.js` save handler). `name` drives the tx modal's recent-history suggestions (`fetchRecentTransactionsByName()`) and category propagation: when an edit changes a transaction's category, `updateCategoryByName()` batch-applies the new category to **every** transaction with the same `name`+`type` across all months. This app-wide side effect is intentional (a merchant's category correction should apply everywhere) — keep it in mind when touching the edit flow.
+The tx modal has no separate name input: a transaction's `name` is the trimmed memo field — labelled **내용** in the UI (placeholder "예: 스타벅스 (비우면 카테고리 이름)"), since it is what lists and the calendar show — falling back to the category label (`txModal.js` save handler). `name` drives the tx modal's recent-history suggestions (`fetchRecentTransactionsByName()`) and category propagation: when an edit changes a transaction's category, `updateCategoryByName()` batch-applies the new category to **every** transaction with the same `name`+`type` across all months. This app-wide side effect is intentional (a merchant's category correction should apply everywhere) — keep it in mind when touching the edit flow.
 
 ### Firestore document shapes
 

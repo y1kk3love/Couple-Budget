@@ -81,6 +81,10 @@ function setType(type) {
     b.setAttribute("aria-pressed", on);
   });
   populateCategorySelect(type);
+  // "내용" 칸이 곧 목록에 보이는 이름이라는 걸 예시로 알려 준다 (예전 라벨 "메모 (선택)"은 이를 가렸다)
+  document.getElementById("txMemo").placeholder = type === "income"
+    ? "예: 월급 (비우면 카테고리 이름)"
+    : "예: 스타벅스 (비우면 카테고리 이름)";
 }
 
 function setKind(kind) {
