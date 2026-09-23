@@ -127,11 +127,12 @@ export function setupFixedModal() {
     const btn = e.currentTarget;
     const id = document.getElementById("fixedEditId").value;
     if (!id) return;
-    if (!(await showConfirm("이 고정비를 삭제할까요?\n이미 기록된 달의 내역은 유지됩니다.", { confirmText: "삭제" }))) return;
+    if (!(await showConfirm("이 고정비를 삭제할까요?\n이번 달까지 기록된 내역은 유지되고,\n다음 달부터는 자동으로 기록되지 않습니다.", { confirmText: "삭제" }))) return;
     if (!(await runWrite(btn, () => deleteFixedItem(id), "삭제"))) return;
     closeModal();
     showToast("삭제되었습니다");
     await fetchFixedItems();
+    await fetchTransactions(); // 미래 달을 보고 있었다면 지워진 복사본이 목록에서 빠지도록
     renderAll();
   });
 }

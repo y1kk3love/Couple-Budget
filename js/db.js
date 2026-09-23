@@ -148,9 +148,35 @@ export async function saveFixedItem(data, id = null) {
   }
 }
 
+// 실제 오늘 기준 이번 달 (YYYY*100+MM) — 고정비 동기화·삭제가 "과거 기록"을 가르는 기준.
+// 화면에서 보고 있는 달이 아니다.
+function realCurrentYM() {
+  const today = new Date();
+  return today.getFullYear() * 100 + today.getMonth() + 1;
+}
+
+// 고정비 삭제 — 이번 달까지 기록된 자동생성 거래는 실제 기록이라 남기고,
+// 다음 달 이후에 미리 만들어진 복사본(미래 달을 한 번 열어 보면 생긴다)과
+// 그 달들의 skip 마커는 함께 지운다. 예전에는 템플릿만 지워서, 해지한 고정비가
+// 이미 열어 본 미래 달의 예산·잔액에 계속 잡혔다.
 export async function deleteFixedItem(id) {
-  await deleteDoc(doc(db, "fixed_items", id));
-  // 고정비에서 자동 생성된 거래는 그대로 두지만, 향후 보강 시 필요할 수 있어 무효화.
+  const snap = await getDocs(query(
+    collection(db, "transactions"),
+    where("fixedId", "==", id),
+    where("fromFixed", "==", true)
+  ));
+  const currentYM = realCurrentYM();
+  const refs = snap.docs
+    .filter(d => d.data().year * 100 + d.data().month > currentYM)
+    .map(d => d.ref);
+  refs.push(doc(db, "fixed_items", id)); // 템플릿은 마지막 청크에서 지운다
+
+  // writeBatch 한도(500) 여유를 두고 450개씩 — 실패해도 템플릿이 남아 다시 시도할 수 있다
+  for (let i = 0; i < refs.length; i += 450) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + 450).forEach(r => batch.delete(r));
+    await batch.commit();
+  }
   invalidateBalanceCache();
 }
 
@@ -162,8 +188,7 @@ export async function syncFixedItemTransactions(id, data) {
   const q    = query(collection(db, "transactions"), where("fixedId", "==", id), where("fromFixed", "==", true));
   const snap = await getDocs(q);
 
-  const today     = new Date();
-  const currentYM = today.getFullYear() * 100 + today.getMonth() + 1;
+  const currentYM = realCurrentYM();
 
   await Promise.all(snap.docs.map(d => {
     const t = d.data();
