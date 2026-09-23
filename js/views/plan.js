@@ -16,6 +16,16 @@ const DONUT_C = 339.292; // 반지름 54 원둘레
 
 let editing = false;   // 내 예산안 수정 모드
 let draft   = null;    // 수정 중 임시값 { income, items:[{name, amount}] }
+// draft를 만든 사용자 — 모듈 상태는 로그아웃해도 남으므로, 같은 브라우저에서 상대가 로그인하면
+// 내 초안이 상대의 수정 카드에 뜨고 저장 시 상대 문서에 기록되던 문제를 막는다
+let draftOwner = null;
+
+// 로그아웃 시 app.js(resetSessionUI)가 호출 — 편집 중이던 초안을 버린다
+export function resetPlanEdit() {
+  editing = false;
+  draft = null;
+  draftOwner = null;
+}
 
 // ── 정렬 상태 (두 카드에 공통 적용) ───────────────────────────
 let sortKey = "default"; // "default"(저장 순서) | "name" | "amount"
@@ -25,6 +35,8 @@ export function renderPlanView() {
   const container = document.getElementById("view-plan");
   const myEmail   = state.currentUser?.email;
   const partner   = ALLOWED_EMAILS.find(e => e !== myEmail);
+  // 다른 사용자가 만든 초안이면 버린다 (로그아웃 훅이 못 돌았을 때의 이중 안전장치)
+  if (editing && draftOwner !== myEmail) resetPlanEdit();
 
   container.innerHTML = `
     ${renderSortBar()}
@@ -227,6 +239,7 @@ function bindEvents(container, myEmail) {
     draft = plan
       ? { name: plan.name ?? "", income: plan.income, items: plan.items.map(i => ({ ...i })) }
       : { name: "", income: "", items: [{ name: "", amount: "" }] };
+    draftOwner = myEmail;
     editing = true;
     renderPlanView();
   };
@@ -282,8 +295,7 @@ function bindEvents(container, myEmail) {
   });
 
   container.querySelector("#peCancelBtn")?.addEventListener("click", () => {
-    editing = false;
-    draft = null;
+    resetPlanEdit();
     renderPlanView();
   });
 
@@ -298,8 +310,7 @@ function bindEvents(container, myEmail) {
     const ok = await runWrite(btn, () =>
       saveBudgetPlan(myEmail, { owner: myEmail, name: draft.name, income, items }));
     if (!ok) return;
-    editing = false;
-    draft = null;
+    resetPlanEdit();
     await fetchBudgetPlans();
     showToast("예산안이 저장되었습니다");
     renderAll();

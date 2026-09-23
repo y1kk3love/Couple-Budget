@@ -5,7 +5,7 @@
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, ALLOWED_EMAILS } from "../firebase.js";
 import state from "./state.js";
 import { showToast } from "./utils.js";
-import { initApp } from "./app.js";
+import { initApp, resetSessionUI } from "./app.js";
 import { stopSync } from "./sync.js";
 
 export function setupAuth() {
@@ -39,6 +39,7 @@ export function setupAuth() {
     } else {
       state.currentUser = null;
       stopSync(); // 로그아웃 — 실시간 리스너 해제 (다음 로그인 때 initApp이 다시 건다)
+      resetSessionUI(); // 편집 중이던 예산안 초안·열린 모달 정리 (상대가 이어서 로그인할 수 있음)
     }
   });
 }

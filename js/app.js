@@ -20,7 +20,7 @@ import { renderCalendarView } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
-import { renderPlanView }     from "./views/plan.js";
+import { renderPlanView, resetPlanEdit } from "./views/plan.js";
 import { renderWeddingView, setWeddingSegment, markWeddingStale, weddingAddAction } from "./views/wedding.js";
 import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
@@ -51,6 +51,16 @@ export async function initApp() {
   // (다른 결혼 데이터는 탭 진입 시 로드 — 이 예외는 CLAUDE.md에 문서화)
   await fetchWeddingEvents();
   await loadAllData();
+}
+
+// ── 로그아웃 정리 (auth.js가 호출) ─────────────────────────────
+// 모듈 상태와 DOM은 로그아웃해도 남는다. 같은 브라우저에서 상대가 로그인했을 때
+// 내가 쓰던 초안·입력이 보이거나 상대 이름으로 저장되지 않도록 비운다.
+export function resetSessionUI() {
+  resetPlanEdit();
+  // 열린 모달은 각자의 닫기 버튼으로 닫아 모달별 정리 로직을 태운다 (확인 다이얼로그는 취소)
+  document.querySelector(".confirm-overlay .confirm-cancel")?.click();
+  document.querySelectorAll(".modal-overlay:not(.hidden) .modal-close").forEach(b => b.click());
 }
 
 // ── 상대 기기의 변경 반영 (sync.js가 호출) ─────────────────────
