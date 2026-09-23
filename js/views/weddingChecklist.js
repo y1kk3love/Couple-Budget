@@ -4,7 +4,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { escapeHtml, showToast, showConfirm } from "../utils.js";
+import { escapeHtml, showToast, showConfirm, runWrite } from "../utils.js";
 import { WEDDING_PERIODS } from "../constants.js";
 import { toggleWeddingTask, seedWeddingChecklist, fetchWeddingTasks } from "../weddingDb.js";
 import { renderWeddingView } from "./wedding.js";
@@ -55,15 +55,10 @@ export function renderChecklistSegment(container) {
 
   // ── 바인딩 ──────────────────────────────────────────────────
 
-  container.querySelector("#wdSeedBtn")?.addEventListener("click", async () => {
+  container.querySelector("#wdSeedBtn")?.addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!(await showConfirm("표준 결혼 준비 체크리스트를 불러올까요?", { confirmText: "불러오기", danger: false }))) return;
-    try {
-      await seedWeddingChecklist();
-    } catch (err) {
-      console.error("템플릿 불러오기 실패:", err);
-      showToast("불러오기에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => seedWeddingChecklist(), "불러오기"))) return;
     await fetchWeddingTasks();
     renderWeddingView();
   });

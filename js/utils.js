@@ -57,6 +57,28 @@ export function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.add("hidden"), 2200);
 }
 
+/** 저장·삭제 버튼 공통 실행기.
+ *  - 쓰기가 끝날 때까지 버튼을 잠가 연타로 인한 중복 저장을 막는다
+ *  - 실패하면 콘솔 기록 + "<action>에 실패했습니다" 토스트
+ *  - 성공 여부를 반환 → 호출부는 true일 때만 모달을 닫는다 (실패 시 입력 보존 규칙)
+ *  ⚠ 잠금은 클릭 직후 동기적으로 걸려야 하므로 이 함수보다 앞에 await를 두지 말 것.
+ *    (showConfirm처럼 화면 전체를 덮는 대기는 괜찮다 — 그동안 버튼을 누를 수 없다)
+ *  사용: if (!(await runWrite(btn, () => saveX(data)))) return; */
+export async function runWrite(button, write, action = "저장") {
+  if (button?.disabled) return false;
+  if (button) button.disabled = true;
+  try {
+    await write();
+    return true;
+  } catch (err) {
+    console.error(`${action} 실패:`, err);
+    showToast(`${action}에 실패했습니다. 네트워크를 확인해주세요`);
+    return false;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 /** 금액 입력 빠른 버튼 그룹(.amount-presets) 바인딩.
  *  컨테이너의 data-target 속성으로 input id를 지정.
  *  data-add: 현재값에 누적, data-clear: 빈 값으로 초기화. */

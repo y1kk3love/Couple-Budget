@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml } from "../utils.js";
+import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml, runWrite } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName, moveFixedTransaction } from "../db.js";
 import { renderAll } from "../app.js";
@@ -155,7 +155,7 @@ export function setupTxModal() {
   });
 
   // 저장
-  document.getElementById("saveTxBtn").addEventListener("click", async () => {
+  document.getElementById("saveTxBtn").addEventListener("click", async e => {
     const amount = parseInt(document.getElementById("txAmount").value);
     const date   = document.getElementById("txDate").value;
 
@@ -183,7 +183,7 @@ export function setupTxModal() {
 
     // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
     let toastMsg;
-    try {
+    const ok = await runWrite(e.currentTarget, async () => {
       if (editingTxId) {
         const prev = editingTx;
         // 고정비 자동생성 거래를 다른 달로 옮기면 원래 달엔 skip 마커, 옮긴 달엔 새 일반 거래
@@ -203,11 +203,8 @@ export function setupTxModal() {
         await addTransaction(data);
         toastMsg = "추가되었습니다";
       }
-    } catch (err) {
-      console.error("거래 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    });
+    if (!ok) return;
 
     closeModal();
     showToast(toastMsg);
@@ -216,15 +213,10 @@ export function setupTxModal() {
   });
 
   // 삭제
-  document.getElementById("deleteTxBtn").addEventListener("click", async () => {
+  document.getElementById("deleteTxBtn").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!(await showConfirm("이 내역을 삭제할까요?", { confirmText: "삭제" }))) return;
-    try {
-      await deleteTransaction(editingTxId);
-    } catch (err) {
-      console.error("거래 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => deleteTransaction(editingTxId), "삭제"))) return;
     closeModal();
     showToast("삭제되었습니다");
     await fetchTransactions();

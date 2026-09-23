@@ -115,6 +115,9 @@ body {
 /* 토스 특유의 '눌리는' 촉감 — 모든 버튼 공통 */
 button { transition: transform 0.12s ease; }
 button:active { transform: scale(0.96); }
+/* 저장 중 잠긴 버튼 (runWrite) — 눌림 효과 없이 흐리게 */
+button:disabled { opacity: 0.55; cursor: default; }
+button:disabled:active { transform: none; }
 
 /* 키보드 포커스 표시 — 마우스 클릭에는 나타나지 않는다.
    입력 필드는 focus 시 테두리 색으로 이미 표시되므로 제외 */

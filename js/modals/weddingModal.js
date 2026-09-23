@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName } from "../utils.js";
+import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName, runWrite } from "../utils.js";
 import { WEDDING_CATEGORIES, WEDDING_PERIODS, getWeddingCategory } from "../constants.js";
 import {
   saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
@@ -283,7 +283,7 @@ export function setupWeddingModals() {
 
   // 설정 저장 — 쓰기 성공 후에만 닫는다
   // (총예산은 예산 항목 계획 합계로 파생되므로 여기서는 날짜만 저장)
-  document.getElementById("wdSettingsSave").addEventListener("click", async () => {
+  document.getElementById("wdSettingsSave").addEventListener("click", async e => {
     const date = document.getElementById("wdDate").value;
     if (!date) { showToast("결혼식 날짜를 선택하세요"); return; }
 
@@ -294,20 +294,14 @@ export function setupWeddingModals() {
       return;
     }
 
-    try {
-      await saveWeddingConfig({ date, sheetUrl: sheetUrl || null });
-    } catch (err) {
-      console.error("결혼 설정 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(e.currentTarget, () => saveWeddingConfig({ date, sheetUrl: sheetUrl || null })))) return;
     closeSettings();
     showToast("저장되었습니다");
     renderWeddingView();
   });
 
   // 항목 저장
-  document.getElementById("wdItemSave").addEventListener("click", async () => {
+  document.getElementById("wdItemSave").addEventListener("click", async e => {
     const name = document.getElementById("wdItemName").value.trim();
     if (!name) { showToast("항목명을 입력하세요"); return; }
 
@@ -324,13 +318,7 @@ export function setupWeddingModals() {
       data.vendorId = null;
     }
 
-    try {
-      await saveWeddingItem(data, editingItemId);
-    } catch (err) {
-      console.error("예산 항목 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(e.currentTarget, () => saveWeddingItem(data, editingItemId)))) return;
     closeItem();
     showToast(editingItemId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingItems();
@@ -338,7 +326,7 @@ export function setupWeddingModals() {
   });
 
   // 할 일 저장
-  document.getElementById("wdTaskSave").addEventListener("click", async () => {
+  document.getElementById("wdTaskSave").addEventListener("click", async e => {
     const title = document.getElementById("wdTaskTitle").value.trim();
     if (!title) { showToast("할 일을 입력하세요"); return; }
 
@@ -352,13 +340,7 @@ export function setupWeddingModals() {
       data.order = 1000 + state.wedding.tasks.length; // 직접 추가한 항목은 템플릿 뒤에
     }
 
-    try {
-      await saveWeddingTask(data, editingTaskId);
-    } catch (err) {
-      console.error("할 일 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(e.currentTarget, () => saveWeddingTask(data, editingTaskId)))) return;
     closeTask();
     showToast(editingTaskId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingTasks();
@@ -366,16 +348,11 @@ export function setupWeddingModals() {
   });
 
   // 할 일 삭제
-  document.getElementById("wdTaskDelete").addEventListener("click", async () => {
+  document.getElementById("wdTaskDelete").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!editingTaskId) return;
     if (!(await showConfirm("이 할 일을 삭제할까요?", { confirmText: "삭제" }))) return;
-    try {
-      await deleteWeddingTask(editingTaskId);
-    } catch (err) {
-      console.error("할 일 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => deleteWeddingTask(editingTaskId), "삭제"))) return;
     closeTask();
     showToast("삭제되었습니다");
     await fetchWeddingTasks();
@@ -383,18 +360,12 @@ export function setupWeddingModals() {
   });
 
   // 업체 저장
-  document.getElementById("wdVendorSave").addEventListener("click", async () => {
+  document.getElementById("wdVendorSave").addEventListener("click", async e => {
     const data = readVendorForm();
     if (!data.name) { showToast("업체명을 입력하세요"); return; }
     if (!editingVendorId) data.status = "candidate";
 
-    try {
-      await saveWeddingVendor(data, editingVendorId);
-    } catch (err) {
-      console.error("업체 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(e.currentTarget, () => saveWeddingVendor(data, editingVendorId)))) return;
     closeVendor();
     showToast(editingVendorId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingVendors();
@@ -402,16 +373,11 @@ export function setupWeddingModals() {
   });
 
   // 업체 삭제
-  document.getElementById("wdVendorDelete").addEventListener("click", async () => {
+  document.getElementById("wdVendorDelete").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!editingVendorId) return;
     if (!(await showConfirm("이 업체를 삭제할까요?", { confirmText: "삭제" }))) return;
-    try {
-      await deleteWeddingVendor(editingVendorId);
-    } catch (err) {
-      console.error("업체 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => deleteWeddingVendor(editingVendorId), "삭제"))) return;
     closeVendor();
     showToast("삭제되었습니다");
     await fetchWeddingVendors();
@@ -419,13 +385,14 @@ export function setupWeddingModals() {
   });
 
   // 업체 확정 — 같은 카테고리 예산 항목에 견적 반영/생성까지 이어지는 흐름
-  document.getElementById("wdVendorChoose").addEventListener("click", async () => {
+  document.getElementById("wdVendorChoose").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!editingVendorId) return;
     const v = readVendorForm();
     if (!v.name) { showToast("업체명을 입력하세요"); return; }
     if (!(await showConfirm(`'${v.name}'을(를) 확정 업체로 표시할까요?`, { confirmText: "확정", danger: false }))) return;
 
-    try {
+    const ok = await runWrite(btn, async () => {
       await saveWeddingVendor({ ...v, status: "chosen" }, editingVendorId);
 
       const catName = getWeddingCategory(v.category).name;
@@ -444,11 +411,8 @@ export function setupWeddingModals() {
           order: state.wedding.items.length, vendorId: editingVendorId,
         });
       }
-    } catch (err) {
-      console.error("업체 확정 실패:", err);
-      showToast("확정에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    }, "확정");
+    if (!ok) return;
 
     closeVendor();
     showToast("확정했습니다 💍");
@@ -457,7 +421,7 @@ export function setupWeddingModals() {
   });
 
   // 일정 저장
-  document.getElementById("wdEventSave").addEventListener("click", async () => {
+  document.getElementById("wdEventSave").addEventListener("click", async e => {
     const title = document.getElementById("wdEventTitle").value.trim();
     const date  = document.getElementById("wdEventDate").value;
     if (!title) { showToast("일정을 입력하세요"); return; }
@@ -470,13 +434,7 @@ export function setupWeddingModals() {
       memo: document.getElementById("wdEventMemo").value,
     };
 
-    try {
-      await saveWeddingEvent(data, editingEventId);
-    } catch (err) {
-      console.error("일정 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(e.currentTarget, () => saveWeddingEvent(data, editingEventId)))) return;
     closeEvent();
     showToast(editingEventId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingEvents();
@@ -484,16 +442,11 @@ export function setupWeddingModals() {
   });
 
   // 일정 삭제
-  document.getElementById("wdEventDelete").addEventListener("click", async () => {
+  document.getElementById("wdEventDelete").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!editingEventId) return;
     if (!(await showConfirm("이 일정을 삭제할까요?", { confirmText: "삭제" }))) return;
-    try {
-      await deleteWeddingEvent(editingEventId);
-    } catch (err) {
-      console.error("일정 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => deleteWeddingEvent(editingEventId), "삭제"))) return;
     closeEvent();
     showToast("삭제되었습니다");
     await fetchWeddingEvents();
@@ -501,16 +454,11 @@ export function setupWeddingModals() {
   });
 
   // 항목 삭제
-  document.getElementById("wdItemDelete").addEventListener("click", async () => {
+  document.getElementById("wdItemDelete").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     if (!editingItemId) return;
     if (!(await showConfirm("이 예산 항목을 삭제할까요?", { confirmText: "삭제" }))) return;
-    try {
-      await deleteWeddingItem(editingItemId);
-    } catch (err) {
-      console.error("예산 항목 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => deleteWeddingItem(editingItemId), "삭제"))) return;
     closeItem();
     showToast("삭제되었습니다");
     await fetchWeddingItems();

@@ -53,7 +53,7 @@ js/state.js              ← single shared mutable state (currentYear/Month/View
                             wedding{config, items, tasks, vendors, events, loadError})
 js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo(); OWNER_COLORS;
                             WEDDING_CATEGORIES/getWeddingCategory, WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE
-js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, ymKey, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
+js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, ymKey, todayStr, showToast, showConfirm, runWrite, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
 js/db.js                 ← 가계부 Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/weddingDb.js          ← 결혼 탭 전용 Firestore reads/writes (wedding_* + settings/wedding); mutates state.wedding
 js/auth.js               ← Google sign-in; on success calls initApp()
@@ -79,7 +79,7 @@ All views read from `state` and write to their fixed `#view-<name>` div. Any mut
 
 Race protection: rapid month-nav clicks used to let a stale fetch overwrite a newer one. Guards now exist in three places — `loadAllData()` and `renderSummary()` each carry a sequence counter and abort if a newer call started, and `fetchTransactions()` discards its result if the month changed mid-flight. Keep these intact when touching the load path.
 
-Firestore writes in modal save/delete handlers are wrapped in try/catch and the modal closes **only after the write succeeds** (failure keeps the modal open with inputs preserved and shows an error toast). Follow this pattern for any new write flow.
+Firestore writes in save/delete handlers go through `runWrite(button, writeFn, action)` in `utils.js`, and the modal closes **only after the write succeeds** (failure keeps the modal open with inputs preserved; `runWrite` logs and shows "<action>에 실패했습니다" itself). `runWrite` also disables the button for the duration of the write — that is the double-submit guard (a double tap used to create duplicate transactions/fixed items). The lock must be taken synchronously on click, so grab `e.currentTarget` and call `runWrite` before any `await` other than a `showConfirm()` (which covers the screen). Follow this pattern for any new write flow. The only exception is CSV import, which needs its own partial-failure message and locks its button manually.
 
 Because re-rendering wipes all DOM state, transient UI state lives in **module-level variables** inside the owning view/modal module: `list.js` keeps its sort key/direction and filter values, `plan.js` keeps its sort state plus the edit-mode `draft` object, `txModal.js` keeps `editingTxId` plus `editingTx` (the original tx object — needed because a tx opened from 전체 기간 or the history panel isn't in `state.transactions`). New UI state that must survive a re-render follows this pattern (note it also survives view switches and logout/login, since modules are never reloaded — reset it explicitly if that's not wanted).
 

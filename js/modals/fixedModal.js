@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, showConfirm, setupAmountPresets } from "../utils.js";
+import { showToast, showConfirm, setupAmountPresets, runWrite } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import {
   saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions,
@@ -82,7 +82,7 @@ export function setupFixedModal() {
   });
 
   // 저장
-  document.getElementById("fixedSaveBtn").addEventListener("click", async () => {
+  document.getElementById("fixedSaveBtn").addEventListener("click", async e => {
     const id     = document.getElementById("fixedEditId").value || null;
     const name   = document.getElementById("fixedEditName").value.trim();
     const amount = parseInt(document.getElementById("fixedEditAmount").value);
@@ -107,14 +107,11 @@ export function setupFixedModal() {
     };
 
     // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
-    try {
+    const ok = await runWrite(e.currentTarget, async () => {
       await saveFixedItem(data, id);
       if (id) await syncFixedItemTransactions(id, data);
-    } catch (err) {
-      console.error("고정비 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    });
+    if (!ok) return;
 
     closeModal();
     showToast(id ? "수정되었습니다" : "고정비가 추가되었습니다");
@@ -126,17 +123,12 @@ export function setupFixedModal() {
   });
 
   // 삭제
-  document.getElementById("fixedDeleteBtn").addEventListener("click", async () => {
+  document.getElementById("fixedDeleteBtn").addEventListener("click", async e => {
+    const btn = e.currentTarget;
     const id = document.getElementById("fixedEditId").value;
     if (!id) return;
     if (!(await showConfirm("이 고정비를 삭제할까요?\n이미 기록된 달의 내역은 유지됩니다.", { confirmText: "삭제" }))) return;
-    try {
-      await deleteFixedItem(id);
-    } catch (err) {
-      console.error("고정비 삭제 실패:", err);
-      showToast("삭제에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(btn, () => deleteFixedItem(id), "삭제"))) return;
     closeModal();
     showToast("삭제되었습니다");
     await fetchFixedItems();

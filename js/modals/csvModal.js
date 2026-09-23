@@ -229,14 +229,17 @@ export function setupCsvModal() {
   });
 
   // 가져오기 확정
-  document.getElementById("csvImportConfirm").addEventListener("click", async () => {
-    if (!parsedRows.length) return;
+  document.getElementById("csvImportConfirm").addEventListener("click", async e => {
+    const btn = e.currentTarget;
+    if (!parsedRows.length || btn.disabled) return;
 
     const count = parsedRows.length;
     const ops   = buildImportOps(parsedRows);
 
     // writeBatch는 한 번에 최대 500개 쓰기. 여유를 두고 450개씩 끊어 커밋.
+    // 실패 시 전용 안내(이어서 가져오기)가 필요해 runWrite 대신 직접 잠근다 — 연타 방지는 동일
     const CHUNK = 450;
+    btn.disabled = true;
     try {
       for (let i = 0; i < ops.length; i += CHUNK) {
         const batch = writeBatch(db);
@@ -246,6 +249,7 @@ export function setupCsvModal() {
         await batch.commit();
       }
     } catch (err) {
+      btn.disabled = false;
       // 청크 일부만 커밋됐을 수 있다 — 문서 ID가 결정적이라 같은 파일을
       // 다시 가져오면 중복 없이 이어서 채워진다
       console.error("CSV 가져오기 실패:", err);
@@ -255,6 +259,7 @@ export function setupCsvModal() {
       renderAll();
       return;
     }
+    btn.disabled = false;
     invalidateBalanceCache();
 
     closeModal();

@@ -5,7 +5,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { showToast, escapeHtml } from "../utils.js";
+import { showToast, escapeHtml, runWrite } from "../utils.js";
 import { saveWeddingConfig, fetchWeddingConfig } from "../weddingDb.js";
 
 export function renderMemoSegment(container) {
@@ -21,15 +21,9 @@ export function renderMemoSegment(container) {
       </div>
     </div>`;
 
-  container.querySelector("#wdMemoSaveBtn").addEventListener("click", async () => {
+  container.querySelector("#wdMemoSaveBtn").addEventListener("click", async e => {
     const text = container.querySelector("#wdMemoText").value;
-    try {
-      await saveWeddingConfig({ memo: text });
-    } catch (err) {
-      console.error("메모 저장 실패:", err);
-      showToast("저장에 실패했습니다. 네트워크를 확인해주세요");
-      return;
-    }
+    if (!(await runWrite(e.currentTarget, () => saveWeddingConfig({ memo: text })))) return;
     showToast("메모를 저장했습니다");
     await fetchWeddingConfig(); // 다른 기기에서 바뀐 내용과 어긋나지 않게 재조회
   });
