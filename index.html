@@ -68,6 +68,17 @@
         </button>
       </nav>
       <div class="sidebar-footer">
+        <!-- 모바일 전용 — 좁은 헤더에서 뺀 CSV 가져오기/내보내기를 햄버거 메뉴로 -->
+        <div class="sidebar-tools">
+          <button id="sideImportBtn" class="nav-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            CSV 가져오기
+          </button>
+          <button id="sideExportBtn" class="nav-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV 내보내기
+          </button>
+        </div>
         <div class="user-info" id="sidebarUser"></div>
         <button id="logoutBtn" class="logout-btn">로그아웃</button>
       </div>
@@ -89,6 +100,8 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
+          <!-- 월과 무관한 화면(예산안·결혼)에서 월 이동 대신 보이는 제목 -->
+          <h2 class="view-title" id="viewTitle"></h2>
         </div>
         <div class="header-right">
           <button id="themeToggleBtn" class="icon-btn theme-btn" title="테마 전환"></button>
@@ -132,7 +145,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
         목록
       </button>
-      <button class="mob-tab add-center" id="mobAddBtn">
+      <button class="mob-tab add-center" id="mobAddBtn" aria-label="내역 추가">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
       <button class="mob-tab" data-view="stats">

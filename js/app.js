@@ -71,7 +71,9 @@ async function loadAllData() {
 // ── 전체 렌더 (외부에서도 호출 가능) ─────────────────────────
 
 export function renderAll() {
-  renderSummary();
+  applyViewChrome();
+  // 월과 무관한 화면에서는 요약 바가 숨겨져 있으므로 계산하지 않는다 (돌아오면 다시 그림)
+  if (!MONTHLESS_VIEWS[state.currentView]) renderSummary();
   renderWeddingBanner();
   switch (state.currentView) {
     case "calendar": renderCalendarView(); break;
@@ -81,6 +83,18 @@ export function renderAll() {
     case "plan":     renderPlanView();     break;
     case "wedding":  renderWeddingView();  break;
   }
+}
+
+// ── 화면별 상단 영역 ──────────────────────────────────────────
+// 예산안·결혼은 월과 무관한 화면이라 이번 달 요약·월 이동·결혼 일정 배너를 숨기고
+// 그 자리에 화면 제목을 보인다 (CSS: .main-content.monthless)
+
+const MONTHLESS_VIEWS = { plan: "예산안", wedding: "결혼 준비" };
+
+function applyViewChrome() {
+  const title = MONTHLESS_VIEWS[state.currentView] ?? "";
+  document.querySelector(".main-content").classList.toggle("monthless", !!title);
+  document.getElementById("viewTitle").textContent = title;
 }
 
 // ── 요약 카드 ─────────────────────────────────────────────────
@@ -321,6 +335,7 @@ async function exportAllCsv() {
 setupAuth();
 setupThemeToggle();
 document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
+document.getElementById("sideExportBtn").addEventListener("click", exportAllCsv); // 모바일 햄버거 메뉴
 setupTxModal();
 setupFixedModal();
 setupCsvModal();

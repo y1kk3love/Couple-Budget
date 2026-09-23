@@ -193,6 +193,8 @@ a:focus-visible {
 .nav-btn:hover { background: var(--surface2); color: var(--text); }
 .nav-btn.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 .sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+/* CSV 가져오기/내보내기 — 모바일에서만 보임 (데스크톱은 헤더 버튼 사용) */
+.sidebar-tools { display: none; flex-direction: column; gap: 2px; margin: -0.25rem -0.5rem 0.75rem; }
 .user-info { font-size: 0.8rem; color: var(--text-2); margin-bottom: 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .logout-btn {
   font-size: 0.8rem; color: var(--text-3); background: none; border: none;
@@ -234,6 +236,16 @@ a:focus-visible {
   padding: 4px 8px; border-radius: 8px; transition: background 0.15s, transform 0.12s ease;
 }
 .month-label:hover { background: var(--surface2); }
+/* 월과 무관한 화면(예산안·결혼) 제목 — app.js applyViewChrome이 .monthless와 함께 채운다 */
+.view-title {
+  display: none;
+  font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+}
+/* 월과 무관한 화면에서는 이번 달 요약·월 이동·결혼 일정 배너를 숨긴다 */
+.main-content.monthless .summary-bar,
+.main-content.monthless .month-nav,
+.main-content.monthless .wd-banner { display: none; }
+.main-content.monthless .view-title { display: block; }
 .header-right { display: flex; align-items: center; gap: 8px; }
 .icon-btn {
   display: flex; align-items: center; gap: 6px;
@@ -1045,9 +1057,10 @@ a:focus-visible {
   .view-container { padding: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
   .wd-banner { margin: 8px 1rem 0; }
-  .add-btn span { display: none; } /* 모바일 헤더에서는 + 아이콘만 */
-  .add-btn { padding: 0.5rem 0.65rem; }
-  .icon-btn span { display: none; } /* 가져오기/내보내기 라벨 숨김 */
+  /* 좁은 헤더가 화면 밖으로 넘치지 않도록 (375px에서 432px까지 넘쳐 가져오기가 잘렸다):
+     내역 추가는 하단 + 버튼이 맡고, CSV 가져오기/내보내기는 햄버거 메뉴(.sidebar-tools)로 */
+  #addTxBtn, #csvImportBtn, #csvExportBtn { display: none; }
+  .sidebar-tools { display: flex; }
   .icon-btn { padding: 0.5rem 0.6rem; }
 
   /* 모달을 토스식 바텀시트로 */

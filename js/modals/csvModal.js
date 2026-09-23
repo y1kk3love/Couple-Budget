@@ -206,6 +206,7 @@ function handleFile(file) {
 
 export function setupCsvModal() {
   document.getElementById("csvImportBtn").addEventListener("click", openModal);
+  document.getElementById("sideImportBtn").addEventListener("click", openModal); // 모바일 햄버거 메뉴
   document.getElementById("csvModalClose").addEventListener("click", closeModal);
   document.getElementById("csvModal").addEventListener("click", e => {
     if (e.target === document.getElementById("csvModal")) closeModal();
