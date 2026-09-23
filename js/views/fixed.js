@@ -43,11 +43,11 @@ function renderFixedRow(item) {
   const sign      = item.type === "income" ? "+" : "-";
 
   return `
-    <div class="fixed-item" data-id="${item.id}" role="button" tabindex="0">
+    <div class="fixed-item" data-id="${escapeHtml(item.id)}" role="button" tabindex="0">
       <div class="fixed-cat-dot" style="background:${cat.color}"></div>
       <div class="fixed-info">
         <div class="fixed-name">${escapeHtml(item.name)} ${renderStatusTag(item)}</div>
-        <div class="fixed-meta">${cat.name} · ${item.type === "income" ? "수입" : "지출"}${item.startYear ? ` · ${item.startYear}년 ${item.startMonth}월부터` : ""}</div>
+        <div class="fixed-meta">${escapeHtml(cat.name)} · ${item.type === "income" ? "수입" : "지출"}${item.startYear ? ` · ${escapeHtml(item.startYear)}년 ${escapeHtml(item.startMonth)}월부터` : ""}</div>
       </div>
       <div class="fixed-amount ${amtCls}">${sign}${fmtMoney(item.amount)}</div>
     </div>`;

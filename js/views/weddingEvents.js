@@ -25,7 +25,7 @@ function dLabel(dateStr) {
 function fmtEventDate(e) {
   const [y, m, d] = e.date.split("-").map(Number);
   const dow = "일월화수목금토"[new Date(y, m - 1, d).getDay()];
-  return `${m}/${d} (${dow})${e.time ? ` ${e.time}` : ""}`;
+  return `${m}/${d} (${dow})${e.time ? ` ${escapeHtml(e.time)}` : ""}`;
 }
 
 export function renderEventsSegment(container) {
@@ -90,7 +90,7 @@ function renderEventList() {
   const past     = events.filter(e => e.date < today).slice().reverse(); // 최근에 지난 순
 
   const row = (e, isPast) => `
-    <div class="fixed-item ${isPast ? "wd-event-past" : ""}" data-wd-event="${e.id}" role="button" tabindex="0">
+    <div class="fixed-item ${isPast ? "wd-event-past" : ""}" data-wd-event="${escapeHtml(e.id)}" role="button" tabindex="0">
       <span class="wd-event-dday">${dLabel(e.date)}</span>
       <div class="fixed-info">
         <div class="fixed-name">${escapeHtml(e.title)}</div>

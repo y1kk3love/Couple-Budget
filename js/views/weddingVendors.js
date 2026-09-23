@@ -20,7 +20,7 @@ export function renderVendorsSegment(container) {
     <div class="sort-bar"><div class="sort-keys">
       <button class="sort-key-btn ${vendorFilter === "" ? "active" : ""}" data-vf="">전체</button>
       ${usedCatIds.map(id => `
-        <button class="sort-key-btn ${vendorFilter === id ? "active" : ""}" data-vf="${id}">${getWeddingCategory(id).name}</button>`).join("")}
+        <button class="sort-key-btn ${vendorFilter === id ? "active" : ""}" data-vf="${escapeHtml(id)}">${escapeHtml(getWeddingCategory(id).name)}</button>`).join("")}
     </div></div>`;
 
   const list = vendorFilter ? vendors.filter(v => v.category === vendorFilter) : vendors;
@@ -30,7 +30,7 @@ export function renderVendorsSegment(container) {
     const chosen = v.status === "chosen";
     const meta   = [cat.name, v.contact, v.memo].filter(Boolean).map(escapeHtml).join(" · ");
     return `
-      <div class="fixed-item" data-wd-vendor="${v.id}" role="button" tabindex="0">
+      <div class="fixed-item" data-wd-vendor="${escapeHtml(v.id)}" role="button" tabindex="0">
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(v.name)} ${chosen ? `<span class="tag applied">확정</span>` : ""}</div>

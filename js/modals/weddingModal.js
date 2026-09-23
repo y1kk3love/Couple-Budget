@@ -188,7 +188,7 @@ function renderPayments() {
     return `
     <div class="wd-pay-row${p.settled ? " settled" : ""}" data-pay-row="${i}">
       <span class="wd-pay-label">${escapeHtml(p.label)}</span>
-      <span class="wd-pay-date">${p.date ?? ""}</span>
+      <span class="wd-pay-date">${escapeHtml(p.date ?? "")}</span>
       <span class="wd-pay-amt">${fmtMoney(p.amount)}원</span>
       <button type="button" class="wd-pay-del" data-pay-i="${i}" title="삭제">&times;</button>
       <div class="wd-pay-settle" title="상대에게 돌려받은(정산된) 금액을 입력하세요">

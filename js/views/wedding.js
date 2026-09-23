@@ -226,7 +226,7 @@ function renderBudgetSegment() {
     const pctCls  = over ? "over" : spent === 0 ? "zero" : "";
     // 그래프 두 겹: 진한 색 = 정산 완료, 연한 색 = 아직 미정산인 지출
     return `
-      <div class="fixed-item" data-wd-item="${it.id}" role="button" tabindex="0">
+      <div class="fixed-item" data-wd-item="${escapeHtml(it.id)}" role="button" tabindex="0">
         <span class="pe-drag wd-item-drag" title="드래그로 순서 변경">⠿</span>
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">

@@ -197,10 +197,10 @@ function renderPreview({ rows, badDates, reversed }) {
     const sign    = r.type === "income" ? "+" : "-";
     const catName = getCategoryInfo(r.category, r.type).name;
     return `<tr>
-      <td>${r.date}</td>
+      <td>${escapeHtml(r.date)}</td>
       <td>${escapeHtml(r.name)}</td>
       <td style="color:${color}">${sign}${fmtMoney(r.amount)}</td>
-      <td>${catName}</td>
+      <td>${escapeHtml(catName)}</td>
     </tr>`;
   }).join("");
 

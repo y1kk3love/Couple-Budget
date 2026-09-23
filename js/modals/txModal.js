@@ -35,7 +35,7 @@ export function openAddModal(dateStr = null) {
   // 해당 날 기존 내역 패널
   const dayTxs = state.transactions.filter(t => t.date === date);
   renderContextPanel(
-    dayTxs.length ? `${date.slice(5).replace("-", "/")} 기존 내역` : null,
+    dayTxs.length ? `${escapeHtml(date.slice(5).replace("-", "/"))} 기존 내역` : null,
     dayTxs
   );
 }
@@ -135,7 +135,7 @@ function renderContextPanel(title, txs) {
     const sign  = t.type === "income" ? "+" : "-";
     const color = t.type === "income" ? "var(--income)" : "var(--expense)";
     return `<div class="ctx-row" role="button" tabindex="0" data-i="${i}" title="클릭해서 이 내역 수정">
-      <span class="ctx-date">${t.date.slice(5).replace("-", "/")}</span>
+      <span class="ctx-date">${escapeHtml(t.date.slice(5).replace("-", "/"))}</span>
       <span class="ctx-name">${escapeHtml(t.name)}</span>
       <span class="ctx-amt" style="color:${color}">${sign}${fmtMoney(t.amount)}</span>
     </div>`;

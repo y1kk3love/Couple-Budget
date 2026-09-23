@@ -198,7 +198,7 @@ function renderEditCard(title, sub) {
     <div class="plan-edit-row" data-idx="${i}">
       <span class="pe-drag" title="드래그로 순서 변경">⠿</span>
       <input type="text" class="pe-name" placeholder="항목명" value="${escapeHtml(it.name)}" />
-      <input type="number" class="pe-amount" placeholder="금액" min="0" value="${it.amount || ""}" />
+      <input type="number" class="pe-amount" placeholder="금액" min="0" value="${escapeHtml(it.amount || "")}" />
       <button class="pe-del" title="삭제">&times;</button>
     </div>`).join("");
 
@@ -209,7 +209,7 @@ function renderEditCard(title, sub) {
         <label>표시 이름</label>
         <input type="text" id="peName" placeholder="예: 바오랍" maxlength="20" value="${escapeHtml(draft.name ?? "")}" />
         <label>월급</label>
-        <input type="number" id="peIncome" placeholder="0" min="0" value="${draft.income || ""}" />
+        <input type="number" id="peIncome" placeholder="0" min="0" value="${escapeHtml(draft.income || "")}" />
         <label>배정 항목</label>
         ${itemRows}
         <button class="pe-add" id="peAddBtn">+ 항목 추가</button>

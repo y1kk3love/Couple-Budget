@@ -111,7 +111,7 @@ function openCategoryDetail(catId) {
 
   document.getElementById("categoryDetailTitle").innerHTML = `
     <span class="cd-cat-dot" style="background:${cat.color}"></span>
-    <span>${cat.name}</span>
+    <span>${escapeHtml(cat.name)}</span>
     <span class="cd-total">-${fmtMoney(total)}원</span>`;
 
   const body = document.getElementById("categoryDetailBody");
@@ -122,8 +122,8 @@ function openCategoryDetail(catId) {
       const memo = t.memo && t.memo !== t.name ? `<span class="cd-memo">${escapeHtml(t.memo)}</span>` : "";
       const kind = t.kind === "fixed" ? `<span class="tag fixed">고정</span>` : "";
       return `
-        <div class="cd-row" data-tx-id="${t.id}" role="button" tabindex="0">
-          <span class="cd-date">${t.date.slice(5).replace("-", "/")}</span>
+        <div class="cd-row" data-tx-id="${escapeHtml(t.id)}" role="button" tabindex="0">
+          <span class="cd-date">${escapeHtml(t.date.slice(5).replace("-", "/"))}</span>
           <span class="cd-name">${escapeHtml(t.name)}${kind}${memo}</span>
           <span class="cd-amt">-${fmtMoney(t.amount)}원</span>
         </div>`;
@@ -163,10 +163,10 @@ function renderCategoryBars(expTxs) {
     const cat = getCategoryInfo(catId, "expense");
     const pct = Math.round(amt / max * 100);
     return `
-      <div class="cat-bar-item clickable" data-cat-id="${catId}" role="button" tabindex="0"
-        aria-label="${cat.name} 세부 내역 보기">
+      <div class="cat-bar-item clickable" data-cat-id="${escapeHtml(catId)}" role="button" tabindex="0"
+        aria-label="${escapeHtml(cat.name)} 세부 내역 보기">
         <div class="cat-bar-row">
-          <span class="cat-bar-label">${cat.name}</span>
+          <span class="cat-bar-label">${escapeHtml(cat.name)}</span>
           <span class="cat-bar-val">${fmtMoney(amt)}원</span>
         </div>
         <div class="pbar">

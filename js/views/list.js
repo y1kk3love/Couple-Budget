@@ -158,17 +158,17 @@ function renderFilterPanel() {
       <div class="filter-row">
         <label>금액</label>
         <div class="filter-range">
-          <input type="number" id="f-min" value="${filters.minAmount}" placeholder="최소" />
+          <input type="number" id="f-min" value="${escapeHtml(filters.minAmount)}" placeholder="최소" />
           <span>~</span>
-          <input type="number" id="f-max" value="${filters.maxAmount}" placeholder="최대" />
+          <input type="number" id="f-max" value="${escapeHtml(filters.maxAmount)}" placeholder="최대" />
         </div>
       </div>
       <div class="filter-row">
         <label>날짜</label>
         <div class="filter-range">
-          <input type="date" id="f-from" value="${filters.dateFrom}" />
+          <input type="date" id="f-from" value="${escapeHtml(filters.dateFrom)}" />
           <span>~</span>
-          <input type="date" id="f-to" value="${filters.dateTo}" />
+          <input type="date" id="f-to" value="${escapeHtml(filters.dateTo)}" />
         </div>
       </div>
       <div class="filter-actions">
@@ -275,7 +275,7 @@ function renderGrouped(sorted) {
     return `
       <div class="list-group">
         <div class="list-date-header">
-          <span>${label}</span>
+          <span>${escapeHtml(label)}</span>
           <span class="date-total" style="color:${color}">${sign}${fmtMoney(dayTotal)}</span>
         </div>
         ${items.map(renderTxRow).join("")}
@@ -298,14 +298,14 @@ function renderTxRow(t) {
   const memoTag  = t.memo && t.memo !== t.name ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
   const ownerTag = t.owner ? `<span class="tx-owner">${escapeHtml(ownerName(t.owner))}</span>` : "";
   // 전체 기간 + 날짜 외 정렬이면 그룹 헤더가 없어 날짜를 행에 표기
-  const dateTag  = scope === "all" && sortKey !== "date" ? `<span>${t.date}</span>` : "";
+  const dateTag  = scope === "all" && sortKey !== "date" ? `<span>${escapeHtml(t.date)}</span>` : "";
 
   return `
-    <div class="tx-item" data-id="${t.id}" role="button" tabindex="0">
+    <div class="tx-item" data-id="${escapeHtml(t.id)}" role="button" tabindex="0">
       <div class="tx-cat-dot" style="background:${cat.color}"></div>
       <div class="tx-info">
         <div class="tx-name">${escapeHtml(t.name)}</div>
-        <div class="tx-meta">${dateTag}<span>${cat.name}</span>${kindTag}${ownerTag}${memoTag}</div>
+        <div class="tx-meta">${dateTag}<span>${escapeHtml(cat.name)}</span>${kindTag}${ownerTag}${memoTag}</div>
       </div>
       <div class="tx-amount ${amtCls}">${sign}${fmtMoney(t.amount)}</div>
     </div>`;

@@ -31,8 +31,8 @@ export function renderChecklistSegment(container) {
       const list = tasks.filter(t => t.period === p.id);
       if (!list.length) return "";
       const rows = list.map(t => `
-        <div class="wd-task-row ${t.done ? "done" : ""}" data-task-id="${t.id}" role="button" tabindex="0">
-          <label class="wd-task-chk-hit"><input type="checkbox" class="wd-task-chk" data-chk-id="${t.id}" ${t.done ? "checked" : ""} aria-label="완료 표시" /></label>
+        <div class="wd-task-row ${t.done ? "done" : ""}" data-task-id="${escapeHtml(t.id)}" role="button" tabindex="0">
+          <label class="wd-task-chk-hit"><input type="checkbox" class="wd-task-chk" data-chk-id="${escapeHtml(t.id)}" ${t.done ? "checked" : ""} aria-label="완료 표시" /></label>
           <span class="wd-task-title">${escapeHtml(t.title)}</span>
           ${t.memo ? `<span class="wd-task-memo">${escapeHtml(t.memo)}</span>` : ""}
         </div>`).join("");
