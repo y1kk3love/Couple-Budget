@@ -14,19 +14,24 @@
   --border-strong: rgba(2, 32, 71, 0.12);
   --text: #191f28;
   --text-2: #4e5968;
-  --text-3: #6b7684; /* 소형 라벨에도 WCAG AA(4.5:1)를 만족하는 회색 */
-  --accent: #3182f6;
+  /* 라이트 모드 글씨 대비 — 작은 글씨도 WCAG AA(4.5:1)를 흰 카드와 회색 바탕(--bg) 모두에서 만족하도록.
+     예전 토스 블루 #3182f6·레드 #f04452는 3.7:1(흰 글씨 버튼도 3.7:1), 경고 주황 글씨는 2.2:1이었다.
+     파랑·빨강은 토스 팔레트의 한 단계 진한 색(blue600·red700)으로 */
+  --text-3: #66717e;
+  --accent: #1b64da;
+  --accent-fill: #1b64da; /* 흰 글씨가 올라가는 채움(저장·추가 버튼, 오늘 표시) — 두 테마 모두 흰 글씨 5.4:1 */
   --accent-bg: #e8f3ff;
-  --income: #3182f6;
+  --income: #1b64da;
   --income-bg: #e8f3ff;
-  --expense: #f04452;
+  --expense: #d22030;
   --expense-bg: #fdedee;
-  --warn: #ff9500;
-  --saturday: #3182f6;
+  --warn: #ff9500;       /* 막대·테두리 등 채움용 (밝은 주황 유지) */
+  --warn-text: #a35f00;  /* 글씨용 — 경고 금액·미정산 */
+  --saturday: #1b64da;
   --fixed-bg: #edeeff;
-  --fixed-text: #5c63d8;
+  --fixed-text: #585fd7;
   --var-bg: #fff3e0;
-  --var-text: #d07e00;
+  --var-text: #a06100;
   --overlay: rgba(0, 0, 0, 0.4);
   --shadow-card: 0 1px 3px rgba(2, 32, 71, 0.04);
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.18);
@@ -54,13 +59,15 @@
     --text: #eceff4;
     --text-2: #b0b8c1;
     --text-3: #8f99a6; /* 어두운 카드 위에서도 4.5:1 이상 확보 */
-    --accent: #4593fc;
+    --accent: #529afc; /* 글씨용 — 연한 파랑 바탕(활성 메뉴 등) 위에서도 4.5:1 */
+    --accent-fill: #1b64da;
     --accent-bg: rgba(49, 130, 246, 0.18);
     --income: #5c9eff;
     --income-bg: rgba(49, 130, 246, 0.18);
     --expense: #ff6b70;
     --expense-bg: rgba(240, 68, 82, 0.18);
     --warn: #ffa938;
+    --warn-text: #ffa938; /* 어두운 카드 위에서는 채움색 그대로도 대비 충분 */
     --saturday: #5c9eff;
     --fixed-bg: rgba(122, 133, 240, 0.2);
     --fixed-text: #a5aeff;
@@ -85,13 +92,15 @@
   --text: #eceff4;
   --text-2: #b0b8c1;
   --text-3: #8f99a6;
-  --accent: #4593fc;
+  --accent: #529afc;
+  --accent-fill: #1b64da;
   --accent-bg: rgba(49, 130, 246, 0.18);
   --income: #5c9eff;
   --income-bg: rgba(49, 130, 246, 0.18);
   --expense: #ff6b70;
   --expense-bg: rgba(240, 68, 82, 0.18);
   --warn: #ffa938;
+  --warn-text: #ffa938;
   --saturday: #5c9eff;
   --fixed-bg: rgba(122, 133, 240, 0.2);
   --fixed-text: #a5aeff;
@@ -262,7 +271,7 @@ a:focus-visible {
   display: flex; align-items: center; gap: 6px;
   padding: 0.5rem 1rem; border-radius: 10px;
   font-size: 0.88rem; font-family: var(--font); font-weight: 600;
-  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  background: var(--accent-fill); color: #fff; border: none; cursor: pointer;
   transition: filter 0.15s, transform 0.12s ease;
 }
 .add-btn:hover { filter: brightness(1.08); }
@@ -283,7 +292,7 @@ a:focus-visible {
 .val.income { color: var(--income); }
 .val.expense { color: var(--expense); }
 .val.neutral { color: var(--text); }
-.val.warn { color: var(--warn); }
+.val.warn { color: var(--warn-text); }
 
 /* 주인공 카드 — 이번달 잔액을 크게 */
 .sum-card.hero .val { font-size: 1.7rem; letter-spacing: -0.03em; }
@@ -331,7 +340,7 @@ a:focus-visible {
 .cal-cell.empty { cursor: default; background: none; }
 .cal-cell.empty:hover { background: none; }
 .cal-cell.today .day-num-wrap .day-num {
-  background: var(--accent); color: #fff; border-radius: 50%; font-weight: 600;
+  background: var(--accent-fill); color: #fff; border-radius: 50%; font-weight: 600;
   width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
 }
 .day-num-wrap { margin-bottom: 4px; }
@@ -391,7 +400,7 @@ a:focus-visible {
 }
 .filter-toggle-btn.has-filter { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 .filter-badge {
-  background: var(--accent); color: #fff; border-radius: 50%;
+  background: var(--accent-fill); color: #fff; border-radius: 50%;
   width: 17px; height: 17px; font-size: 0.7rem;
   display: inline-flex; align-items: center; justify-content: center;
 }
@@ -420,7 +429,7 @@ a:focus-visible {
 }
 .filter-apply-btn {
   font-size: 0.8rem; padding: 6px 14px; border-radius: 8px;
-  border: none; background: var(--accent); color: #fff; font-weight: 600;
+  border: none; background: var(--accent-fill); color: #fff; font-weight: 600;
   cursor: pointer; font-family: var(--font);
 }
 
@@ -695,7 +704,7 @@ a:focus-visible {
 .type-btn[data-type="expense"].active, .kind-btn[data-kind="expense"].active { color: var(--expense); }
 .type-btn[data-type="income"].active,  .kind-btn[data-kind="income"].active  { color: var(--income); }
 .save-btn {
-  padding: 0.65rem 1.5rem; background: var(--accent); color: #fff;
+  padding: 0.65rem 1.5rem; background: var(--accent-fill); color: #fff;
   border: none; border-radius: var(--radius);
   font-size: 0.88rem; font-family: var(--font); font-weight: 600; cursor: pointer;
   transition: filter 0.15s, transform 0.12s ease;
@@ -728,7 +737,7 @@ a:focus-visible {
   transition: filter 0.15s, transform 0.12s ease;
 }
 .confirm-cancel { background: var(--surface2); color: var(--text-2); font-weight: 500; }
-.confirm-ok { background: var(--accent); color: #fff; font-weight: 600; }
+.confirm-ok { background: var(--accent-fill); color: #fff; font-weight: 600; }
 .confirm-ok.danger { background: var(--expense); }
 .confirm-ok:hover, .confirm-cancel:hover { filter: brightness(0.97); }
 
@@ -863,7 +872,7 @@ a:focus-visible {
   font-size: 0.78rem; font-weight: 600; text-decoration: none;
   transition: background 0.15s, color 0.15s, transform 0.12s ease;
 }
-.wd-sheet-link:hover { background: var(--accent); color: #fff; }
+.wd-sheet-link:hover { background: var(--accent-fill); color: #fff; }
 .wd-sheet-link:active { transform: scale(0.96); }
 .wd-header:hover { background: var(--surface-hover); }
 .wd-header:active { transform: scale(0.99); }
@@ -886,7 +895,7 @@ a:focus-visible {
 .wd-item-pct.over { color: var(--expense); }
 .wd-item-pct.zero { color: var(--text-3); font-weight: 500; }
 .wd-settled { color: var(--income); font-weight: 600; }
-.wd-unsettled { color: var(--warn); font-weight: 600; }
+.wd-unsettled { color: var(--warn-text); font-weight: 600; }
 /* 예산 항목 그래프 두 겹 — 진한 색: 정산 완료, 연한 색: 미정산 지출 */
 .wd-pbar-layered { position: relative; }
 .wd-pbar-layered .pfill { position: absolute; left: 0; top: 0; height: 100%; }
@@ -963,7 +972,7 @@ a:focus-visible {
 
 /* 업체 세그먼트 */
 .wd-choose-btn { width: 100%; background: var(--accent-bg); color: var(--accent); }
-.wd-choose-btn:hover { filter: none; background: var(--accent); color: #fff; }
+.wd-choose-btn:hover { filter: none; background: var(--accent-fill); color: #fff; }
 
 /* 결혼 일정 배너 (메인 화면, 요약 바 아래) */
 .wd-banner {
@@ -1013,7 +1022,7 @@ a:focus-visible {
   transition: background 0.12s;
 }
 .wd-mc-cell:hover { background: var(--surface-hover); }
-.wd-mc-cell.today { background: var(--accent); color: #fff; font-weight: 600; }
+.wd-mc-cell.today { background: var(--accent-fill); color: #fff; font-weight: 600; }
 .wd-mc-cell.has-event::after {
   content: ""; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
   width: 4px; height: 4px; border-radius: 50%; background: var(--expense);
@@ -1073,7 +1082,7 @@ a:focus-visible {
 }
 .mob-tab.active { color: var(--accent); font-weight: 600; }
 .mob-tab.add-center {
-  background: var(--accent); border-radius: 50%;
+  background: var(--accent-fill); border-radius: 50%;
   width: 48px; height: 48px; padding: 0; margin: -8px auto 0;
   color: #fff !important; flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(49,130,246,0.35);
