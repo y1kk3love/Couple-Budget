@@ -1159,3 +1159,52 @@ a:focus-visible {
     width: 5px; height: 5px; border-radius: 50%; background: var(--income);
   }
 }
+
+/* ── 터치 기기 누름 영역 (WCAG 2.5.5 · Apple HIG 권장 44px) ──
+   손가락으로 누르는 기기(pointer: coarse)에서만 적용 — 마우스 환경의 촘촘한 크기는 그대로.
+   예전 측정: 헤더 아이콘 28~31px, 세그먼트·정렬 칩 24px, 로그아웃 14px */
+@media (pointer: coarse) {
+  /* 아이콘 버튼 — 정사각 44px (display는 건드리지 않는다: 햄버거는 데스크톱에서 숨김 유지) */
+  .mobile-menu-btn, .arrow-btn, .icon-btn, .modal-close {
+    min-width: 44px; min-height: 44px;
+    align-items: center; justify-content: center;
+  }
+  .modal-close { margin: -10px; }
+
+  /* 실제 크기를 44px로 키우는 것들 — 입력칸, 주요 버튼, 목록 행 */
+  .month-label, .nav-btn, .save-btn, .delete-btn, .plan-edit-btn, .pe-add,
+  .filter-apply-btn, .filter-reset-btn, .type-btn, .kind-btn,
+  .form-row input, .form-row select, .amount-input-wrap input,
+  .filter-row input, .filter-row select, .plan-edit input,
+  .ctx-row, .wd-task-row, .wd-banner, .cat-bar-item.clickable {
+    min-height: 44px;
+  }
+  .logout-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; }
+  .cat-bar-item.clickable { display: flex; flex-direction: column; justify-content: center; }
+  .wd-banner { display: flex; align-items: center; } /* .hidden은 !important라 그대로 숨는다 */
+
+  /* 줄지어 있는 작은 칩·세그먼트 — 겉모습은 36px, 보이지 않는 영역으로 위아래 4px씩 넓혀 44px */
+  .scope-btn, .sort-key-btn, .sort-dir-btn, .filter-toggle-btn,
+  .cat-chip, .preset-btn, .wd-pay-settle-full {
+    position: relative; min-height: 36px; min-width: 44px;
+  }
+  .scope-btn::after, .sort-key-btn::after, .sort-dir-btn::after, .filter-toggle-btn::after,
+  .cat-chip::after, .preset-btn::after, .wd-pay-settle-full::after, .wd-sheet-link::after {
+    content: ""; position: absolute; inset: -4px 0;
+  }
+  .wd-sheet-link { min-height: 36px; }
+
+  /* 작은 삭제·드래그 손잡이 */
+  .pe-del, .wd-pay-del, .pe-drag, .wd-item-drag {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* 체크리스트 체크박스 — 17px 상자를 44px 누름 영역(label)으로 감싼다 (weddingChecklist.js).
+     음수 여백으로 행 높이는 늘리지 않고 누름 영역만 넓힌다 */
+  .wd-task-chk { width: 20px; height: 20px; }
+  .wd-task-chk-hit { min-width: 44px; min-height: 44px; margin: -12px -8px -12px -12px; justify-content: center; }
+}
+
+/* 체크박스를 감싸는 누름 영역 — 행 클릭(수정 모달)과 분리 */
+.wd-task-chk-hit { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }

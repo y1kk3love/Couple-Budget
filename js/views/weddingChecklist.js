@@ -32,7 +32,7 @@ export function renderChecklistSegment(container) {
       if (!list.length) return "";
       const rows = list.map(t => `
         <div class="wd-task-row ${t.done ? "done" : ""}" data-task-id="${t.id}" role="button" tabindex="0">
-          <input type="checkbox" class="wd-task-chk" data-chk-id="${t.id}" ${t.done ? "checked" : ""} aria-label="완료 표시" />
+          <label class="wd-task-chk-hit"><input type="checkbox" class="wd-task-chk" data-chk-id="${t.id}" ${t.done ? "checked" : ""} aria-label="완료 표시" /></label>
           <span class="wd-task-title">${escapeHtml(t.title)}</span>
           ${t.memo ? `<span class="wd-task-memo">${escapeHtml(t.memo)}</span>` : ""}
         </div>`).join("");
@@ -67,6 +67,10 @@ export function renderChecklistSegment(container) {
 
   container.querySelector("#wdTaskAddBtn")?.addEventListener("click", () => openWeddingTaskModal(null));
 
+  // 체크박스를 감싼 넓은 누름 영역(label) — 누르면 체크가 바뀌고, 행 클릭(수정 모달)으로는 번지지 않는다
+  container.querySelectorAll(".wd-task-chk-hit").forEach(hit =>
+    hit.addEventListener("click", e => e.stopPropagation())
+  );
   container.querySelectorAll(".wd-task-chk").forEach(chk => {
     chk.addEventListener("click", e => e.stopPropagation()); // 행 클릭(수정 모달)과 분리
     chk.addEventListener("change", async () => {
