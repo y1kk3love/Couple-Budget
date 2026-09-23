@@ -65,7 +65,9 @@ js/views/wedding{Events,Checklist,Vendors,Memo}.js  ← 세그먼트 렌더러 �
 js/modals/{txModal,fixedModal,csvModal,budgetModal,weddingModal}.js  ← setup<Name>Modal(s)() wires DOM events; open<Name>Modal() opens it
 ```
 
-Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, `setupThemeToggle()`, the 내보내기 button binding, the five modal `setup*` calls (tx/fixed/csv/budget/wedding), and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click.
+Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, `setupThemeToggle()`, the 내보내기 button binding, the five modal `setup*` calls (tx/fixed/csv/budget/wedding), and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click. The guard runs **before** the first data load. Registering after it used to leave month nav and view switching dead for the session whenever the first load failed (offline, missing index).
+
+`loadAllData()` catches its own failures. It sets `loadError`, and while that is set `renderAll()` replaces month-scoped views with a "데이터를 불러오지 못했어요" card and a 다시 시도 button. The card shows a composite-index hint for `failed-precondition`. Month navigation or the button retries, and a successful load clears it. `renderSummary()` also survives a failed accumulated-balance read by showing "—" in that card instead of rejecting.
 
 ### The render cycle
 

@@ -33,10 +33,8 @@ let listenersBound = false;
 
 export async function initApp() {
   updateMonthLabel();
-  // 결혼 일정은 메인 화면 배너·달력 마커에 쓰여 로그인 시 1회 미리 로드
-  // (다른 결혼 데이터는 탭 진입 시 로드 — 이 예외는 CLAUDE.md에 문서화)
-  await fetchWeddingEvents();
-  await loadAllData();
+  // 리스너를 데이터 로드보다 먼저 건다 — 예전에는 로드 뒤에 걸어서, 첫 로드가 실패하면
+  // (오프라인·색인 누락 등) 월 이동·탭 전환 버튼이 그 세션 내내 먹통이었다
   if (!listenersBound) {
     setupMonthNav();
     setupViewNav();
@@ -45,27 +43,62 @@ export async function initApp() {
     setupWeddingBanner();
     listenersBound = true;
   }
+  // 결혼 일정은 메인 화면 배너·달력 마커에 쓰여 로그인 시 1회 미리 로드
+  // (다른 결혼 데이터는 탭 진입 시 로드 — 이 예외는 CLAUDE.md에 문서화)
+  await fetchWeddingEvents();
+  await loadAllData();
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 // 월 이동을 연타하면 이전 달 로드가 나중에 끝나 최신 화면을 덮을 수 있어,
 // 순번을 매겨 낡은 로드는 렌더하지 않는다 (fetchTransactions도 자체 방어함).
 let loadSeq = 0;
+// 마지막 로드 실패 원인 — 있으면 월 화면 대신 오류 안내와 "다시 시도"를 보인다.
+// (빈 화면을 그리면 "내역이 하나도 없다"로 오해하게 된다)
+let loadError = null;
 
 async function loadAllData() {
   const seq = ++loadSeq;
   const year = state.currentYear, month = state.currentMonth;
-  await Promise.all([
-    fetchTransactions(),
-    fetchFixedItems(),
-    fetchBudget(),
-    fetchBudgetPlans(),
-  ]);
-  if (seq !== loadSeq) return; // 그 사이 더 최신 로드가 시작됨
-  await applyFixedItemsToMonth(year, month);
-  await fetchTransactions(); // 고정비 적용 후 재조회
+  try {
+    await Promise.all([
+      fetchTransactions(),
+      fetchFixedItems(),
+      fetchBudget(),
+      fetchBudgetPlans(),
+    ]);
+    if (seq !== loadSeq) return; // 그 사이 더 최신 로드가 시작됨
+    await applyFixedItemsToMonth(year, month);
+    await fetchTransactions(); // 고정비 적용 후 재조회
+  } catch (err) {
+    if (seq !== loadSeq) return;
+    console.error("데이터 로드 실패:", err);
+    loadError = err;
+    showToast("데이터를 불러오지 못했어요");
+    renderAll();
+    return;
+  }
   if (seq !== loadSeq) return;
+  loadError = null;
   renderAll();
+}
+
+// 로드 실패 안내 — 월 이동이나 "다시 시도"로 다시 로드한다
+function renderLoadError(container) {
+  const hint = loadError?.code === "failed-precondition"
+    ? "Firestore 복합 색인이 없어요. README의 '복합 인덱스' 안내대로 색인을 만든 뒤 다시 시도해주세요."
+    : "네트워크 연결을 확인한 뒤 다시 시도해주세요.";
+  container.innerHTML = `
+    <div class="empty-state">
+      <span class="empty-emoji">⚠️</span>
+      <p>데이터를 불러오지 못했어요</p>
+      <p class="load-error-hint">${hint}</p>
+      <button class="save-btn load-retry-btn" id="loadRetryBtn">다시 시도</button>
+    </div>`;
+  container.querySelector("#loadRetryBtn").addEventListener("click", e => {
+    e.currentTarget.disabled = true;
+    loadAllData();
+  });
 }
 
 // ── 전체 렌더 (외부에서도 호출 가능) ─────────────────────────
@@ -75,6 +108,11 @@ export function renderAll() {
   // 월과 무관한 화면에서는 요약 바가 숨겨져 있으므로 계산하지 않는다 (돌아오면 다시 그림)
   if (!MONTHLESS_VIEWS[state.currentView]) renderSummary();
   renderWeddingBanner();
+  // 월 데이터 로드가 실패한 상태면 월 화면 대신 안내 (예산안·결혼은 각자 따로 읽으므로 그대로 그림)
+  if (loadError && !MONTHLESS_VIEWS[state.currentView]) {
+    renderLoadError(document.getElementById(`view-${state.currentView}`));
+    return;
+  }
   switch (state.currentView) {
     case "calendar": renderCalendarView(); break;
     case "list":     renderListView();     break;
@@ -110,9 +148,15 @@ async function renderSummary() {
     .filter(t => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
-  const accum   = await calcAccumulatedBalance();
+  // 누적 잔액은 전체 거래를 읽어야 해서 오프라인이면 실패한다 — 요약 바 전체가 멈추지 않게 그 칸만 비운다
+  let accum = null;
+  try {
+    accum = await calcAccumulatedBalance();
+  } catch (err) {
+    console.error("누적 잔액 계산 실패:", err);
+  }
   if (seq !== summarySeq) return; // 더 최신 렌더가 시작됨 — 낡은 결과로 덮지 않는다
-  const accumTotal = accum + balance;
+  const accumTotal = (accum ?? 0) + balance;
 
   const balanceClass = balance > 0 ? "income" : balance < 0 ? "expense" : "neutral";
   const accumClass   = accumTotal > 0 ? "income" : accumTotal < 0 ? "expense" : "neutral";
@@ -132,8 +176,10 @@ async function renderSummary() {
     </div>
     <div class="sum-card">
       <div class="lbl">누적 잔액</div>
-      <div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}원</div>
-      <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>
+      ${accum === null
+        ? `<div class="val neutral">—</div><div class="sub">불러오지 못함</div>`
+        : `<div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}원</div>
+      <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>`}
     </div>
     ${renderBudgetCard(totalExpense)}`;
 
