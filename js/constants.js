@@ -12,10 +12,12 @@ export const CATEGORIES = {
     { id: "rent",      name: "월세",     color: "#f272b6" },
     { id: "mgmt",      name: "관리비",   color: "#c29063" },
     { id: "health",    name: "의료/건강", color: "#35c08e" },
-    { id: "shopping",  name: "쇼핑",     color: "#f56a6a" },
+    // 쇼핑은 빨강(#f56a6a)이었으나 지출 빨강(--expense)과 겹치고, 미용(코랄)·식비(주황)와
+    // 월별 누적 막대에서 구분이 어려워 금색으로 — 미용은 연두로 (통계 색 정리)
+    { id: "shopping",  name: "쇼핑",     color: "#e2b128" },
     { id: "culture",   name: "문화/여가", color: "#2fb8ac" },
     { id: "sub",       name: "구독",     color: "#7a85f0" },
-    { id: "beauty",    name: "미용",     color: "#ff8a66" },
+    { id: "beauty",    name: "미용",     color: "#8bc34a" },
     { id: "edu",       name: "교육",     color: "#66c6ea" },
     { id: "etc",       name: "기타",     color: "#9aa5b1" },
   ],

@@ -8,6 +8,7 @@ import { getCategoryInfo, CATEGORIES, OWNER_COLORS } from "../constants.js";
 import { fetchMonthlySummary } from "../db.js";
 import { setMonth } from "../app.js";
 import { openEditModal } from "../modals/txModal.js";
+import { ALLOWED_EMAILS } from "../../firebase.js";
 
 const MONTHLY_COMPARE_RANGE = 6;
 
@@ -216,6 +217,14 @@ function renderFixedVsVariable(expTxs) {
 // owner 필드가 있는 거래가 하나라도 있을 때만 표시.
 // owner가 없는 거래(과거 데이터·고정비 자동생성)는 '함께'로 묶는다.
 
+// 사람마다 고정된 색 — 예전에는 금액 순위로 색을 매겨, 달마다 같은 사람의 색이 바뀌었다.
+// 허용 계정 순서대로 OWNER_COLORS[0], [1], 작성자 없음('함께')은 회색 [2]
+function ownerColor(email) {
+  if (!email) return OWNER_COLORS[2];
+  const i = ALLOWED_EMAILS.indexOf(email);
+  return OWNER_COLORS[i === 0 || i === 1 ? i : 3];
+}
+
 function renderOwnerSplit(expTxs) {
   if (!expTxs.some(t => t.owner)) return "";
 
@@ -226,17 +235,18 @@ function renderOwnerSplit(expTxs) {
   });
   const total = Object.values(totals).reduce((s, v) => s + v, 0) || 1;
 
-  const bars = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([email, amt], i) => {
+  const bars = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([email, amt]) => {
     const label = email ? ownerName(email) : "함께";
     const pct   = Math.round(amt / total * 100);
+    const color = ownerColor(email);
     return `
       <div class="cat-bar-item">
         <div class="cat-bar-row">
-          <span class="cat-bar-label">${escapeHtml(label)}</span>
+          <span class="cat-bar-label"><i class="owner-dot" style="background:${color}"></i>${escapeHtml(label)}</span>
           <span class="cat-bar-val">${fmtMoney(amt)}원 (${pct}%)</span>
         </div>
         <div class="pbar">
-          <div class="pfill" style="width:${pct}%;background:${OWNER_COLORS[i % OWNER_COLORS.length]}"></div>
+          <div class="pfill" style="width:${pct}%;background:${color}"></div>
         </div>
       </div>`;
   }).join("");
