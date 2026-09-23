@@ -79,6 +79,21 @@ export async function runWrite(button, write, action = "저장") {
   }
 }
 
+/** root 안에 사용자가 입력 중이거나 아직 반영하지 않은 값이 있는지.
+ *  innerHTML로 그린 폼은 그릴 때의 값이 defaultValue/defaultChecked/defaultSelected로 남으므로,
+ *  그것과 다르면 "입력 중"이다. 실시간 동기화가 화면을 다시 그려 입력을 날리지 않게 확인할 때 쓴다. */
+export function hasUnsavedInput(root) {
+  return [...root.querySelectorAll("input, textarea, select")].some(el => {
+    if (el === document.activeElement) return true;
+    if (el.type === "checkbox" || el.type === "radio") return el.checked !== el.defaultChecked;
+    if (el.tagName === "SELECT") {
+      const def = [...el.options].findIndex(o => o.defaultSelected);
+      return el.selectedIndex !== (def === -1 ? 0 : def);
+    }
+    return el.value !== el.defaultValue;
+  });
+}
+
 /** 금액 입력 빠른 버튼 그룹(.amount-presets) 바인딩.
  *  컨테이너의 data-target 속성으로 input id를 지정.
  *  data-add: 현재값에 누적, data-clear: 빈 값으로 초기화. */

@@ -6,6 +6,7 @@ import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, ALL
 import state from "./state.js";
 import { showToast } from "./utils.js";
 import { initApp } from "./app.js";
+import { stopSync } from "./sync.js";
 
 export function setupAuth() {
   // 로그인 버튼
@@ -37,6 +38,7 @@ export function setupAuth() {
       await initApp();
     } else {
       state.currentUser = null;
+      stopSync(); // 로그아웃 — 실시간 리스너 해제 (다음 로그인 때 initApp이 다시 건다)
     }
   });
 }

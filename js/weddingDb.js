@@ -14,10 +14,15 @@ import { WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE } from "./constants.js";
 
 // ── 설정 (settings/wedding) ───────────────────────────────────
 
+// apply*: 스냅샷 → state 반영. 조회(fetch*)와 실시간 리스너(sync.js)가 같은 정렬·변환을 쓰도록 분리
+export function applyWeddingConfig(data) {
+  state.wedding.config = data ?? null;
+}
+
 export async function fetchWeddingConfig() {
   try {
     const snap = await getDoc(doc(db, "settings", "wedding"));
-    state.wedding.config = snap.exists() ? snap.data() : null;
+    applyWeddingConfig(snap.exists() ? snap.data() : null);
   } catch { state.wedding.loadError = true; }
 }
 
@@ -34,12 +39,15 @@ export async function saveWeddingConfig(data) {
 
 // ── 예산 항목 (wedding_items) ─────────────────────────────────
 
+export function applyWeddingItemDocs(docs) {
+  state.wedding.items = docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
 export async function fetchWeddingItems() {
   try {
-    const snap = await getDocs(collection(db, "wedding_items"));
-    state.wedding.items = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    applyWeddingItemDocs((await getDocs(collection(db, "wedding_items"))).docs);
   } catch { state.wedding.loadError = true; }
 }
 
@@ -77,13 +85,16 @@ export async function saveWeddingItemOrders(orderedIds) {
 
 const periodOrder = id => WEDDING_PERIODS.findIndex(p => p.id === id);
 
+export function applyWeddingTaskDocs(docs) {
+  state.wedding.tasks = docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) =>
+      (periodOrder(a.period) - periodOrder(b.period)) || ((a.order ?? 0) - (b.order ?? 0)));
+}
+
 export async function fetchWeddingTasks() {
   try {
-    const snap = await getDocs(collection(db, "wedding_tasks"));
-    state.wedding.tasks = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) =>
-        (periodOrder(a.period) - periodOrder(b.period)) || ((a.order ?? 0) - (b.order ?? 0)));
+    applyWeddingTaskDocs((await getDocs(collection(db, "wedding_tasks"))).docs);
   } catch { state.wedding.loadError = true; }
 }
 
@@ -116,12 +127,15 @@ export async function seedWeddingChecklist() {
 
 // ── 업체 후보 (wedding_vendors) ───────────────────────────────
 
+export function applyWeddingVendorDocs(docs) {
+  state.wedding.vendors = docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.category ?? "").localeCompare(b.category ?? "") || (a.name ?? "").localeCompare(b.name ?? "", "ko"));
+}
+
 export async function fetchWeddingVendors() {
   try {
-    const snap = await getDocs(collection(db, "wedding_vendors"));
-    state.wedding.vendors = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.category ?? "").localeCompare(b.category ?? "") || (a.name ?? "").localeCompare(b.name ?? "", "ko"));
+    applyWeddingVendorDocs((await getDocs(collection(db, "wedding_vendors"))).docs);
   } catch { state.wedding.loadError = true; }
 }
 
@@ -140,12 +154,15 @@ export async function deleteWeddingVendor(id) {
 // 체촌·옷 픽업 같은 날짜 확정 약속. 메인 화면 배너·달력 마커에도 쓰여서
 // 다른 결혼 데이터와 달리 로그인 시 1회 미리 로드된다 (app.js initApp).
 
+export function applyWeddingEventDocs(docs) {
+  state.wedding.events = docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")));
+}
+
 export async function fetchWeddingEvents() {
   try {
-    const snap = await getDocs(collection(db, "wedding_events"));
-    state.wedding.events = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")));
+    applyWeddingEventDocs((await getDocs(collection(db, "wedding_events"))).docs);
   } catch { state.wedding.loadError = true; }
 }
 

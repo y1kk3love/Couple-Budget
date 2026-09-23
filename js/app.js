@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast, todayStr, downloadCSV, escapeHtml } from "./utils.js";
+import { fmtMoney, showToast, todayStr, downloadCSV, escapeHtml, hasUnsavedInput } from "./utils.js";
 import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
@@ -24,6 +24,7 @@ import { renderPlanView }     from "./views/plan.js";
 import { renderWeddingView, setWeddingSegment, markWeddingStale, weddingAddAction } from "./views/wedding.js";
 import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
+import { startSync } from "./sync.js";
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -43,10 +44,27 @@ export async function initApp() {
     setupWeddingBanner();
     listenersBound = true;
   }
+  // 실시간 동기화 시작 (로그아웃 시 auth.js가 멈춘다). 조회보다 먼저 걸어 두면
+  // 누적 잔액용 전체 조회를 리스너의 첫 스냅샷이 대신한다.
+  startSync();
   // 결혼 일정은 메인 화면 배너·달력 마커에 쓰여 로그인 시 1회 미리 로드
   // (다른 결혼 데이터는 탭 진입 시 로드 — 이 예외는 CLAUDE.md에 문서화)
   await fetchWeddingEvents();
   await loadAllData();
+}
+
+// ── 상대 기기의 변경 반영 (sync.js가 호출) ─────────────────────
+// state는 리스너가 이미 최신으로 바꿔 두었다. 입력 중인 화면은 다시 그리면 입력이 날아가므로
+// 그 화면은 그대로 두고 요약·배너만 갱신한다 — 화면은 다음 렌더 때 최신으로 그려진다.
+export function renderRemoteChange() {
+  if (loadError) { loadAllData(); return; } // 로드 실패 중이었다면 연결이 돌아온 것 — 다시 로드
+  const view = document.getElementById(`view-${state.currentView}`);
+  if (view && hasUnsavedInput(view)) {
+    if (!MONTHLESS_VIEWS[state.currentView]) renderSummary();
+    renderWeddingBanner();
+    return;
+  }
+  renderAll();
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────

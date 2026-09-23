@@ -4,7 +4,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast, hasUnsavedInput } from "../utils.js";
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
@@ -93,8 +93,7 @@ export function renderWeddingView() {
     ensureLoaded().then(() => {
       if (state.currentView !== "wedding") return;
       // 메모 등을 입력하는 중이면 다시 그리지 않는다 (입력이 날아감) — 새 데이터는 다음 렌더에 반영
-      const active = document.activeElement;
-      if (active && container.contains(active) && /^(TEXTAREA|INPUT|SELECT)$/.test(active.tagName)) return;
+      if (hasUnsavedInput(container)) return;
       renderWeddingView();
     });
   }

@@ -7,7 +7,7 @@ import {
   collection, doc,
   addDoc, updateDoc, deleteDoc,
   getDocs, getDoc, setDoc, writeBatch,
-  query, where, orderBy, deleteField
+  query, where, orderBy, deleteField, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
 import { ymKey } from "./utils.js";
@@ -23,12 +23,65 @@ let   allTxCache           = null;
 export function invalidateBalanceCache() {
   balanceCache.clear();
   monthlySummaryCache.clear();
-  allTxCache = null;
+  allTxCache = null; // 실시간 사본(liveTx)이 있으면 네트워크 없이 다시 만든다
+}
+
+// ── 거래 실시간 사본 ──────────────────────────────────────────
+// sync.js가 로그인 동안 transactions 전체에 리스너를 건다. 첫 스냅샷은 예전에 누적 잔액용으로
+// 로그인마다 하던 전체 조회와 같은 비용이고, 이후에는 바뀐 문서만 받는다.
+// 사본이 준비되면 월 목록·전체 기간·월별 합계를 네트워크 없이 여기서 만든다.
+// 리스너가 실패하면 liveTx가 null로 돌아가 예전 조회 방식으로 계속 동작한다.
+
+let liveTx    = null;  // 전체 거래(skip 마커 포함) — 리스너가 채움
+let txUnsub   = null;
+let liveReady = null;  // 첫 스냅샷 대기 (fetchAllTransactions가 중복 전체 조회를 피하려고 기다림)
+
+// Firestore의 orderBy("date","desc")와 같은 순서 — 같은 날짜는 문서 ID 내림차순.
+// 예전 skip 마커에는 date가 없으므로 빈 문자열로 취급한다
+const byDateDesc = (a, b) =>
+  (b.date ?? "").localeCompare(a.date ?? "") || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+
+// 실시간 사본에서 (y, m)의 목록을 만들어 state에 넣는다. 사본이 없으면 false.
+function deriveMonth(y, m) {
+  if (!liveTx) return false;
+  const rows = liveTx.filter(t => t.year === y && t.month === m).sort(byDateDesc);
+  state.skippedFixedIds = new Set(rows.filter(t => t.skipped).map(t => t.fixedId));
+  state.transactions    = rows.filter(t => !t.skipped);
+  state.transactionsYM  = ymKey(y, m);
+  return true;
+}
+
+// onRemoteChange: 상대 기기에서 바뀐 스냅샷일 때만 호출 (내 쓰기의 즉시 반영 이벤트는 제외 —
+// 내 저장 흐름이 스스로 재조회·렌더한다)
+export function watchTransactions(onRemoteChange) {
+  if (txUnsub) return;
+  let resolveReady, rejectReady;
+  liveReady = new Promise((res, rej) => { resolveReady = res; rejectReady = rej; });
+  liveReady.catch(() => {}); // 기다리는 곳이 없을 때 unhandled rejection 방지
+  let first = true;
+  txUnsub = onSnapshot(collection(db, "transactions"), snap => {
+    liveTx = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    invalidateBalanceCache();
+    deriveMonth(state.currentYear, state.currentMonth);
+    if (first) { first = false; resolveReady(); return; }
+    if (!snap.metadata.hasPendingWrites) onRemoteChange();
+  }, err => {
+    console.warn("거래 실시간 동기화 중단 — 조회 방식으로 계속합니다:", err.code ?? err);
+    txUnsub = null; liveTx = null; liveReady = null;
+    rejectReady(err);
+  });
+}
+
+export function unwatchTransactions() {
+  txUnsub?.();
+  txUnsub = null; liveTx = null; liveReady = null;
+  invalidateBalanceCache();
 }
 
 // ── 거래 내역 ──────────────────────────────────────────────────
 
 export async function fetchTransactions() {
+  if (deriveMonth(state.currentYear, state.currentMonth)) return; // 실시간 사본이 있으면 조회 불필요
   const y = state.currentYear, m = state.currentMonth;
   const q = query(
     collection(db, "transactions"),
@@ -97,10 +150,13 @@ export async function deleteTransaction(id) {
   if (t?.fromFixed && t.fixedId) {
     // 고정비 자동생성 거래는 문서를 지우면 다음 방문 때 결정적 ID로 되살아난다.
     // 대신 같은 ID를 skip 마커로 덮어써 "이 달은 건너뛰기"를 기록한다.
+    // date를 꼭 남긴다 — Firestore의 orderBy("date")는 date가 없는 문서를 결과에서 빼므로,
+    // 없으면 월 조회(fetchTransactions)에 마커가 잡히지 않는다.
     await setDoc(doc(db, "transactions", id), {
       fixedId:   t.fixedId,
       year:      t.year,
       month:     t.month,
+      date:      t.date,
       fromFixed: true,
       skipped:   true,
     });
@@ -123,6 +179,7 @@ export async function moveFixedTransaction(id, tx, data) {
     fixedId:   tx.fixedId,
     year:      tx.year,
     month:     tx.month,
+    date:      tx.date, // 월 조회(orderBy date)에 잡히도록 — deleteTransaction 참고
     fromFixed: true,
     skipped:   true,
   });
@@ -135,9 +192,13 @@ export async function moveFixedTransaction(id, tx, data) {
 
 // ── 고정비 ────────────────────────────────────────────────────
 
+// 조회와 실시간 리스너(sync.js)가 같은 변환을 쓰도록 스냅샷 → state 반영을 분리
+export function applyFixedItemDocs(docs) {
+  state.fixedItems = docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 export async function fetchFixedItems() {
-  const snap = await getDocs(collection(db, "fixed_items"));
-  state.fixedItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  applyFixedItemDocs((await getDocs(collection(db, "fixed_items"))).docs);
 }
 
 export async function saveFixedItem(data, id = null) {
@@ -313,19 +374,21 @@ export async function fetchMonthlySummary(months = 6) {
     monthsList.push({ year: y, month: m });
   }
 
-  const results = await Promise.all(monthsList.map(({ year, month }) =>
-    getDocs(query(
-      collection(db, "transactions"),
-      where("year",  "==", year),
-      where("month", "==", month)
-    ))
-  ));
+  // 실시간 사본이 있으면 네트워크 없이 계산 (없으면 달마다 조회)
+  const results = liveTx
+    ? monthsList.map(({ year, month }) => liveTx.filter(t => t.year === year && t.month === month))
+    : (await Promise.all(monthsList.map(({ year, month }) =>
+        getDocs(query(
+          collection(db, "transactions"),
+          where("year",  "==", year),
+          where("month", "==", month)
+        ))
+      ))).map(snap => snap.docs.map(d => d.data()));
 
   const summary = monthsList.map((m, i) => {
     let income = 0, expense = 0;
     const expenseByCategory = {};
-    results[i].docs.forEach(d => {
-      const t = d.data();
+    results[i].forEach(t => {
       if (t.type === "income") {
         income += t.amount;
       } else if (t.type === "expense") {
@@ -352,12 +415,16 @@ function resolveBudget() {
   state.budget = state.budgetMonths[currentYM()] ?? state.budgetDefault;
 }
 
+// settings/budget 문서 내용 → state (조회·실시간 리스너 공용). 문서가 없으면 {}
+export function applyBudgetDoc(data) {
+  state.budgetDefault = data?.amount ?? null;
+  state.budgetMonths  = data?.months ?? {};
+  resolveBudget();
+}
+
 export async function fetchBudget() {
   const snap = await getDoc(doc(db, "settings", "budget"));
-  const data = snap.exists() ? snap.data() : {};
-  state.budgetDefault = data.amount ?? null;
-  state.budgetMonths  = data.months ?? {};
-  resolveBudget();
+  applyBudgetDoc(snap.exists() ? snap.data() : {});
 }
 
 export async function saveBudget(amount) {
@@ -394,10 +461,13 @@ export async function deleteBudget() {
 // ── 개인 예산안 (budget_plans, 문서 ID = 이메일) ───────────────
 // 월급에서 항목별 배정을 미리 짜보는 계획표. 월과 무관하게 1인 1문서 유지.
 
+export function applyBudgetPlanDocs(docs) {
+  state.budgetPlans = docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 export async function fetchBudgetPlans() {
   try {
-    const snap = await getDocs(collection(db, "budget_plans"));
-    state.budgetPlans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    applyBudgetPlanDocs((await getDocs(collection(db, "budget_plans"))).docs);
   } catch {
     // rules에 budget_plans가 아직 게시되지 않은 경우 앱 전체가 죽지 않도록 무시
     state.budgetPlans = [];
@@ -413,11 +483,13 @@ export async function saveBudgetPlan(email, data) {
 
 export async function fetchAllTransactions() {
   if (allTxCache) return allTxCache;
-  const snap = await getDocs(collection(db, "transactions"));
-  allTxCache = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(t => !t.skipped)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  // 리스너의 첫 스냅샷이 곧 올 예정이면 같은 전체 조회를 두 번 하지 않도록 잠시 기다린다.
+  // 오프라인이면 첫 스냅샷이 오지 않으므로 오래 기다리지 않고 직접 조회로 넘어간다(실패하면 호출부가 처리).
+  if (!liveTx && liveReady) {
+    try { await Promise.race([liveReady, new Promise(r => setTimeout(r, 4000))]); } catch { /* 직접 조회 */ }
+  }
+  const rows = liveTx ?? (await getDocs(collection(db, "transactions"))).docs.map(d => ({ id: d.id, ...d.data() }));
+  allTxCache = rows.filter(t => !t.skipped).sort(byDateDesc);
   return allTxCache;
 }
 
