@@ -21,7 +21,7 @@ import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
 import { renderPlanView }     from "./views/plan.js";
-import { renderWeddingView, setWeddingSegment } from "./views/wedding.js";
+import { renderWeddingView, setWeddingSegment, markWeddingStale } from "./views/wedding.js";
 import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 
@@ -242,6 +242,8 @@ function setupViewNav() {
 
 function switchView(view) {
   state.currentView = view;
+  // 결혼 탭은 월 로드와 무관하게 따로 읽으므로, 들어올 때마다 최신본을 다시 받게 표시
+  if (view === "wedding") markWeddingStale();
 
   // 뷰 컨테이너 전환
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));

@@ -21,6 +21,12 @@ export async function fetchWeddingConfig() {
   } catch { state.wedding.loadError = true; }
 }
 
+// 메모 최신본 — 저장 직전 상대의 수정 여부 확인용 (오류는 호출부로 던진다)
+export async function readWeddingMemo() {
+  const snap = await getDoc(doc(db, "settings", "wedding"));
+  return snap.exists() ? (snap.data().memo ?? "") : "";
+}
+
 export async function saveWeddingConfig(data) {
   await setDoc(doc(db, "settings", "wedding"), data, { merge: true });
   state.wedding.config = { ...(state.wedding.config ?? {}), ...data };
@@ -35,6 +41,12 @@ export async function fetchWeddingItems() {
       .map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   } catch { state.wedding.loadError = true; }
+}
+
+// 항목 하나의 최신본 — 저장 직전 상대의 수정 여부 확인용 (없으면 null, 오류는 호출부로)
+export async function readWeddingItem(id) {
+  const snap = await getDoc(doc(db, "wedding_items", id));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
 export async function saveWeddingItem(data, id = null) {
@@ -89,12 +101,17 @@ export async function toggleWeddingTask(id, done) {
 }
 
 // 표준 템플릿 시딩 — 문서 ID 고정(tpl_n) + setDoc → 두 명이 동시에 눌러도 중복 없음.
-// UI에서 빈 목록일 때만 노출되므로 완료 상태를 덮어쓸 일도 없다.
+// 버튼은 빈 목록일 때만 보이지만 화면의 목록이 오래됐을 수 있다 — 그 사이 상대가 불러와
+// 체크해 둔 항목을 done:false로 되돌리지 않도록, 서버에 할 일이 하나라도 있으면 쓰지 않는다.
+// 반환: 실제로 불러왔으면 true, 이미 있어서 건너뛰었으면 false
 export async function seedWeddingChecklist() {
+  const existing = await getDocs(collection(db, "wedding_tasks"));
+  if (!existing.empty) return false;
   await Promise.all(WEDDING_CHECKLIST_TEMPLATE.map((t, i) =>
     setDoc(doc(db, "wedding_tasks", `tpl_${i}`),
       { title: t.title, period: t.period, done: false, memo: "", order: i })
   ));
+  return true;
 }
 
 // ── 업체 후보 (wedding_vendors) ───────────────────────────────

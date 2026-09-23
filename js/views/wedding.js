@@ -18,8 +18,13 @@ import { renderEventsSegment } from "./weddingEvents.js";
 import { renderMemoSegment } from "./weddingMemo.js";
 
 // 현재 세그먼트 — 재렌더·뷰 전환에도 유지 (모듈 레벨 UI 상태 패턴)
-let segment = "budget"; // "budget" | "checklist" | "vendors" | "guests"
-let loaded  = false;    // 탭 최초 진입 시 1회 로드 플래그
+let segment = "budget"; // "budget" | "events" | "checklist" | "vendors" | "memo"
+let loaded  = false;    // 최초 로드 완료 여부 — 전에는 이것만 있어 페이지를 새로 열기 전까지 다시 읽지 않았다
+let stale   = false;    // 탭에 다시 들어왔음 — 캐시로 먼저 그리고 뒤에서 새로 읽는다
+
+// 결혼 탭으로 전환할 때 app.js가 호출. 상대가 그 사이 바꾼 내용을 반영하기 위함 —
+// 오래된 사본을 그대로 두면 결제 내역처럼 통째로 저장하는 필드가 상대의 수정을 지운다.
+export function markWeddingStale() { stale = true; }
 
 const SEGMENTS = [
   { id: "budget",    label: "예산" },
@@ -53,11 +58,23 @@ export function renderWeddingView() {
   const container = document.getElementById("view-wedding");
 
   if (!loaded) {
+    stale = false;
     container.innerHTML = `<p class="list-loading">결혼 준비 데이터를 불러오는 중…</p>`;
     ensureLoaded().then(() => {
       if (state.currentView === "wedding") renderWeddingView(); // 뷰 이탈 시 무시
     });
     return;
+  }
+
+  if (stale) {
+    stale = false;
+    ensureLoaded().then(() => {
+      if (state.currentView !== "wedding") return;
+      // 메모 등을 입력하는 중이면 다시 그리지 않는다 (입력이 날아감) — 새 데이터는 다음 렌더에 반영
+      const active = document.activeElement;
+      if (active && container.contains(active) && /^(TEXTAREA|INPUT|SELECT)$/.test(active.tagName)) return;
+      renderWeddingView();
+    });
   }
 
   container.innerHTML = `${renderHeader()}${renderSegBar()}<div id="wdSegBody"></div>`;
@@ -66,6 +83,7 @@ export function renderWeddingView() {
 }
 
 async function ensureLoaded() {
+  state.wedding.loadError = false; // 일시적 오류가 탭을 영구히 막지 않도록 매 로드마다 초기화
   await Promise.all([
     fetchWeddingConfig(), fetchWeddingItems(), fetchWeddingTasks(),
     fetchWeddingVendors(), fetchWeddingEvents(),

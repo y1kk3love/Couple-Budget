@@ -9,7 +9,7 @@ import {
   saveWeddingConfig, saveWeddingItem, deleteWeddingItem, fetchWeddingItems,
   saveWeddingTask, deleteWeddingTask, fetchWeddingTasks,
   saveWeddingVendor, deleteWeddingVendor, fetchWeddingVendors,
-  saveWeddingEvent, deleteWeddingEvent, fetchWeddingEvents, paymentSettled
+  saveWeddingEvent, deleteWeddingEvent, fetchWeddingEvents, paymentSettled, readWeddingItem
 } from "../weddingDb.js";
 import { renderWeddingView } from "../views/wedding.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
@@ -20,6 +20,17 @@ let editingVendorId = null;
 let editingVendorStatus = "candidate";
 let editingEventId  = null;
 let draftPayments = []; // 편집 중 결제 내역 — 저장 시 통째로 기록 (마지막 저장 승리, 스펙에 명시된 트레이드오프)
+// 모달을 연 시점의 항목 서명 — 저장 직전 서버본과 비교해 그 사이 상대가 고쳤는지 판단한다.
+// payments를 통째로 저장하므로, 확인 없이 덮어쓰면 상대가 추가한 결제가 조용히 사라진다.
+let baseItemSig = null;
+
+// 충돌 판단에 쓰는 필드 (order는 드래그 정렬로 바뀌지만 이 모달이 쓰지 않으므로 제외)
+const ITEM_SIG_FIELDS = ["name", "category", "planned", "payer", "memo", "payments", "vendorId"];
+// 키 순서와 무관한 비교를 위해 객체 키를 정렬해 직렬화
+const stable = v => Array.isArray(v) ? v.map(stable)
+  : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map(k => [k, stable(v[k])]))
+  : v;
+const itemSig = it => JSON.stringify(ITEM_SIG_FIELDS.map(k => stable(it?.[k] ?? null)));
 
 const PAY_LABELS = ["계약금", "중도금", "잔금"];
 
@@ -40,6 +51,7 @@ function closeSettings() {
 
 export function openWeddingItemModal(item) {
   editingItemId = item?.id ?? null;
+  baseItemSig   = item ? itemSig(item) : null;
   // 과거 기록(settled 체크만 있는 결제)도 settledAmount 형태로 정규화해서 편집·저장
   draftPayments = (item?.payments ?? []).map(p => withSettled({ ...p }, paymentSettled(p)));
 
@@ -318,9 +330,35 @@ export function setupWeddingModals() {
       data.vendorId = null;
     }
 
-    if (!(await runWrite(e.currentTarget, () => saveWeddingItem(data, editingItemId)))) return;
-    closeItem();
-    showToast(editingItemId ? "수정되었습니다" : "추가되었습니다");
+    // 수정 저장이면 직전에 서버본을 다시 읽어, 모달을 연 뒤 상대가 고쳤는지 확인한다
+    const itemId = editingItemId;
+    let outcome = "saved"; // "saved" | "deleted"(상대가 삭제) | 서버 최신본(덮어쓰기 취소)
+    const ok = await runWrite(e.currentTarget, async () => {
+      if (itemId) {
+        const server = await readWeddingItem(itemId);
+        if (!server) { outcome = "deleted"; return; }
+        if (itemSig(server) !== baseItemSig &&
+            !(await showConfirm(
+              "그 사이 상대가 이 항목을 수정했어요.\n덮어쓰면 상대가 바꾼 내용(결제 내역 등)이 사라져요.\n취소하면 최신 내용을 다시 불러와요.",
+              { confirmText: "덮어쓰기" }))) {
+          outcome = server;
+          return;
+        }
+      }
+      await saveWeddingItem(data, itemId);
+    });
+    if (!ok) return;
+
+    if (outcome === "deleted") {
+      closeItem();
+      showToast("상대가 이 항목을 삭제했어요");
+    } else if (outcome !== "saved") {
+      openWeddingItemModal(outcome); // 최신본으로 다시 채움 (내 변경은 버림)
+      showToast("최신 내용을 불러왔어요");
+    } else {
+      closeItem();
+      showToast(itemId ? "수정되었습니다" : "추가되었습니다");
+    }
     await fetchWeddingItems();
     renderWeddingView();
   });

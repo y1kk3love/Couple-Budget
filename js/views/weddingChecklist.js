@@ -58,7 +58,9 @@ export function renderChecklistSegment(container) {
   container.querySelector("#wdSeedBtn")?.addEventListener("click", async e => {
     const btn = e.currentTarget;
     if (!(await showConfirm("표준 결혼 준비 체크리스트를 불러올까요?", { confirmText: "불러오기", danger: false }))) return;
-    if (!(await runWrite(btn, () => seedWeddingChecklist(), "불러오기"))) return;
+    let seeded = false;
+    if (!(await runWrite(btn, async () => { seeded = await seedWeddingChecklist(); }, "불러오기"))) return;
+    if (!seeded) showToast("상대가 이미 체크리스트를 만들어 두었어요 — 최신 목록을 불러왔어요");
     await fetchWeddingTasks();
     renderWeddingView();
   });
