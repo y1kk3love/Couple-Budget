@@ -208,14 +208,22 @@ function renderBudgetSegment() {
     const over  = it.planned > 0 && spent > it.planned;
     const color = over ? "var(--expense)" : cat.color;
     const payer = it.payer === "both" ? "공동" : ownerName(it.payer);
-    // 메타 줄 정산 표시: 전액 정산이면 '정산 완료', 아니면 정산된 금액(있을 때만)과 미정산 금액을 나란히
-    let settledMeta = "";
+    // 한 행 안의 금액은 모두 같은 형식(1,000,000원)으로 — 예전에는 전체·축약(100만) 표기가 섞였다.
+    // 카테고리 이름은 항목 이름과 다를 때만 붙인다 ("예식장 · 예식장" 반복 방지)
+    const catMeta = cat.name !== it.name ? ` · ${escapeHtml(cat.name)}` : "";
+    // 정산 줄: 전액 정산이면 '정산 완료', 아니면 정산된 금액(있을 때만)과 미정산 금액
+    let settleLine = "";
     if (spent > 0 && unsettled <= 0) {
-      settledMeta = ` · <span class="wd-settled">정산 완료</span>`;
+      settleLine = `<span class="wd-settled">정산 완료</span>`;
     } else if (spent > 0) {
-      if (settled > 0) settledMeta += ` · <span class="wd-settled">정산 ${fmtMoneyShort(settled)}</span>`;
-      settledMeta += ` · <span class="wd-unsettled">미정산 ${fmtMoneyShort(unsettled)}</span>`;
+      settleLine = [
+        settled > 0 ? `<span class="wd-settled">정산 ${fmtMoney(settled)}원</span>` : "",
+        `<span class="wd-unsettled">미정산 ${fmtMoney(unsettled)}원</span>`,
+      ].filter(Boolean).join(" · ");
     }
+    // 오른쪽 숫자: 계획 대비 사용률 (지출액은 메타 줄에 이미 있어 반복하지 않는다)
+    const usedPct = it.planned > 0 ? Math.round(spent / it.planned * 100) : null;
+    const pctCls  = over ? "over" : spent === 0 ? "zero" : "";
     // 그래프 두 겹: 진한 색 = 정산 완료, 연한 색 = 아직 미정산인 지출
     return `
       <div class="fixed-item" data-wd-item="${it.id}" role="button" tabindex="0">
@@ -223,13 +231,14 @@ function renderBudgetSegment() {
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(it.name)} <span class="tag ${it.payer === "both" ? "fixed" : "variable"}">${escapeHtml(payer)}</span></div>
-          <div class="wd-item-plan">${fmtMoney(spent)} / ${fmtMoney(it.planned ?? 0)}원 · ${cat.name}${settledMeta}</div>
+          <div class="wd-item-plan">${fmtMoney(spent)}원 / ${fmtMoney(it.planned ?? 0)}원${catMeta}</div>
           <div class="pbar wd-pbar-layered" style="margin-top:5px" title="진한 색: 정산 완료 · 연한 색: 미정산">
             <div class="pfill wd-fill-spent" style="width:${pctSpent}%;background:${color}"></div>
             <div class="pfill" style="width:${pctSettled}%;background:${color}"></div>
           </div>
+          ${settleLine ? `<div class="wd-settle-line">${settleLine}</div>` : ""}
         </div>
-        <div class="fixed-amount">${fmtMoneyShort(spent)}</div>
+        <div class="wd-item-pct ${pctCls}" title="계획 대비 사용">${usedPct == null ? "" : `${usedPct}%`}</div>
       </div>`;
   }).join("");
 

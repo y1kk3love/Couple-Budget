@@ -872,6 +872,15 @@ a:focus-visible {
 .wd-seg { margin-bottom: 1rem; }
 .scope-btn:disabled { opacity: 0.45; cursor: default; }
 .wd-item-plan { font-size: 0.75rem; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+/* 정산 줄 — 막대 아래 따로 (예전에는 금액 줄에 섞여 빽빽했다) */
+.wd-settle-line { font-size: 0.72rem; margin-top: 5px; font-family: var(--mono); }
+/* 오른쪽: 계획 대비 사용률 — 평소엔 본문색, 초과면 빨강, 아직 0이면 흐리게 */
+.wd-item-pct {
+  font-size: 0.9rem; font-weight: 700; font-family: var(--mono);
+  color: var(--text); min-width: 3.2em; text-align: right; flex-shrink: 0;
+}
+.wd-item-pct.over { color: var(--expense); }
+.wd-item-pct.zero { color: var(--text-3); font-weight: 500; }
 .wd-settled { color: var(--income); font-weight: 600; }
 .wd-unsettled { color: var(--warn); font-weight: 600; }
 /* 예산 항목 그래프 두 겹 — 진한 색: 정산 완료, 연한 색: 미정산 지출 */
