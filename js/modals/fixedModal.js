@@ -7,7 +7,7 @@ import { showToast, showConfirm, setupAmountPresets } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import {
   saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions,
-  applyFixedItemsToCurrentMonth, fetchTransactions
+  applyFixedItemsToMonth, fetchTransactions
 } from "../db.js";
 import { renderAll } from "../app.js";
 
@@ -120,7 +120,7 @@ export function setupFixedModal() {
     showToast(id ? "수정되었습니다" : "고정비가 추가되었습니다");
     await fetchFixedItems();
     // 저장 즉시 이번 달에 반영 — 예전에는 월 이동/새로고침 전까지 보이지 않았다
-    await applyFixedItemsToCurrentMonth();
+    await applyFixedItemsToMonth(state.currentYear, state.currentMonth);
     await fetchTransactions();
     renderAll();
   });

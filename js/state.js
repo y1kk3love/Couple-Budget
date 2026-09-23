@@ -10,6 +10,9 @@ const state = {
   currentView:   "calendar",
   currentUser:   null,
   transactions:  [],
+  // transactions가 어느 달의 조회 결과인지 ("YYYY-MM") — 고정비 적용이 다른 달 목록으로
+  // 적용 여부를 잘못 판단하지 않도록 fetchTransactions가 함께 기록한다
+  transactionsYM: null,
   fixedItems:    [],
   // 이번 달에 사용자가 삭제(건너뛰기)한 고정비 ID 목록 — skip 마커 문서에서 채워짐
   skippedFixedIds: new Set(),

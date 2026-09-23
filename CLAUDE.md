@@ -49,11 +49,11 @@ Single-page app with one global mutable `state` object and a single `renderAll()
 ```
 firebase.js              ← Firebase init + ALLOWED_EMAILS allowlist
 js/state.js              ← single shared mutable state (currentYear/Month/View, currentUser, transactions[],
-                            fixedItems[], skippedFixedIds:Set, budget/budgetDefault/budgetMonths, budgetPlans[],
+                            transactionsYM, fixedItems[], skippedFixedIds:Set, budget/budgetDefault/budgetMonths, budgetPlans[],
                             wedding{config, items, tasks, vendors, events, loadError})
 js/constants.js          ← CATEGORIES (expense×12, income×4) + getCategoryInfo(); OWNER_COLORS;
                             WEDDING_CATEGORIES/getWeddingCategory, WEDDING_PERIODS, WEDDING_CHECKLIST_TEMPLATE
-js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
+js/utils.js              ← fmtMoney, fmtMoneyShort, escapeHtml, ymKey, todayStr, showToast, showConfirm, downloadCSV, ownerName, setupAmountPresets, emptyStateHTML
 js/db.js                 ← 가계부 Firestore reads/writes; mutates state.transactions / state.fixedItems
 js/weddingDb.js          ← 결혼 탭 전용 Firestore reads/writes (wedding_* + settings/wedding); mutates state.wedding
 js/auth.js               ← Google sign-in; on success calls initApp()
@@ -81,7 +81,7 @@ Race protection: rapid month-nav clicks used to let a stale fetch overwrite a ne
 
 Firestore writes in modal save/delete handlers are wrapped in try/catch and the modal closes **only after the write succeeds** (failure keeps the modal open with inputs preserved and shows an error toast). Follow this pattern for any new write flow.
 
-Because re-rendering wipes all DOM state, transient UI state lives in **module-level variables** inside the owning view/modal module: `list.js` keeps its sort key/direction and filter values, `plan.js` keeps its sort state plus the edit-mode `draft` object, `txModal.js` keeps `editingTxId`. New UI state that must survive a re-render follows this pattern (note it also survives view switches and logout/login, since modules are never reloaded — reset it explicitly if that's not wanted).
+Because re-rendering wipes all DOM state, transient UI state lives in **module-level variables** inside the owning view/modal module: `list.js` keeps its sort key/direction and filter values, `plan.js` keeps its sort state plus the edit-mode `draft` object, `txModal.js` keeps `editingTxId` plus `editingTx` (the original tx object — needed because a tx opened from 전체 기간 or the history panel isn't in `state.transactions`). New UI state that must survive a re-render follows this pattern (note it also survives view switches and logout/login, since modules are never reloaded — reset it explicitly if that's not wanted).
 
 A view that needs async data after its synchronous render (e.g. `stats.js` filling the monthly-compare card from `fetchMonthlySummary()`) renders a loading placeholder, then in the `.then()` re-checks that its target element still exists — the user may have switched views or months before the fetch resolved.
 
@@ -107,9 +107,11 @@ The list view has a scope toggle (이번 달/전체 기간). In 전체 기간 mo
 
 ### Fixed items → transactions materialization
 
-`fixed_items` are templates; they are materialized into the `transactions` collection on demand by `applyFixedItemsToCurrentMonth()` (called from `loadAllData()` every time the month changes, and from `fixedModal.js` right after saving so a new/edited fixed item shows up in the current month immediately). Each generated transaction uses the deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` written with `setDoc`, so concurrent sessions overwrite the same doc instead of duplicating it, and is tagged `fromFixed: true` / `fixedId` so it is skipped on re-apply. Important consequences:
+`fixed_items` are templates; they are materialized into the `transactions` collection on demand by `applyFixedItemsToMonth(year, month)` (called from `loadAllData()` every time the month changes, and from `fixedModal.js` right after saving so a new/edited fixed item shows up in the viewed month immediately). Each generated transaction uses the deterministic doc ID `fixed_<fixedId>_<YYYY-MM>`, so concurrent sessions write the same doc instead of duplicating it, and is tagged `fromFixed: true` / `fixedId` so it is skipped on re-apply. Important consequences:
 
-- Editing a fixed item must call `syncFixedItemTransactions()` to propagate changes to already-materialized transactions — but it deliberately only touches the current month and later; past months are preserved as historical record.
+- **The target month is an explicit argument — never read `state.currentYear/Month` inside these functions.** The user can change month while writes are in flight; reading the global mid-loop used to write the remaining items into the wrong month. `applyFixedItemsToMonth` also trusts `state.transactions` only when `state.transactionsYM` (set by `fetchTransactions()`) equals the target month, and snapshots the applied/skipped sets up front. It counts an item as applied only when a doc with *this month's* deterministic ID is present, and it `getDoc`s each pending ID first and never overwrites an existing doc (create-if-absent).
+- Editing a fixed item must call `syncFixedItemTransactions()` to propagate changes to already-materialized transactions — but it deliberately only touches the **real** current month (today's date, not the viewed month) and later; past months are preserved as historical record.
+- Moving a materialized fixed transaction to a different month in the tx modal goes through `moveFixedTransaction()`: one batch writes a skip marker at the original deterministic ID and a new auto-ID doc *without* `fromFixed`/`fixedId` in the target month. Updating the date in place would leave the doc at the old month's ID, so revisiting the old month re-materialized it and overwrote the moved record. The moved copy is a plain transaction: the target month still gets its own materialized copy (both are real cash flow), and later fixed-item edits don't touch it. Same-month date changes are a normal `updateTransaction()`.
 - The day-of-month is clamped against the target month's last day (e.g. day 31 in February becomes 28/29).
 - A fixed item's `startYear`/`startMonth` gates application; earlier months are skipped.
 - Deleting a materialized fixed transaction does **not** delete the doc — `deleteTransaction()` overwrites it with a skip marker (`{skipped: true, fixedId, year, month, fromFixed: true}`, no amount/name) so the deterministic ID can't resurrect it. `fetchTransactions()` filters skip markers out of `state.transactions` and collects them into `state.skippedFixedIds`; all-collection scans (`calcAccumulatedBalance`, `fetchRecentTransactionsByName`, `syncFixedItemTransactions`) must guard against `t.skipped` docs, which lack `amount`/`name`.

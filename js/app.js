@@ -7,7 +7,7 @@ import { fmtMoney, showToast, todayStr, downloadCSV, escapeHtml } from "./utils.
 import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
-  applyFixedItemsToCurrentMonth, calcAccumulatedBalance, fetchBudget,
+  applyFixedItemsToMonth, calcAccumulatedBalance, fetchBudget,
   fetchBudgetPlans, fetchAllTransactions
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
@@ -54,6 +54,7 @@ let loadSeq = 0;
 
 async function loadAllData() {
   const seq = ++loadSeq;
+  const year = state.currentYear, month = state.currentMonth;
   await Promise.all([
     fetchTransactions(),
     fetchFixedItems(),
@@ -61,7 +62,7 @@ async function loadAllData() {
     fetchBudgetPlans(),
   ]);
   if (seq !== loadSeq) return; // 그 사이 더 최신 로드가 시작됨
-  await applyFixedItemsToCurrentMonth();
+  await applyFixedItemsToMonth(year, month);
   await fetchTransactions(); // 고정비 적용 후 재조회
   if (seq !== loadSeq) return;
   renderAll();

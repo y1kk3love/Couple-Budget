@@ -10,6 +10,7 @@ import {
   query, where, orderBy, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "./state.js";
+import { ymKey } from "./utils.js";
 
 // ── 집계 캐시 ──────────────────────────────────────────────────
 // calcAccumulatedBalance / fetchMonthlySummary / fetchAllTransactions 모두
@@ -43,9 +44,10 @@ export async function fetchTransactions() {
   const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   // skip 마커(고정비 자동생성 거래를 사용자가 삭제한 흔적)는 화면에서 제외하고,
-  // applyFixedItemsToCurrentMonth가 재생성하지 않도록 ID만 따로 보관한다.
+  // applyFixedItemsToMonth가 재생성하지 않도록 ID만 따로 보관한다.
   state.skippedFixedIds = new Set(rows.filter(t => t.skipped).map(t => t.fixedId));
   state.transactions    = rows.filter(t => !t.skipped);
+  state.transactionsYM  = ymKey(y, m);
 }
 
 export async function addTransaction(data) {
@@ -108,6 +110,29 @@ export async function deleteTransaction(id) {
   invalidateBalanceCache();
 }
 
+// 고정비 자동생성 거래를 다른 달로 옮길 때 사용.
+// 결정적 ID 문서의 연·월만 바꾸면 원래 달에서 그 고정비가 "미적용"으로 보여
+// 다음 방문 때 같은 ID로 다시 생성되며 옮긴 거래를 덮어쓴다. 그래서
+//  - 원래 달의 ID는 skip 마커로 덮어 "이 달은 처리됨"을 남기고
+//  - 옮긴 내용은 새 ID의 일반 거래로 기록한다 (fromFixed를 떼야 옮긴 달의
+//    고정비 자동 적용을 막지 않고, 이후 고정비 수정 동기화에도 휩쓸리지 않는다).
+// tx: 수정 전 원본 거래, data: 모달에서 수정한 값
+export async function moveFixedTransaction(id, tx, data) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, "transactions", id), {
+    fixedId:   tx.fixedId,
+    year:      tx.year,
+    month:     tx.month,
+    fromFixed: true,
+    skipped:   true,
+  });
+  const moved = { ...data };
+  if (tx.owner) moved.owner = tx.owner;
+  batch.set(doc(collection(db, "transactions")), moved);
+  await batch.commit();
+  invalidateBalanceCache();
+}
+
 // ── 고정비 ────────────────────────────────────────────────────
 
 export async function fetchFixedItems() {
@@ -129,13 +154,16 @@ export async function deleteFixedItem(id) {
   invalidateBalanceCache();
 }
 
-// 현재 달(state.currentYear/Month) 이상의 자동생성 거래만 갱신.
+// 실제 이번 달(오늘 기준) 이상의 자동생성 거래만 갱신.
 // 과거 달은 실제 지출 기록이므로 고정비 금액·카테고리 변경 시에도 보존한다.
+// ⚠ 화면에서 보고 있는 달(state.currentYear/Month)을 기준으로 삼으면, 과거 달을 보면서
+//   고정비를 고쳤을 때 그 달부터 이번 달까지의 기록이 전부 새 금액으로 바뀐다.
 export async function syncFixedItemTransactions(id, data) {
   const q    = query(collection(db, "transactions"), where("fixedId", "==", id), where("fromFixed", "==", true));
   const snap = await getDocs(q);
 
-  const currentYM = state.currentYear * 100 + state.currentMonth;
+  const today     = new Date();
+  const currentYM = today.getFullYear() * 100 + today.getMonth() + 1;
 
   await Promise.all(snap.docs.map(d => {
     const t = d.data();
@@ -158,49 +186,57 @@ export async function syncFixedItemTransactions(id, data) {
   invalidateBalanceCache();
 }
 
-// ── 고정비 → 이번 달 자동 적용 ────────────────────────────────
-// Deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` + setDoc → 동시 호출에도
-// 멱등. 두 사용자가 같은 달에 동시에 접속해도 같은 문서가 덮어써질 뿐
-// 중복 생성되지 않는다.
+// ── 고정비 → 해당 달 자동 적용 ────────────────────────────────
+// Deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` → 동시 호출에도 멱등. 두 사용자가
+// 같은 달에 동시에 접속해도 같은 문서가 쓰일 뿐 중복 생성되지 않는다.
+//
+// 대상 달을 인자로 받는다 — 전역의 "보고 있는 달"을 읽으면, 적용 도중 사용자가
+// 월을 옮겼을 때 남은 항목이 엉뚱한 달에 기록된다. 적용 여부 판단에 쓰는
+// state.transactions도 그 달의 조회 결과일 때만 믿고, 시작 시점에 사본으로 고정한다.
 
-export async function applyFixedItemsToCurrentMonth() {
+export async function applyFixedItemsToMonth(year, month) {
+  const ym = ymKey(year, month);
+  // 그 사이 다른 달이 조회됐으면 이 달의 적용 여부를 판단할 수 없다 — 그 달의 로드가 따로 적용한다
+  if (state.transactionsYM !== ym) return;
+
+  const txId = item => `fixed_${item.id}_${ym}`;
+  // 이 달의 결정적 ID를 가진 문서만 "적용됨"으로 센다
   const appliedIds = new Set(
-    state.transactions
-      .filter(t => t.fromFixed)
-      .map(t => t.fixedId)
+    state.transactions.filter(t => t.fromFixed && t.id === `fixed_${t.fixedId}_${ym}`).map(t => t.fixedId)
   );
+  const skipped   = new Set(state.skippedFixedIds); // 이 달에 사용자가 삭제한 항목
+  const targetYM  = year * 100 + month;
+  const lastDay   = new Date(year, month, 0).getDate();
 
-  for (const item of state.fixedItems) {
-    if (appliedIds.has(item.id)) continue;
-    if (state.skippedFixedIds.has(item.id)) continue; // 이 달은 사용자가 삭제함
-
+  const pending = state.fixedItems.filter(item => {
+    if (appliedIds.has(item.id) || skipped.has(item.id)) return false;
     // 시작 연월 이전 달에는 적용하지 않음
-    if (item.startYear && item.startMonth) {
-      const itemStart    = item.startYear * 100 + item.startMonth;
-      const currentYM   = state.currentYear * 100 + state.currentMonth;
-      if (currentYM < itemStart) continue;
-    }
+    if (item.startYear && item.startMonth && targetYM < item.startYear * 100 + item.startMonth) return false;
+    return true;
+  });
 
-    const lastDay    = new Date(state.currentYear, state.currentMonth, 0).getDate();
-    const clampedDay = Math.min(item.day ?? 1, lastDay);
-    const ym         = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
-    const dateStr    = `${ym}-${String(clampedDay).padStart(2, "0")}`;
-    const txId       = `fixed_${item.id}_${ym}`;
-    await setDoc(doc(db, "transactions", txId), {
+  let wrote = 0;
+  await Promise.all(pending.map(async item => {
+    const ref = doc(db, "transactions", txId(item));
+    // 이미 문서가 있으면 덮어쓰지 않는다. 이 달 조회에 안 잡혔는데 문서가 있다는 건
+    // 예전에 다른 달로 옮겨진 거래라는 뜻 — 덮어쓰면 옮긴 기록이 사라진다.
+    if ((await getDoc(ref)).exists()) return;
+    await setDoc(ref, {
       name:      item.name,
       amount:    item.amount,
       type:      item.type,
       category:  item.category,
       kind:      "fixed",
       memo:      item.name,
-      date:      dateStr,
-      year:      state.currentYear,
-      month:     state.currentMonth,
+      date:      `${ym}-${String(Math.min(item.day ?? 1, lastDay)).padStart(2, "0")}`,
+      year,
+      month,
       fromFixed: true,
       fixedId:   item.id,
     });
-    invalidateBalanceCache();
-  }
+    wrote++;
+  }));
+  if (wrote) invalidateBalanceCache();
 }
 
 // ── 최근 N개월 이름 유사 거래 조회 ────────────────────────────

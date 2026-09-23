@@ -5,15 +5,19 @@
 import state from "../state.js";
 import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName } from "../db.js";
+import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName, moveFixedTransaction } from "../db.js";
 import { renderAll } from "../app.js";
 
 let editingTxId = null;
+// 수정 중인 거래의 원본 — 전체 기간 목록·이력 패널에서 연 다른 달 거래는
+// state.transactions(현재 달)에 없으므로 원본을 여기 들고 있는다
+let editingTx = null;
 
 // ── 열기 ──────────────────────────────────────────────────────
 
 export function openAddModal(dateStr = null) {
   editingTxId = null;
+  editingTx = null;
   const date = dateStr ?? todayStr();
   document.getElementById("modalTitle").textContent = "내역 추가";
   document.getElementById("txId").value = "";
@@ -40,6 +44,7 @@ export function openEditModal(id, tx = null) {
   if (!t) return;
 
   editingTxId = id;
+  editingTx = t;
   document.getElementById("modalTitle").textContent = "내역 수정";
   document.getElementById("txId").value = id;
   document.getElementById("txAmount").value = t.amount;
@@ -180,8 +185,13 @@ export function setupTxModal() {
     let toastMsg;
     try {
       if (editingTxId) {
-        const prev = state.transactions.find(t => t.id === editingTxId);
-        await updateTransaction(editingTxId, data);
+        const prev = editingTx;
+        // 고정비 자동생성 거래를 다른 달로 옮기면 원래 달엔 skip 마커, 옮긴 달엔 새 일반 거래
+        // (결정적 ID를 그대로 두면 원래 달 방문 시 고정비가 다시 생성되며 옮긴 거래를 덮어쓴다)
+        const movedFixed = prev?.fromFixed && prev.fixedId &&
+          (prev.year !== data.year || prev.month !== data.month);
+        if (movedFixed) await moveFixedTransaction(editingTxId, prev, data);
+        else            await updateTransaction(editingTxId, data);
 
         // 카테고리를 바꿨으면 같은 이름의 거래 전체(전 기간)에 전파
         let synced = 0;

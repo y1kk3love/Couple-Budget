@@ -34,6 +34,11 @@ export function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
+/** 연·월 → "YYYY-MM" (고정비 결정적 문서 ID, 월별 예산 키 등에 쓰는 형식) */
+export function ymKey(year, month) {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
 /** 오늘 날짜를 YYYY-MM-DD 형식으로 반환 */
 export function todayStr() {
   const d = new Date();
