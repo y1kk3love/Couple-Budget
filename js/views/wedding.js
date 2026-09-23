@@ -11,7 +11,11 @@ import {
   fetchWeddingEvents, itemSpent, itemSettled, weddingTotals,
   saveWeddingItemOrders
 } from "../weddingDb.js";
-import { openWeddingSettingsModal, openWeddingItemModal } from "../modals/weddingModal.js";
+import {
+  openWeddingSettingsModal, openWeddingItemModal, openWeddingEventModal,
+  openWeddingTaskModal, openWeddingVendorModal
+} from "../modals/weddingModal.js";
+import { refreshAddButton } from "../app.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
 import { renderEventsSegment } from "./weddingEvents.js";
@@ -40,6 +44,23 @@ export function setWeddingSegment(seg) {
   if (ENABLED.has(seg)) segment = seg;
 }
 
+// 결혼 탭에서 헤더 "내역 추가"·하단 + 버튼이 할 일 — 지금 세그먼트에 맞는 추가.
+// 예전에는 결혼 탭에서도 가계부 거래 입력창이 열렸다. app.js가 라벨과 클릭 동작에 쓴다.
+export function weddingAddAction() {
+  switch (segment) {
+    case "budget":    return { label: "예산 항목 추가", run: () => openWeddingItemModal(null) };
+    case "events":    return { label: "일정 추가",      run: () => openWeddingEventModal(null) };
+    case "checklist": return { label: "할 일 추가",     run: () => openWeddingTaskModal(null) };
+    case "vendors":   return { label: "업체 추가",      run: () => openWeddingVendorModal(null) };
+    case "memo":      return { label: "메모 쓰기",      run: () => {
+      const t = document.getElementById("wdMemoText");
+      t?.scrollIntoView({ block: "center" });
+      t?.focus();
+    } };
+    default:          return null;
+  }
+}
+
 // ── D-day 계산 (자정 기준 날짜 차이) ──────────────────────────
 
 export function dDayInfo(dateStr, today = new Date()) {
@@ -56,6 +77,7 @@ export function dDayInfo(dateStr, today = new Date()) {
 
 export function renderWeddingView() {
   const container = document.getElementById("view-wedding");
+  refreshAddButton(); // 세그먼트가 바뀌면 추가 버튼 라벨도 바뀐다
 
   if (!loaded) {
     stale = false;

@@ -12,7 +12,7 @@ import {
 } from "./db.js";
 import { setupAuth }      from "./auth.js";
 import { setupThemeToggle } from "./theme.js";
-import { setupTxModal }   from "./modals/txModal.js";
+import { setupTxModal, openAddModal } from "./modals/txModal.js";
 import { setupFixedModal } from "./modals/fixedModal.js";
 import { setupCsvModal }  from "./modals/csvModal.js";
 import { setupBudgetModal, openBudgetModal } from "./modals/budgetModal.js";
@@ -21,7 +21,7 @@ import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
 import { renderPlanView }     from "./views/plan.js";
-import { renderWeddingView, setWeddingSegment, markWeddingStale } from "./views/wedding.js";
+import { renderWeddingView, setWeddingSegment, markWeddingStale, weddingAddAction } from "./views/wedding.js";
 import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 
@@ -133,6 +133,26 @@ function applyViewChrome() {
   const title = MONTHLESS_VIEWS[state.currentView] ?? "";
   document.querySelector(".main-content").classList.toggle("monthless", !!title);
   document.getElementById("viewTitle").textContent = title;
+  refreshAddButton();
+}
+
+// ── 추가 버튼 (헤더 "내역 추가" · 모바일 하단 +) ─────────────────
+// 결혼 탭에서는 지금 세그먼트의 추가(예산 항목·일정·할 일·업체)를, 그 밖에서는 가계부 거래 입력을 연다.
+
+function currentAddAction() {
+  return state.currentView === "wedding" ? weddingAddAction() : null;
+}
+
+export function refreshAddButton() {
+  const label = currentAddAction()?.label ?? "내역 추가";
+  document.querySelector("#addTxBtn span").textContent = label;
+  document.getElementById("mobAddBtn").setAttribute("aria-label", label);
+}
+
+function onAddClick() {
+  const action = currentAddAction();
+  if (action) action.run();
+  else openAddModal();
 }
 
 // ── 요약 카드 ─────────────────────────────────────────────────
@@ -382,6 +402,8 @@ setupAuth();
 setupThemeToggle();
 document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
 document.getElementById("sideExportBtn").addEventListener("click", exportAllCsv); // 모바일 햄버거 메뉴
+document.getElementById("addTxBtn").addEventListener("click", onAddClick);
+document.getElementById("mobAddBtn").addEventListener("click", onAddClick);
 setupTxModal();
 setupFixedModal();
 setupCsvModal();

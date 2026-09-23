@@ -223,7 +223,5 @@ export function setupTxModal() {
     renderAll();
   });
 
-  // 내역 추가 버튼
-  document.getElementById("addTxBtn").addEventListener("click", () => openAddModal());
-  document.getElementById("mobAddBtn")?.addEventListener("click", () => openAddModal());
+  // 헤더 "내역 추가"·하단 + 버튼은 화면에 따라 동작이 달라 app.js가 바인딩한다 (onAddClick)
 }
