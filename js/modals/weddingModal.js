@@ -255,14 +255,30 @@ function renderPayInput(label) {
   box.appendChild(row);
 
   row.querySelector(".wd-pay-in-add").addEventListener("click", () => {
-    const lbl    = row.querySelector(".wd-pay-in-label").value.trim() || "결제";
-    const amount = parseInt(row.querySelector(".wd-pay-in-amount").value);
-    const date   = row.querySelector(".wd-pay-in-date").value;
-    if (!amount || amount <= 0) { showToast("금액을 입력하세요"); return; }
-    draftPayments.push({ label: lbl, amount, date, settled: false, settledAmount: 0 });
-    renderPayments();
+    if (commitPayInput() === "invalid") showToast("금액을 입력하세요");
   });
   row.querySelector(".wd-pay-in-amount").focus();
+}
+
+// 결제 입력 행의 값을 draftPayments에 넣는다. 행의 "추가" 버튼과 모달의 "저장"이 함께 쓴다 —
+// 예전에는 금액을 입력하고 "추가" 없이 저장을 누르면 그 결제가 조용히 버려졌다.
+// 반환: "none"(입력 행이 없거나 금액이 비어 있음) | "added" | "invalid"(금액이 0 이하 등)
+function commitPayInput() {
+  const row = document.querySelector("#wdPayments .wd-pay-input");
+  if (!row) return "none";
+  const raw = row.querySelector(".wd-pay-in-amount").value.trim();
+  if (raw === "") return "none";
+  const amount = parseInt(raw);
+  if (!amount || amount <= 0) return "invalid";
+  draftPayments.push({
+    label:  row.querySelector(".wd-pay-in-label").value.trim() || "결제",
+    amount,
+    date:   row.querySelector(".wd-pay-in-date").value,
+    settled: false,
+    settledAmount: 0,
+  });
+  renderPayments(); // 입력 행이 사라지고 목록에 추가된다
+  return "added";
 }
 
 // ── 이벤트 바인딩 ─────────────────────────────────────────────
@@ -314,8 +330,12 @@ export function setupWeddingModals() {
 
   // 항목 저장
   document.getElementById("wdItemSave").addEventListener("click", async e => {
+    const btn  = e.currentTarget;
     const name = document.getElementById("wdItemName").value.trim();
     if (!name) { showToast("항목명을 입력하세요"); return; }
+    // 입력만 해 두고 "추가"를 누르지 않은 결제도 함께 저장
+    const pending = commitPayInput();
+    if (pending === "invalid") { showToast("결제 금액을 확인하세요"); return; }
 
     const data = {
       name,
@@ -333,7 +353,7 @@ export function setupWeddingModals() {
     // 수정 저장이면 직전에 서버본을 다시 읽어, 모달을 연 뒤 상대가 고쳤는지 확인한다
     const itemId = editingItemId;
     let outcome = "saved"; // "saved" | "deleted"(상대가 삭제) | 서버 최신본(덮어쓰기 취소)
-    const ok = await runWrite(e.currentTarget, async () => {
+    const ok = await runWrite(btn, async () => {
       if (itemId) {
         const server = await readWeddingItem(itemId);
         if (!server) { outcome = "deleted"; return; }
@@ -357,7 +377,7 @@ export function setupWeddingModals() {
       showToast("최신 내용을 불러왔어요");
     } else {
       closeItem();
-      showToast(itemId ? "수정되었습니다" : "추가되었습니다");
+      showToast((itemId ? "수정되었습니다" : "추가되었습니다") + (pending === "added" ? " · 입력 중이던 결제도 함께 저장했어요" : ""));
     }
     await fetchWeddingItems();
     renderWeddingView();
