@@ -717,6 +717,12 @@ a:focus-visible {
 .csv-note { background: var(--surface2); border-radius: var(--radius); padding: 1rem; font-size: 0.82rem; }
 .csv-note strong { display: block; margin-bottom: 4px; color: var(--text); }
 .csv-note p { color: var(--text-2); line-height: 1.6; }
+/* 미리보기 안내 — 환불로 뒤집힌 행·날짜를 못 읽어 뺀 행 */
+.csv-warn {
+  font-size: 0.8rem; line-height: 1.5; color: var(--text-2);
+  background: var(--surface2); border-left: 3px solid var(--warn);
+  border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;
+}
 
 /* ── 카테고리 상세 모달 ── */
 #categoryDetailTitle { display: flex; align-items: center; gap: 8px; }

@@ -5,7 +5,7 @@
 import { db } from "../../firebase.js";
 import { doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "../state.js";
-import { showToast, todayStr, fmtMoney, escapeHtml } from "../utils.js";
+import { showToast, fmtMoney, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { fetchTransactions, invalidateBalanceCache } from "../db.js";
 import { renderAll } from "../app.js";
@@ -33,11 +33,13 @@ function hashStr(s) {
 // 같은 CSV를 다시 가져와도 중복이 쌓이지 않도록, 행 내용으로 결정적
 // 문서 ID를 만든다. 한 파일 안에 완전히 동일한 행(같은 날·금액·가맹점)이
 // 여러 건이면 occ(등장 순번)로 구분해 모두 보존한다.
+// idName: ID용 원래 가맹점명 — 환불 행은 표시 이름에 "환불"이 붙지만 ID는 예전 방식 그대로
+// 만들어, 부호가 사라진 채 지출로 잘못 들어간 예전 기록을 같은 파일 재가져오기로 바로잡는다.
 function buildImportOps(rows) {
   const seen = new Map();
-  return rows.map(row => {
+  return rows.map(({ idName, ...row }) => {
     const [y, m]  = row.date.split("-").map(Number);
-    const baseKey = `${row.date}_${row.amount}_${hashStr(row.name)}`;
+    const baseKey = `${row.date}_${row.amount}_${hashStr(idName)}`;
     const occ     = seen.get(baseKey) ?? 0;
     seen.set(baseKey, occ + 1);
     return {
@@ -86,9 +88,41 @@ function parseCsvLine(line) {
   return out.map(v => v.trim());
 }
 
+// 금액 문자열 → { amount: 양의 정수(원), negative } — 읽을 수 없으면 null.
+// "-15,000", 유니코드 마이너스 "−15,000", 회계식 "(15,000)", "12,000원", "₩12,000", "12000.00"을 처리한다.
+// 예전에는 숫자 외 문자를 모두 지워 부호와 소수점이 사라졌다
+// (환불 -15,000이 지출 15,000으로, 12000.00이 1,200,000으로 들어왔다).
+function parseAmount(raw) {
+  // 숫자·부호·소수점·괄호 외의 문자("원", "₩", 통화 표기, 인코딩이 깨진 기호 등)는 버린다 — 예전처럼 관대하게
+  let s = String(raw ?? "").replace(/−/g, "-").replace(/[^\d.+\-()]/g, "");
+  let negative = false;
+  const paren = s.match(/^\((.*)\)$/);
+  if (paren) { negative = true; s = paren[1]; }
+  const m = s.match(/^([+-]?)(\d+(?:\.\d+)?)/);
+  if (!m) return null;
+  if (m[1] === "-") negative = !negative;
+  return { amount: Math.round(parseFloat(m[2])), negative };
+}
+
+// 날짜 문자열 → "YYYY-MM-DD" — 읽을 수 없거나 없는 날짜면 null.
+// 2026-09-01 / 2026.09.01 / 2026. 9. 1 / 2026/09/01 / 2026년 9월 1일 / 20260901, 뒤에 시간이 붙어도 된다.
+// 예전에는 모르는 형식을 오늘 날짜로 넣어 버려, 전부 이번 달에 쌓이고 다른 날 다시
+// 가져오면 문서 ID(날짜 포함)가 달라져 중복이 생겼다. 이제는 그 행을 빼고 미리보기에서 알린다.
+function parseDate(raw) {
+  const s = String(raw ?? "").trim();
+  const m = s.match(/^(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/) ||
+            s.match(/^(\d{4})(\d{2})(\d{2})(?!\d)/);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (mo < 1 || mo > 12 || d < 1 || d > new Date(y, mo, 0).getDate()) return null;
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+// 반환: { rows, badDates: 날짜를 읽지 못해 뺀 행 수, reversed: 음수라 수입↔지출을 뒤집은 행 수 }
 function parseCSV(text) {
-  const lines   = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return [];
+  const result = { rows: [], badDates: 0, reversed: 0 };
+  const lines  = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return result;
 
   const headers = parseCsvLine(lines[0]);
 
@@ -99,22 +133,21 @@ function parseCSV(text) {
   const typeKey = headers.find(h => /구분|입출금/.test(h));
   const catKey  = headers.find(h => /카테고리/.test(h));
 
-  return lines.slice(1).reduce((acc, line) => {
+  for (const line of lines.slice(1)) {
     const vals = parseCsvLine(line);
-    if (vals.length < 2) return acc;
+    if (vals.length < 2) continue;
 
     const row    = Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
-    const amount = parseInt((row[amtKey] ?? "").replace(/[^0-9]/g, "")) || 0;
-    if (!amount) return acc;
+    const parsed = parseAmount(row[amtKey]);
+    if (!parsed?.amount) continue; // 금액 없는 행(소계·빈 줄 등)은 조용히 건너뜀
 
-    // 날짜 정규화 (YYYYMMDD / YYYY.MM.DD / YYYY-MM-DD → YYYY-MM-DD)
-    let date = (row[dateKey] ?? "")
-      .replace(/\./g, "-")
-      .replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = todayStr();
+    const date = parseDate(row[dateKey]);
+    if (!date) { result.badDates++; continue; }
 
-    const rawType = row[typeKey] ?? "";
-    const type    = /입금|수입/.test(rawType) ? "income" : "expense";
+    const baseType = /입금|수입/.test(row[typeKey] ?? "") ? "income" : "expense";
+    // 음수 금액은 반대 방향 거래 — 카드 지출의 음수는 환불(수입), 입금의 음수는 취소(지출)
+    const type = parsed.negative ? (baseType === "expense" ? "income" : "expense") : baseType;
+    if (parsed.negative) result.reversed++;
 
     const rawCat  = row[catKey] ?? "";
     // 카테고리 이름이 있으면 타입에 맞는 목록에서 찾고, 없으면 기타로
@@ -122,27 +155,40 @@ function parseCSV(text) {
       ? (incomeNameToId[rawCat] ?? "etc_in")
       : (categoryNameToId[rawCat] ?? "etc");
 
-    acc.push({
-      name:     row[nameKey] || "내역",
-      amount,
+    const merchant = row[nameKey] || "";
+    // 뒤집힌 행은 이름에 표시 — 같은 가맹점의 원래 거래와 구분되고, 목록에서도 바로 알아본다
+    const suffix = !parsed.negative ? "" : baseType === "expense" ? " 환불" : " 취소";
+    const label  = merchant ? `${merchant}${suffix}` : "";
+
+    result.rows.push({
+      name:     label || "내역",
+      amount:   parsed.amount,
       date,
       type,
       category,
       kind:     "variable",
-      memo:     row[nameKey] || "",
+      memo:     label,
+      idName:   merchant || "내역", // buildImportOps가 ID를 만들 때만 쓰고 저장하지 않음
     });
-    return acc;
-  }, []);
+  }
+  return result;
 }
 
 // ── 미리보기 렌더 ─────────────────────────────────────────────
 
-function renderPreview(rows) {
+function renderPreview({ rows, badDates, reversed }) {
   const preview = document.getElementById("csvPreview");
 
+  // 조용히 바뀌거나 빠지는 행이 없도록 미리보기에서 알린다
+  const notes = [
+    reversed ? `금액이 음수인 ${reversed}건은 환불·취소로 보고 반대 방향(지출↔수입)으로 가져옵니다.` : "",
+    badDates ? `날짜를 읽지 못한 ${badDates}건은 제외했습니다.` : "",
+  ].filter(Boolean).map(n => `<p class="csv-warn">${n}</p>`).join("");
+
   if (!rows.length) {
-    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">인식된 데이터가 없습니다. CSV 형식을 확인해주세요.</p>`;
+    preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">인식된 데이터가 없습니다. CSV 형식을 확인해주세요.</p>${notes}`;
     preview.classList.remove("hidden");
+    document.getElementById("csvImportConfirm").classList.add("hidden");
     return;
   }
 
@@ -180,6 +226,7 @@ function renderPreview(rows) {
     <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
       ${rows.length}건 인식됨
     </p>
+    ${notes}
     <div style="max-height:260px;overflow-y:auto">
       <table>
         <thead><tr><th>날짜</th><th>내용</th><th>금액</th><th>카테고리</th></tr></thead>
@@ -196,8 +243,9 @@ function renderPreview(rows) {
 function handleFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    parsedRows = parseCSV(e.target.result);
-    renderPreview(parsedRows);
+    const parsed = parseCSV(e.target.result);
+    parsedRows = parsed.rows;
+    renderPreview(parsed);
   };
   reader.readAsText(file, "euc-kr");
 }

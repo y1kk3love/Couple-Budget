@@ -147,6 +147,11 @@ Key invariants:
 
 The importer reads the uploaded file as **EUC-KR**, not UTF-8 (`reader.readAsText(file, "euc-kr")`) — a UTF-8 CSV with Korean headers/values will mojibake and fail header detection.
 
+Amounts and dates go through `parseAmount()` / `parseDate()`; `parseCSV()` returns `{rows, badDates, reversed}` and the preview shows both counts (`.csv-warn`), so nothing is changed or dropped silently:
+- **Sign is preserved.** `-15,000`, `−15,000`, and `(15,000)` are negative, and decimals are rounded, not concatenated. Junk characters such as 원, ₩, or broken symbols are stripped. A negative row flips direction: a card expense becomes an income row named `<가맹점> 환불`, and a negative 입금 becomes an expense named `<가맹점> 취소`. The old digits-only parser turned refunds into expenses and `12000.00` into 1,200,000.
+- **Unreadable dates are skipped and counted.** Accepted forms are `YYYY-MM-DD`, `.`/`/` separators, `2026. 9. 1`, `2026년 9월 1일`, and `YYYYMMDD`, with an optional trailing time. Impossible dates are rejected. The old fallback to today's date piled rows into the current month and duplicated them on re-import, because the date is part of the doc ID.
+- The doc ID still hashes the **original merchant name** (`idName`, stripped before saving), not the 환불/취소 label. The ID scheme is therefore unchanged, and re-importing an old file overwrites refunds that were previously mis-imported as expenses.
+
 ### Shinhan `.xls` → CSV preprocessing
 
 Raw Shinhan Card statements come as `.xls`, which `csvModal.js` cannot read. `tools/convert-shinhan-xls.ps1` converts them: it opens every `excel/*.xls` via the Excel COM object (so it requires Excel installed on Windows), drops cancelled rows, auto-categorizes each row with an industry+merchant keyword heuristic (`Get-Cat`, unmatched → `기타`), groups by `YYYY-MM`, and writes EUC-KR CSVs to `excel/converted/<YYYY-MM>.csv` with headers `날짜,가맹점,금액,구분,카테고리` — exactly what the importer's regex expects. To improve categorization, extend the keyword lists in `Get-Cat`. The `excel/` directory is gitignored (it holds personal statements).
