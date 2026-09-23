@@ -162,6 +162,8 @@ a:focus-visible {
 .login-logo { margin-bottom: 2rem; }
 .logo-icon { display: block; margin-bottom: 0.75rem; color: var(--accent); }
 .sidebar-header .logo-icon { margin-bottom: 0; }
+/* 로그인 박스는 text-align:center지만 block인 svg엔 적용되지 않아 하트만 왼쪽에 붙어 있었다 */
+.login-logo .logo-icon { margin: 0 auto 0.75rem; }
 .login-logo h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 0.4rem; }
 .login-logo p { font-size: 0.85rem; color: var(--text-2); }
 .google-btn {
