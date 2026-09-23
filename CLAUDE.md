@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 There is **no build step**. The app is plain ES modules served as static files; Firebase SDKs are loaded directly from `https://www.gstatic.com/firebasejs/10.12.0/`. ES modules won't load over `file://`, so `index.html` must be served over HTTP.
 
-**The owner's machine has neither Node nor Python** (verified 2026-09: `node`/`npx` absent from PATH and every usual install location; `python`/`python3`/`py` are the Windows Store stubs). So `npx http-server` and `python -m http.server` (both still mentioned in README) do not work here. Use the dependency-free PowerShell server in the repo:
+**The owner's machine has neither Node nor Python** (verified 2026-09: `node`/`npx` absent from PATH and every usual install location; `python`/`python3`/`py` are the Windows Store stubs). So `npx http-server` and `python -m http.server` (README lists them only as alternatives after the PowerShell server) do not work here. Use the dependency-free PowerShell server in the repo:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/serve.ps1 -Port 8000
@@ -106,7 +106,7 @@ The tx modal has no separate name input: a transaction's `name` is the trimmed m
 
 ### Firestore document shapes
 
-The field-by-field schemas for `transactions` and `fixed_items` docs are documented in `README.md` (§ Firestore 데이터 구조) — but those tables predate the newer optional fields (`owner` on transactions, `day` on fixed_items, the skip-marker shape), so treat the sections below as the authority on them. `day` is the day-of-month a fixed item materializes on, defaulting to 1 and clamped to 1–31 on save (`fixedModal.js`).
+The field-by-field schemas for `transactions` and `fixed_items` docs are documented in `README.md` (§ Firestore 데이터 구조), including `owner`, `day`, the skip-marker shape, `settings`, and `budget_plans`. README is user-facing, so this file stays the authority on invariants and the reasons behind them; update both when a schema changes. `day` is the day-of-month a fixed item materializes on, defaulting to 1 and clamped to 1–31 on save (`fixedModal.js`).
 
 Transactions additionally carry an optional `owner` (email of who entered it), written on manual add (`txModal.js`) and CSV import, but **not** on fixed-item materialization and never overwritten on edit. Legacy docs lack it — always treat missing `owner` as "함께/미지정" (the list view's 작성자 tag and the stats 사람별 지출 card both do). Display names resolve through `ownerName()` in `utils.js` (예산안 표시 이름 → email prefix fallback).
 
