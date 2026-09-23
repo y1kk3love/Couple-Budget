@@ -47,8 +47,8 @@ export function renderCalendarView() {
         </div>
         ${weddingByDay[d] ? `<div class="cal-event" title="${escapeHtml(weddingByDay[d].map(e => e.title).join(", "))}">💍 ${escapeHtml(weddingByDay[d][0].title)}${weddingByDay[d].length > 1 ? ` +${weddingByDay[d].length - 1}` : ""}</div>` : ""}
         <div class="cal-amounts">
-          ${dd?.inc > 0 ? `<div class="cal-inc">+${fmtMoneyShort(dd.inc)}</div>` : ""}
-          ${dd?.exp > 0 ? `<div class="cal-exp">-${fmtMoneyShort(dd.exp)}</div>` : ""}
+          ${dd?.inc > 0 ? `<div class="cal-inc"><span class="cal-sign">+</span>${fmtMoneyShort(dd.inc)}</div>` : ""}
+          ${dd?.exp > 0 ? `<div class="cal-exp"><span class="cal-sign">-</span>${fmtMoneyShort(dd.exp)}</div>` : ""}
         </div>
       </div>`;
   }).join("");

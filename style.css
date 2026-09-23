@@ -327,11 +327,13 @@ a:focus-visible {
 
 /* ── 달력 ── */
 .calendar-wrap { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); }
-.cal-head { display: grid; grid-template-columns: repeat(7,1fr); border-bottom: 1px solid var(--border); }
+/* minmax(0,1fr): 칸 내용(결혼 일정 라벨 등)이 열을 넓히지 못하게 — 예전엔 일·토 열만 71px로 벌어져
+   평일 칸이 40px로 눌리고 금액이 줄바꿈됐다 */
+.cal-head { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
 .cal-day-name { text-align: center; font-size: 0.75rem; font-weight: 500; color: var(--text-3); padding: 0.7rem 0; }
 .cal-day-name:first-child { color: var(--expense); }
 .cal-day-name:last-child { color: var(--saturday); }
-.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal-cell {
   border-top: 1px solid var(--border);
   padding: 6px 6px 8px; min-height: 80px; cursor: pointer;
@@ -1153,7 +1155,13 @@ a:focus-visible {
   .cal-cell { min-height: 58px; padding: 4px; position: relative; }
   /* 좁은 화면에서는 지출만 표시 — 수입은 우상단 파란 점으로 축약 */
   .cal-inc { display: none; }
-  .cal-exp { font-size: 0.7rem; }
+  .cal-exp { font-size: 0.7rem; white-space: nowrap; letter-spacing: -0.02em; }
+  /* 좁은 칸에선 부호를 눈으로는 숨긴다 — 빨강이 곧 지출이고 수입은 점으로 따로 표시된다.
+     화면 낭독기는 계속 읽도록 display:none 대신 시각적으로만 숨김 */
+  .cal-sign {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
   .cal-cell:has(.cal-inc)::after {
     content: ""; position: absolute; top: 6px; right: 6px;
     width: 5px; height: 5px; border-radius: 50%; background: var(--income);
