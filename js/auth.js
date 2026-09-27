@@ -28,8 +28,15 @@ export function setupAuth() {
   // 인증 상태 감지
   onAuthStateChanged(auth, async user => {
     const isAllowed = user && ALLOWED_EMAILS.includes(user.email);
+    const loginScreen = document.getElementById("loginScreen");
 
-    document.getElementById("loginScreen").classList.toggle("hidden", isAllowed);
+    // 첫 호출 = 저장된 세션 복원 끝. 그 전엔 로그인 버튼을 막아 둔다 (index.html의 auth-pending) —
+    // 복원 중에 누르면 팝업이 열린 채로 뒤에서 이미 로그인된 앱이 떴다
+    loginScreen.classList.remove("auth-pending");
+    loginScreen.removeAttribute("aria-busy");
+    document.getElementById("googleLoginBtn").disabled = false;
+
+    loginScreen.classList.toggle("hidden", isAllowed);
     document.getElementById("app").classList.toggle("hidden", !isAllowed);
 
     if (isAllowed) {

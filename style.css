@@ -1374,3 +1374,13 @@ a:focus-visible {
   box-shadow: var(--shadow-card); padding: 1.1rem 1.25rem; margin-bottom: 10px;
 }
 .skeleton.tall { height: 72px; border-radius: 12px; }
+
+/* 로그인 버튼 — 저장된 세션을 복원하는 동안(auth-pending)은 같은 크기의 스켈레톤.
+   이때 누르면 팝업이 열린 채 뒤에서 이미 로그인된 앱이 떠 버렸다. 버튼은 disabled라 클릭·포커스도 안 된다 */
+.login-screen.auth-pending .google-btn {
+  opacity: 1; color: transparent; border-color: transparent;
+  background: linear-gradient(90deg, var(--surface2) 0%, var(--surface3) 50%, var(--surface2) 100%);
+  background-size: 200% 100%;
+  animation: m-shimmer 1.4s linear infinite;
+}
+.login-screen.auth-pending .google-btn svg { visibility: hidden; }
