@@ -8,6 +8,7 @@ import { CATEGORIES } from "../constants.js";
 import { fetchBudgetPlans, saveBudgetPlan } from "../db.js";
 import { renderAll } from "../app.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
+import { animateCount } from "../motion.js";
 
 // 항목 색은 파스텔 팔레트를 순서대로 자동 배정
 const PLAN_COLORS = CATEGORIES.expense.map(c => c.color);
@@ -47,6 +48,11 @@ export function renderPlanView() {
 
   bindSortEvents(container);
   bindEvents(container, myEmail);
+  // 도넛 가운데 남은 금액이 바뀌면 굴러가며 바뀐다 (토스)
+  container.querySelectorAll(".plan-donut-val[data-count]").forEach(el => {
+    const v = Number(el.dataset.count);
+    animateCount(el, el.dataset.countKey, v, n => `${n < 0 ? "-" : ""}${fmtMoney(n)}`);
+  });
 }
 
 function getPlan(email) {
@@ -152,7 +158,7 @@ function renderCard(email, isMine) {
         <span class="plan-title">${title}${meTag}</span>
         <span class="plan-sub">${sub} · 월급 ${fmtMoney(plan.income)}원</span>
       </div>
-      <div class="plan-donut-wrap">${donutSVG(plan.income, items, remain)}</div>
+      <div class="plan-donut-wrap">${donutSVG(plan.income, items, remain, email)}</div>
       <div class="plan-rows">${rows}</div>
       ${isMine ? `<button class="plan-edit-btn" id="planEditBtn">수정</button>` : ""}
     </div>`;
@@ -161,7 +167,7 @@ function renderCard(email, isMine) {
 // ── 도넛 차트 ─────────────────────────────────────────────────
 // items는 sortedItems()를 거친 배열(색 포함) — 세그먼트 순서가 행 순서와 일치한다.
 
-function donutSVG(income, items, remain) {
+function donutSVG(income, items, remain, owner = "") {
   const total = items.reduce((s, i) => s + i.amount, 0);
   const over  = remain < 0;
   // 초과 시에는 배정 합계를 100%로 놓고 비율만 보여준다
@@ -170,7 +176,7 @@ function donutSVG(income, items, remain) {
   let off = 0;
   const segs = items.map(it => {
     const len = base > 0 ? (it.amount / base) * DONUT_C : 0;
-    const seg = `<circle cx="70" cy="70" r="54" stroke="${it.color}"
+    const seg = `<circle class="plan-donut-seg" cx="70" cy="70" r="54" stroke="${it.color}"
       stroke-dasharray="${len} ${DONUT_C}" stroke-dashoffset="${-off}"/>`;
     off += len;
     return seg;
@@ -187,7 +193,8 @@ function donutSVG(income, items, remain) {
         ${segs}
       </g>
       <text x="70" y="63" text-anchor="middle" class="plan-donut-lbl">${centerLabel}</text>
-      <text x="70" y="82" text-anchor="middle" class="plan-donut-val" style="fill:${centerColor}">${centerVal}</text>
+      <text x="70" y="82" text-anchor="middle" class="plan-donut-val" style="fill:${centerColor}"
+        data-count="${remain}" data-count-key="plan-remain:${escapeHtml(owner)}">${centerVal}</text>
     </svg>`;
 }
 

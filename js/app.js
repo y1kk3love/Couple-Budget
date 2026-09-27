@@ -25,6 +25,13 @@ import { renderWeddingView, setWeddingSegment, markWeddingStale, weddingAddActio
 import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 import { startSync } from "./sync.js";
+import {
+  playEntrance, slideLabel, animateCount, animateWidth, setupSegmentThumbs, setupSheetDrag
+} from "./motion.js";
+
+// 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
+// null: 없음. 실시간 갱신·저장 후 다시 그릴 때는 움직이지 않도록 탐색할 때만 설정한다.
+let pendingEntrance = null;
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -34,6 +41,7 @@ let listenersBound = false;
 
 export async function initApp() {
   updateMonthLabel();
+  pendingEntrance = 0; // 로그인 직후 첫 화면도 차례로 떠오르며 등장
   // 리스너를 데이터 로드보다 먼저 건다 — 예전에는 로드 뒤에 걸어서, 첫 로드가 실패하면
   // (오프라인·색인 누락 등) 월 이동·탭 전환 버튼이 그 세션 내내 먹통이었다
   if (!listenersBound) {
@@ -59,8 +67,8 @@ export async function initApp() {
 export function resetSessionUI() {
   resetPlanEdit();
   // 열린 모달은 각자의 닫기 버튼으로 닫아 모달별 정리 로직을 태운다 (확인 다이얼로그는 취소)
-  document.querySelector(".confirm-overlay .confirm-cancel")?.click();
-  document.querySelectorAll(".modal-overlay:not(.hidden) .modal-close").forEach(b => b.click());
+  document.querySelector(".confirm-overlay:not(.is-closing) .confirm-cancel")?.click();
+  document.querySelectorAll(".modal-overlay:not(.hidden):not(.is-closing) .modal-close").forEach(b => b.click());
 }
 
 // ── 상대 기기의 변경 반영 (sync.js가 호출) ─────────────────────
@@ -139,15 +147,19 @@ export function renderAll() {
   // 월 데이터 로드가 실패한 상태면 월 화면 대신 안내 (예산안·결혼은 각자 따로 읽으므로 그대로 그림)
   if (loadError && !MONTHLESS_VIEWS[state.currentView]) {
     renderLoadError(document.getElementById(`view-${state.currentView}`));
-    return;
+  } else {
+    switch (state.currentView) {
+      case "calendar": renderCalendarView(); break;
+      case "list":     renderListView();     break;
+      case "stats":    renderStatsView();    break;
+      case "fixed":    renderFixedView();    break;
+      case "plan":     renderPlanView();     break;
+      case "wedding":  renderWeddingView();  break;
+    }
   }
-  switch (state.currentView) {
-    case "calendar": renderCalendarView(); break;
-    case "list":     renderListView();     break;
-    case "stats":    renderStatsView();    break;
-    case "fixed":    renderFixedView();    break;
-    case "plan":     renderPlanView();     break;
-    case "wedding":  renderWeddingView();  break;
+  if (pendingEntrance !== null) {
+    playEntrance(document.getElementById(`view-${state.currentView}`), pendingEntrance);
+    pendingEntrance = null;
   }
 }
 
@@ -214,28 +226,44 @@ async function renderSummary() {
   // 토스식 위계: 이번달 잔액을 주인공으로 크게, 수입·지출은 한 카드에 2줄로.
   // 순서: 잔액 → 예산 → 수입·지출 → 누적 — 가장 행동을 부르는 예산 카드를 둘째로.
   // 예전에는 예산이 마지막이라 모바일 가로 스크롤에서 화면 밖(네 번째 칸)에 숨어 있었다
-  document.getElementById("summaryBar").innerHTML = `
+  // data-count*: 금액이 바뀌면 이전 값에서 굴러가며 바뀐다 (토스). 월 이동·저장·상대 변경 모두
+  const bar = document.getElementById("summaryBar");
+  bar.innerHTML = `
     <div class="sum-card hero">
       <div class="lbl">이번달 잔액</div>
-      <div class="val ${balanceClass}">${balanceSign}${fmtMoney(balance)}원</div>
+      <div class="val ${balanceClass}" data-count="${balance}" data-count-key="sum-balance" data-count-fmt="signed">${balanceSign}${fmtMoney(balance)}원</div>
       <div class="sub">${state.currentMonth}월 수입 − 지출</div>
     </div>
     ${renderBudgetCard(totalExpense)}
     <div class="sum-card duo">
-      <div class="duo-row"><span class="lbl">수입</span><span class="duo-val income">${totalIncome > 0 ? "+" : ""}${fmtMoney(totalIncome)}원</span></div>
-      <div class="duo-row"><span class="lbl">지출</span><span class="duo-val expense">${totalExpense > 0 ? "-" : ""}${fmtMoney(totalExpense)}원</span></div>
+      <div class="duo-row"><span class="lbl">수입</span><span class="duo-val income" data-count="${totalIncome}" data-count-key="sum-income" data-count-fmt="plus">${totalIncome > 0 ? "+" : ""}${fmtMoney(totalIncome)}원</span></div>
+      <div class="duo-row"><span class="lbl">지출</span><span class="duo-val expense" data-count="${totalExpense}" data-count-key="sum-expense" data-count-fmt="minus">${totalExpense > 0 ? "-" : ""}${fmtMoney(totalExpense)}원</span></div>
     </div>
     <div class="sum-card">
       <div class="lbl">누적 잔액</div>
       ${accum === null
         ? `<div class="val neutral">—</div><div class="sub">불러오지 못함</div>`
-        : `<div class="val ${accumClass}">${accumSign}${fmtMoney(accumTotal)}원</div>
+        : `<div class="val ${accumClass}" data-count="${accumTotal}" data-count-key="sum-accum" data-count-fmt="signed">${accumSign}${fmtMoney(accumTotal)}원</div>
       <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>`}
     </div>`;
+
+  bar.querySelectorAll("[data-count]").forEach(el =>
+    animateCount(el, el.dataset.countKey, Number(el.dataset.count), COUNT_FORMATS[el.dataset.countFmt])
+  );
+  const budgetFill = bar.querySelector(".budget-pbar .pfill");
+  if (budgetFill) animateWidth(budgetFill, "sum-budget-bar", parseFloat(budgetFill.style.width));
 
   // 예산 카드 클릭 → 설정 모달 (innerHTML 재생성이므로 매번 다시 바인딩)
   document.getElementById("budgetCard").addEventListener("click", openBudgetModal);
 }
+
+// 굴러가는 숫자의 표기 — 렌더한 문자열과 같은 규칙 (부호 + 금액 + 원)
+const COUNT_FORMATS = {
+  signed: v => `${v > 0 ? "+" : v < 0 ? "-" : ""}${fmtMoney(v)}원`, // 잔액: +/- 둘 다
+  plus:   v => `${v > 0 ? "+" : ""}${fmtMoney(v)}원`,               // 수입
+  minus:  v => `${v > 0 ? "-" : ""}${fmtMoney(v)}원`,               // 지출
+  neg:    v => `${v < 0 ? "-" : ""}${fmtMoney(v)}원`,               // 예산 남음/초과
+};
 
 // ── 예산 카드 ─────────────────────────────────────────────────
 
@@ -267,7 +295,7 @@ function renderBudgetCard(totalExpense) {
   return `
     <div class="sum-card budget-card" id="budgetCard" role="button" tabindex="0" title="클릭해서 월 예산 수정">
       <div class="lbl">예산 ${over ? "초과" : "남음"}</div>
-      <div class="val ${valClass}">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
+      <div class="val ${valClass}" data-count="${remaining}" data-count-key="sum-budget" data-count-fmt="neg">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
       <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
       <div class="sub">${subText}</div>
     </div>`;
@@ -323,21 +351,25 @@ async function changeMonth(delta) {
   state.currentMonth += delta;
   if (state.currentMonth < 1)  { state.currentMonth = 12; state.currentYear--; }
   if (state.currentMonth > 12) { state.currentMonth = 1;  state.currentYear++; }
-  updateMonthLabel();
+  pendingEntrance = Math.sign(delta); // 넘긴 방향에서 새 달이 밀려 들어온다 (iOS 달력)
+  updateMonthLabel(Math.sign(delta));
   await loadAllData();
 }
 
 export async function setMonth(year, month) {
   if (year === state.currentYear && month === state.currentMonth) return;
+  const dir = Math.sign((year * 12 + month) - (state.currentYear * 12 + state.currentMonth));
   state.currentYear  = year;
   state.currentMonth = month;
-  updateMonthLabel();
+  pendingEntrance = dir;
+  updateMonthLabel(dir);
   await loadAllData();
 }
 
-function updateMonthLabel() {
-  document.getElementById("currentMonthLabel").textContent =
-    `${state.currentYear}년 ${state.currentMonth}월`;
+function updateMonthLabel(dir = 0) {
+  const label = document.getElementById("currentMonthLabel");
+  label.textContent = `${state.currentYear}년 ${state.currentMonth}월`;
+  slideLabel(label, dir);
 }
 
 // ── 뷰 전환 ───────────────────────────────────────────────────
@@ -364,6 +396,7 @@ function switchView(view) {
     b.classList.toggle("active", b.dataset.view === view)
   );
 
+  pendingEntrance = 0; // 새 화면의 카드·행이 차례로 떠오른다
   renderAll();
 }
 
@@ -372,8 +405,8 @@ function switchView(view) {
 function setupGlobalKeys() {
   document.addEventListener("keydown", e => {
     // Esc → 열려 있는 모달 닫기 (확인 다이얼로그는 utils.js에서 자체 처리)
-    if (e.key === "Escape" && !document.querySelector(".confirm-overlay")) {
-      const open = document.querySelector(".modal-overlay:not(.hidden)");
+    if (e.key === "Escape" && !document.querySelector(".confirm-overlay:not(.is-closing)")) {
+      const open = document.querySelector(".modal-overlay:not(.hidden):not(.is-closing)");
       // 각 모달의 닫기 버튼을 눌러 모달별 정리 로직(초기화 등)을 그대로 태운다
       open?.querySelector(".modal-close")?.click();
       return;
@@ -396,10 +429,12 @@ function setupMobileMenu() {
     sidebar.classList.toggle("open");
   });
 
-  // 사이드바 외부 클릭 시 닫기
+  // 서랍 안의 항목을 누르면 닫기
   sidebar.addEventListener("click", () => {
     if (window.innerWidth <= 768) sidebar.classList.remove("open");
   });
+  // 서랍 밖(어두운 막)을 누르면 닫기
+  document.getElementById("sidebarScrim").addEventListener("click", () => sidebar.classList.remove("open"));
 }
 
 // ── CSV 내보내기 ──────────────────────────────────────────────
@@ -430,6 +465,8 @@ async function exportAllCsv() {
 
 setupAuth();
 setupThemeToggle();
+setupSegmentThumbs(); // 세그먼트 컨트롤 슬라이딩 배경 (어느 화면이든 자동)
+setupSheetDrag();     // 모바일 바텀시트 끌어서 닫기
 document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
 document.getElementById("sideExportBtn").addEventListener("click", exportAllCsv); // 모바일 햄버거 메뉴
 document.getElementById("addTxBtn").addEventListener("click", onAddClick);

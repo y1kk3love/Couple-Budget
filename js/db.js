@@ -103,9 +103,11 @@ export async function fetchTransactions() {
   state.transactionsYM  = ymKey(y, m);
 }
 
+// 반환: 새 문서 ID (저장 직후 그 행을 반짝여 보여 주는 데 쓴다)
 export async function addTransaction(data) {
-  await addDoc(collection(db, "transactions"), data);
+  const ref = await addDoc(collection(db, "transactions"), data);
   invalidateBalanceCache();
+  return ref.id;
 }
 
 export async function updateTransaction(id, data) {
@@ -185,9 +187,11 @@ export async function moveFixedTransaction(id, tx, data) {
   });
   const moved = { ...data };
   if (tx.owner) moved.owner = tx.owner;
-  batch.set(doc(collection(db, "transactions")), moved);
+  const movedRef = doc(collection(db, "transactions"));
+  batch.set(movedRef, moved);
   await batch.commit();
   invalidateBalanceCache();
+  return movedRef.id; // 옮긴 거래의 새 ID
 }
 
 // ── 고정비 ────────────────────────────────────────────────────

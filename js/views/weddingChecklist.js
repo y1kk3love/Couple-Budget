@@ -10,6 +10,9 @@ import { toggleWeddingTask, seedWeddingChecklist, fetchWeddingTasks } from "../w
 import { renderWeddingView } from "./wedding.js";
 import { openWeddingTaskModal } from "../modals/weddingModal.js";
 
+// 방금 완료로 체크한 할 일 — 다시 그린 뒤 그 행의 체크가 톡 튀어 오른다 (한 번만)
+let popTaskId = null;
+
 export function renderChecklistSegment(container) {
   const tasks = state.wedding.tasks;
 
@@ -31,7 +34,7 @@ export function renderChecklistSegment(container) {
       const list = tasks.filter(t => t.period === p.id);
       if (!list.length) return "";
       const rows = list.map(t => `
-        <div class="wd-task-row ${t.done ? "done" : ""}" data-task-id="${escapeHtml(t.id)}" role="button" tabindex="0">
+        <div class="wd-task-row ${t.done ? "done" : ""}${t.done && t.id === popTaskId ? " m-pop" : ""}" data-task-id="${escapeHtml(t.id)}" role="button" tabindex="0">
           <label class="wd-task-chk-hit"><input type="checkbox" class="wd-task-chk" data-chk-id="${escapeHtml(t.id)}" ${t.done ? "checked" : ""} aria-label="완료 표시" /></label>
           <span class="wd-task-title">${escapeHtml(t.title)}</span>
           ${t.memo ? `<span class="wd-task-memo">${escapeHtml(t.memo)}</span>` : ""}
@@ -52,6 +55,8 @@ export function renderChecklistSegment(container) {
       ${groups}
       <button class="add-fixed-btn" id="wdTaskAddBtn">+ 할 일 추가</button>`;
   }
+
+  popTaskId = null;
 
   // ── 바인딩 ──────────────────────────────────────────────────
 
@@ -82,6 +87,7 @@ export function renderChecklistSegment(container) {
         chk.checked = !chk.checked; // 실패 시 원상 복구
         return;
       }
+      if (chk.checked) popTaskId = chk.dataset.chkId;
       await fetchWeddingTasks();
       renderWeddingView();
     });

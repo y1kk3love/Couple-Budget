@@ -5,6 +5,7 @@
 import { db } from "../../firebase.js";
 import { doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import state from "../state.js";
+import { openOverlay, closeOverlay } from "../motion.js";
 import { showToast, fmtMoney, escapeHtml } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { fetchTransactions, invalidateBalanceCache } from "../db.js";
@@ -51,11 +52,9 @@ function buildImportOps(rows) {
 
 // ── 열기/닫기 ─────────────────────────────────────────────────
 
-function openModal()  { document.getElementById("csvModal").classList.remove("hidden"); }
-function closeModal() {
-  document.getElementById("csvModal").classList.add("hidden");
-  resetModal();
-}
+// 초기화는 열 때 한다 — 닫는 애니메이션 도중 미리보기가 사라지면 시트가 덜컥 줄어든다
+function openModal()  { resetModal(); openOverlay(document.getElementById("csvModal")); }
+function closeModal() { closeOverlay(document.getElementById("csvModal")); }
 
 function resetModal() {
   parsedRows = [];

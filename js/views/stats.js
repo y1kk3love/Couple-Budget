@@ -3,6 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
+import { openOverlay, closeOverlay } from "../motion.js";
 import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName } from "../utils.js";
 import { getCategoryInfo, CATEGORIES, OWNER_COLORS } from "../constants.js";
 import { fetchMonthlySummary } from "../db.js";
@@ -22,7 +23,7 @@ export function renderStatsView() {
     <div class="stats-grid">
       <div class="stats-card full" id="monthly-compare-card">
         <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 카테고리별 지출</h4>
-        <p class="monthly-loading">불러오는 중…</p>
+        <div class="monthly-loading" aria-label="불러오는 중"><span class="skeleton tall"></span><span class="skeleton" style="width:60%"></span></div>
       </div>
       ${renderCategoryBars(expTxs)}
       ${renderFixedVsVariable(expTxs)}
@@ -53,7 +54,7 @@ function renderMonthlyChart(summary) {
   summary.forEach(s => Object.keys(s.expenseByCategory).forEach(id => usedCategoryIds.add(id)));
   const usedCategories = CATEGORIES.expense.filter(c => usedCategoryIds.has(c.id));
 
-  const cols = summary.map(s => {
+  const cols = summary.map((s, idx) => {
     const totalH = (s.expense / max) * 100;
     // 카테고리 정의 순서대로 쌓아 색상 패턴이 6개월 내내 일관됨
     const segments = CATEGORIES.expense
@@ -66,7 +67,7 @@ function renderMonthlyChart(summary) {
 
     const isCurrent = s.year === state.currentYear && s.month === state.currentMonth;
     return `
-      <div class="mc-col${isCurrent ? " current" : ""}" data-year="${s.year}" data-month="${s.month}"
+      <div class="mc-col${isCurrent ? " current" : ""}" style="--c:${idx}" data-year="${s.year}" data-month="${s.month}"
         role="button" tabindex="0" aria-label="${s.year}년 ${s.month}월로 이동">
         <div class="mc-stack-wrap">
           <div class="mc-stack" style="height:${totalH}%">${segments}</div>
@@ -136,11 +137,11 @@ function openCategoryDetail(catId) {
     });
   }
 
-  document.getElementById("categoryDetailModal").classList.remove("hidden");
+  openOverlay(document.getElementById("categoryDetailModal"));
 }
 
 function closeCategoryDetail() {
-  document.getElementById("categoryDetailModal").classList.add("hidden");
+  closeOverlay(document.getElementById("categoryDetailModal"));
 }
 
 export function setupCategoryDetailModal() {

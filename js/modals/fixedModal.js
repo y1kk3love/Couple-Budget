@@ -3,6 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
+import { openOverlay, closeOverlay } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, runWrite } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import {
@@ -35,7 +36,7 @@ export function openFixedEditModal(id) {
   populateFixedCategorySelect(type);
   if (item) document.getElementById("fixedEditCategory").value = item.category;
 
-  document.getElementById("fixedEditModal").classList.remove("hidden");
+  openOverlay(document.getElementById("fixedEditModal"));
 }
 
 // ── 내부 헬퍼 ─────────────────────────────────────────────────
@@ -61,7 +62,7 @@ function populateFixedCategorySelect(type) {
 }
 
 function closeModal() {
-  document.getElementById("fixedEditModal").classList.add("hidden");
+  closeOverlay(document.getElementById("fixedEditModal"));
 }
 
 // ── 이벤트 바인딩 ─────────────────────────────────────────────

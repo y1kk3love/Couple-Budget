@@ -3,6 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
+import { openOverlay, closeOverlay } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName, runWrite } from "../utils.js";
 import { WEDDING_CATEGORIES, WEDDING_PERIODS, getWeddingCategory } from "../constants.js";
 import {
@@ -40,11 +41,11 @@ export function openWeddingSettingsModal() {
   const cfg = state.wedding.config ?? {};
   document.getElementById("wdDate").value     = cfg.date ?? "";
   document.getElementById("wdSheetUrl").value = cfg.sheetUrl ?? "";
-  document.getElementById("weddingSettingsModal").classList.remove("hidden");
+  openOverlay(document.getElementById("weddingSettingsModal"));
 }
 
 function closeSettings() {
-  document.getElementById("weddingSettingsModal").classList.add("hidden");
+  closeOverlay(document.getElementById("weddingSettingsModal"));
 }
 
 // ── 예산 항목 모달 ────────────────────────────────────────────
@@ -64,11 +65,11 @@ export function openWeddingItemModal(item) {
   populatePayerSelect(item?.payer ?? "both");
   document.getElementById("wdItemMemo").value    = item?.memo ?? "";
   renderPayments();
-  document.getElementById("weddingItemModal").classList.remove("hidden");
+  openOverlay(document.getElementById("weddingItemModal"));
 }
 
 function closeItem() {
-  document.getElementById("weddingItemModal").classList.add("hidden");
+  closeOverlay(document.getElementById("weddingItemModal"));
 }
 
 function populateCategorySelect(selected) {
@@ -106,11 +107,11 @@ export function openWeddingTaskModal(task) {
   sel.value = task?.period ?? WEDDING_PERIODS[0].id;
 
   document.getElementById("wdTaskMemo").value = task?.memo ?? "";
-  document.getElementById("weddingTaskModal").classList.remove("hidden");
+  openOverlay(document.getElementById("weddingTaskModal"));
 }
 
 function closeTask() {
-  document.getElementById("weddingTaskModal").classList.add("hidden");
+  closeOverlay(document.getElementById("weddingTaskModal"));
 }
 
 // ── 업체 모달 ─────────────────────────────────────────────────
@@ -133,11 +134,11 @@ export function openWeddingVendorModal(vendor) {
   document.getElementById("wdVendorPrice").value   = vendor?.price || "";
   document.getElementById("wdVendorContact").value = vendor?.contact ?? "";
   document.getElementById("wdVendorMemo").value    = vendor?.memo ?? "";
-  document.getElementById("weddingVendorModal").classList.remove("hidden");
+  openOverlay(document.getElementById("weddingVendorModal"));
 }
 
 function closeVendor() {
-  document.getElementById("weddingVendorModal").classList.add("hidden");
+  closeOverlay(document.getElementById("weddingVendorModal"));
 }
 
 // 모달 입력값을 업체 데이터로 수집
@@ -164,11 +165,11 @@ export function openWeddingEventModal(event, prefillDate = null) {
   document.getElementById("wdEventDate").value  = event?.date ?? prefillDate ?? todayStr();
   document.getElementById("wdEventTime").value  = event?.time ?? "";
   document.getElementById("wdEventMemo").value  = event?.memo ?? "";
-  document.getElementById("weddingEventModal").classList.remove("hidden");
+  openOverlay(document.getElementById("weddingEventModal"));
 }
 
 function closeEvent() {
-  document.getElementById("weddingEventModal").classList.add("hidden");
+  closeOverlay(document.getElementById("weddingEventModal"));
 }
 
 // ── 결제 내역 (모달 안 동적 렌더) ─────────────────────────────

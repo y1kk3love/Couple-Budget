@@ -47,14 +47,27 @@ export function todayStr() {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-/** 토스트 알림 표시 */
+/** 토스트 알림 표시 — 아래에서 스프링으로 떠오르고(.toast:not(.hidden)), 가라앉으며 사라진다(.toast-out).
+ *  이미 떠 있는 동안 새 메시지가 오면 톡 튕겨(.toast-bump) 바뀐 것을 알린다. */
 let toastTimer = null;
+let toastOutTimer = null;
 export function showToast(msg) {
   const toast = document.getElementById("toast");
+  const showing = !toast.classList.contains("hidden") && !toast.classList.contains("toast-out");
   toast.textContent = msg;
-  toast.classList.remove("hidden");
   clearTimeout(toastTimer); // 연속 호출 시 이전 타이머가 새 토스트를 조기에 숨기는 것 방지
-  toastTimer = setTimeout(() => toast.classList.add("hidden"), 2200);
+  clearTimeout(toastOutTimer);
+  toast.classList.remove("toast-out", "toast-bump");
+  if (showing) {
+    void toast.offsetWidth; // 같은 클래스를 다시 붙여도 애니메이션이 재생되도록
+    toast.classList.add("toast-bump");
+  } else {
+    toast.classList.remove("hidden");
+  }
+  toastTimer = setTimeout(() => {
+    toast.classList.add("toast-out");
+    toastOutTimer = setTimeout(() => toast.classList.add("hidden"), 200);
+  }, 2200);
 }
 
 /** 저장·삭제 버튼 공통 실행기.
@@ -138,9 +151,14 @@ export function showConfirm(message, { confirmText = "확인", danger = true } =
         </div>
       </div>`;
     const prevFocus = document.activeElement;
+    let settled = false;
     const done = ok => {
+      if (settled) return;
+      settled = true;
       document.removeEventListener("keydown", onKey, true);
-      overlay.remove();
+      // 결과는 바로 돌려주고, 창은 작아지며 사라진 뒤 제거한다 (.is-closing — style.css 모션)
+      overlay.classList.add("is-closing");
+      setTimeout(() => overlay.remove(), 200);
       if (prevFocus instanceof HTMLElement) prevFocus.focus(); // 원래 위치로 포커스 복원
       resolve(ok);
     };

@@ -3,6 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
+import { openOverlay, closeOverlay, flash, reducedMotion } from "../motion.js";
 import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml, runWrite } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName, moveFixedTransaction } from "../db.js";
@@ -28,7 +29,7 @@ export function openAddModal(dateStr = null) {
 
   setType("expense");
   setKind("variable");
-  document.getElementById("txModal").classList.remove("hidden");
+  openOverlay(document.getElementById("txModal"));
   // 가장 먼저 입력하는 금액 칸에 바로 포커스 (모바일에선 숫자 키패드가 뜬다)
   document.getElementById("txAmount").focus();
 
@@ -57,11 +58,11 @@ export function openEditModal(id, tx = null) {
   setType(t.type); // 칩도 이 타입으로 다시 그린다
   setCategory(t.category);
   setKind(t.kind ?? "variable");
-  document.getElementById("txModal").classList.remove("hidden");
+  openOverlay(document.getElementById("txModal"));
 
   // 최근 3개월 유사 이름 내역 패널 (비동기)
   const panel = document.getElementById("txContextPanel");
-  panel.innerHTML = `<p class="ctx-loading">불러오는 중…</p>`;
+  panel.innerHTML = `<div class="ctx-loading" aria-label="불러오는 중"><span class="skeleton" style="width:40%"></span><span class="skeleton" style="width:85%"></span></div>`;
   panel.classList.remove("hidden");
   fetchRecentTransactionsByName(t.name, id, 3).then(txs => {
     renderContextPanel(txs.length ? `'${escapeHtml(t.name)}' 최근 3개월 내역` : null, txs);
@@ -121,10 +122,27 @@ function setCategory(id) {
   });
 }
 
+// 방금 저장한 거래를 반짝여 어디에 들어갔는지 보여 준다 (토스).
+// 목록이면 그 행을 화면 안으로 가져와 반짝이고, 달력이면 그 날짜 칸을 반짝인다.
+function flashSaved(id, date) {
+  const view = document.querySelector(".view.active");
+  if (!view) return;
+  const row = id ? view.querySelector(`.tx-item[data-id="${CSS.escape(id)}"]`) : null;
+  if (row) {
+    row.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+    flash(row);
+    return;
+  }
+  const [y, m, d] = (date ?? "").split("-").map(Number);
+  if (y === state.currentYear && m === state.currentMonth) {
+    flash(view.querySelector(`.cal-cell[data-day="${d}"]`));
+  }
+}
+
+// 기존 내역 패널은 비우지 않는다 — 닫히는 애니메이션 동안 내용이 먼저 사라지면 시트가 덜컥 줄어든다.
+// 열 때마다 openAddModal/openEditModal이 패널을 새로 채우거나 숨긴다.
 function closeModal() {
-  document.getElementById("txModal").classList.add("hidden");
-  document.getElementById("txContextPanel").classList.add("hidden");
-  document.getElementById("txContextPanel").innerHTML = "";
+  closeOverlay(document.getElementById("txModal"));
 }
 
 function renderContextPanel(title, txs) {
@@ -204,6 +222,7 @@ export function setupTxModal() {
 
     // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
     let toastMsg;
+    let savedId = null; // 저장한 거래 ID — 다시 그린 뒤 그 행(달력은 그 날짜 칸)을 반짝인다
     const ok = await runWrite(e.currentTarget, async () => {
       if (editingTxId) {
         const prev = editingTx;
@@ -211,8 +230,8 @@ export function setupTxModal() {
         // (결정적 ID를 그대로 두면 원래 달 방문 시 고정비가 다시 생성되며 옮긴 거래를 덮어쓴다)
         const movedFixed = prev?.fromFixed && prev.fixedId &&
           (prev.year !== data.year || prev.month !== data.month);
-        if (movedFixed) await moveFixedTransaction(editingTxId, prev, data);
-        else            await updateTransaction(editingTxId, data);
+        if (movedFixed) savedId = await moveFixedTransaction(editingTxId, prev, data);
+        else          { await updateTransaction(editingTxId, data); savedId = editingTxId; }
 
         // 카테고리를 바꿨으면 같은 이름의 거래 전체(전 기간)에 전파
         let synced = 0;
@@ -221,7 +240,7 @@ export function setupTxModal() {
         }
         toastMsg = synced > 0 ? `수정되었습니다 · 같은 이름 ${synced}건 카테고리 변경` : "수정되었습니다";
       } else {
-        await addTransaction(data);
+        savedId = await addTransaction(data);
         toastMsg = "추가되었습니다";
       }
     });
@@ -231,6 +250,9 @@ export function setupTxModal() {
     showToast(toastMsg);
     await fetchTransactions();
     renderAll();
+    // 전체 기간 목록은 한 박자 늦게(프로미스 뒤) 그려지므로 다음 작업에서 찾는다.
+    // (requestAnimationFrame은 숨겨진 탭에서 멈춰 쓰지 않는다)
+    setTimeout(() => flashSaved(savedId, data.date), 0);
   });
 
   // 삭제

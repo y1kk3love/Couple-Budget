@@ -43,6 +43,27 @@
   --mono: 'Pretendard', -apple-system, sans-serif;
 }
 
+/* ── 모션 토큰 (iOS·토스 참고) — 테마와 무관해 여기 한 번만 정의 ──
+   ease-out: 대부분의 등장 / ease-in: 퇴장 / ease-sheet: iOS 바텀시트 곡선
+   ease-spring: 약 4% 튀는 스프링(누름 복귀·세그먼트) / ease-bounce: 약 13% (체크 강조) */
+:root {
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);  /* linear()를 모르는 브라우저용 근사 */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* 감쇠 스프링을 샘플링한 곡선 (감쇠비 0.72 / 0.55) */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(0, 0.054 4.2%, 0.18 8.3%, 0.337 12.5%, 0.497 16.7%, 0.642 20.8%, 0.764 25%, 0.861 29.2%, 0.932 33.3%, 0.981 37.5%, 1.013 41.7%, 1.03 45.8%, 1.037 50%, 1.038 54.2%, 1.035 58.3%, 1.029 62.5%, 1.023 66.7%, 1.017 70.8%, 1.012 75%, 1.008 79.2%, 1.004 83.3%, 1.002 87.5%, 1 91.7%, 0.999 95.8%, 1);
+    --ease-bounce: linear(0, 0.092 4.2%, 0.3 8.3%, 0.543 12.5%, 0.765 16.7%, 0.937 20.8%, 1.051 25%, 1.11 29.2%, 1.126 33.3%, 1.115 37.5%, 1.089 41.7%, 1.058 45.8%, 1.03 50%, 1.008 54.2%, 0.994 58.3%, 0.986 62.5%, 0.984 66.7%, 0.985 70.8%, 0.989 75%, 0.993 79.2%, 0.996 83.3%, 0.999 87.5%, 1.001 91.7%, 1.002 95.8%, 1);
+  }
+}
+
 /* 다크 모드 — 기본은 시스템 설정을 따르고, 헤더 토글 버튼(js/theme.js)이
    <html data-theme="light|dark">를 달면 그 값이 우선한다.
    ⚠ 아래 미디어쿼리 블록과 :root[data-theme="dark"] 블록은 같은 토큰 사본 —
@@ -122,7 +143,9 @@ body {
 }
 
 /* 토스 특유의 '눌리는' 촉감 — 모든 버튼 공통 */
-button { transition: transform 0.12s ease; }
+button { transition: transform var(--dur-base) var(--ease-spring); }
+/* 누를 땐 빠르게 들어가고(90ms), 뗄 땐 스프링으로 살짝 튀며 돌아온다 (iOS) */
+button:active, [role="button"]:active { transition-duration: 90ms; transition-timing-function: ease-out; }
 button:active { transform: scale(0.96); }
 /* 저장 중 잠긴 버튼 (runWrite) — 눌림 효과 없이 흐리게 */
 button:disabled { opacity: 0.55; cursor: default; }
@@ -143,6 +166,8 @@ a:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    animation-delay: 0ms !important;   /* 순차 등장 지연이 남으면 그동안 내용이 안 보인다 */
+    transition-delay: 0ms !important;
   }
 }
 
@@ -172,7 +197,7 @@ a:focus-visible {
   background: var(--surface); border: 1px solid var(--border-strong);
   border-radius: var(--radius); font-size: 0.9rem; font-family: var(--font);
   color: var(--text); cursor: pointer; font-weight: 600;
-  transition: background 0.15s, transform 0.12s ease;
+  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .google-btn:hover { background: var(--surface-hover); }
 .login-note { font-size: 0.78rem; color: var(--text-3); margin-top: 1rem; }
@@ -236,7 +261,7 @@ a:focus-visible {
   background: none; border: none; cursor: pointer; color: var(--text-2);
   display: flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: 8px; /* 터치 타깃 확보 */
-  transition: background 0.15s, transform 0.12s ease;
+  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .arrow-btn:hover { background: var(--surface2); color: var(--text); }
 /* 버튼 요소 — 클릭하면 이번 달로 복귀 */
@@ -244,7 +269,7 @@ a:focus-visible {
   font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text);
   min-width: 110px; text-align: center;
   background: none; border: none; cursor: pointer; font-family: var(--font);
-  padding: 4px 8px; border-radius: 8px; transition: background 0.15s, transform 0.12s ease;
+  padding: 4px 8px; border-radius: 8px; transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .month-label:hover { background: var(--surface2); }
 /* 월과 무관한 화면(예산안·결혼) 제목 — app.js applyViewChrome이 .monthless와 함께 채운다 */
@@ -264,7 +289,7 @@ a:focus-visible {
   font-size: 0.82rem; font-family: var(--font); font-weight: 500;
   color: var(--text-2); background: var(--surface2);
   border: none; cursor: pointer;
-  transition: background 0.15s, transform 0.12s ease;
+  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .icon-btn:hover { background: var(--surface3); }
 .theme-btn { padding: 0.5rem 0.6rem; } /* 아이콘 전용 */
@@ -274,7 +299,7 @@ a:focus-visible {
   padding: 0.5rem 1rem; border-radius: 10px;
   font-size: 0.88rem; font-family: var(--font); font-weight: 600;
   background: var(--accent-fill); color: #fff; border: none; cursor: pointer;
-  transition: filter 0.15s, transform 0.12s ease;
+  transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .add-btn:hover { filter: brightness(1.08); }
 
@@ -443,7 +468,7 @@ a:focus-visible {
   background: var(--surface); border: none; border-radius: var(--radius-lg);
   color: var(--accent); font-size: 0.85rem; font-weight: 600; font-family: var(--font);
   cursor: pointer; box-shadow: var(--shadow-card); margin-bottom: 12px;
-  transition: background 0.15s, transform 0.12s ease;
+  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .list-more-btn:hover { background: var(--surface-hover); }
 
@@ -588,11 +613,9 @@ a:focus-visible {
   background: var(--surface); border-radius: 24px;
   width: 100%; max-width: 420px; max-height: 90vh;
   overflow-y: auto; box-shadow: var(--shadow-pop);
-  animation: pop-in 0.2s ease;
-}
-@keyframes pop-in {
-  from { transform: scale(0.97) translateY(8px); opacity: 0; }
-  to   { transform: none; opacity: 1; }
+  /* 데스크톱 팝업: 살짝 작은 상태에서 스프링으로 커지며 등장. fill은 backwards만 —
+     끝난 뒤 transform을 붙잡고 있으면 바텀시트 끌기(인라인 transform)가 먹지 않는다 */
+  animation: m-pop-in 380ms var(--ease-spring) backwards;
 }
 .modal-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -623,7 +646,7 @@ a:focus-visible {
   border: 1.5px solid transparent; border-radius: 10px;
   background: var(--surface2); color: var(--text-2);
   font-family: var(--font); font-size: 0.8rem; cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s ease;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .cat-chip i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .cat-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -686,7 +709,7 @@ a:focus-visible {
   padding: 0.5rem 0; border: none; border-radius: 8px;
   background: var(--surface2); color: var(--text-2); font-family: var(--font);
   font-size: 0.82rem; font-weight: 500; cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .preset-btn:hover { background: var(--accent-bg); color: var(--accent); }
 .preset-btn.preset-clear { color: var(--text-3); }
@@ -711,14 +734,14 @@ a:focus-visible {
   padding: 0.65rem 1.5rem; background: var(--accent-fill); color: #fff;
   border: none; border-radius: var(--radius);
   font-size: 0.88rem; font-family: var(--font); font-weight: 600; cursor: pointer;
-  transition: filter 0.15s, transform 0.12s ease;
+  transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .save-btn:hover { filter: brightness(1.08); }
 .delete-btn {
   padding: 0.65rem 1rem; background: var(--expense-bg); color: var(--expense);
   border: none; border-radius: var(--radius);
   font-size: 0.88rem; font-family: var(--font); font-weight: 500;
-  cursor: pointer; margin-right: auto; transition: filter 0.15s, transform 0.12s ease;
+  cursor: pointer; margin-right: auto; transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .delete-btn:hover { filter: brightness(0.96); }
 
@@ -727,7 +750,7 @@ a:focus-visible {
   background: var(--surface); border-radius: 20px;
   padding: 1.5rem 1.25rem 1.25rem; width: 100%; max-width: 300px;
   box-shadow: var(--shadow-pop);
-  animation: pop-in 0.18s ease;
+  animation: m-alert-in 260ms var(--ease-out) backwards; /* iOS 알림창: 살짝 크게 떠서 제자리로 */
 }
 .confirm-msg {
   font-size: 0.95rem; font-weight: 600; color: var(--text);
@@ -738,7 +761,7 @@ a:focus-visible {
 .confirm-actions button {
   flex: 1; padding: 0.7rem; border-radius: var(--radius); border: none;
   font-size: 0.88rem; font-family: var(--font); cursor: pointer;
-  transition: filter 0.15s, transform 0.12s ease;
+  transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .confirm-cancel { background: var(--surface2); color: var(--text-2); font-weight: 500; }
 .confirm-ok { background: var(--accent-fill); color: #fff; font-weight: 600; }
@@ -824,7 +847,7 @@ a:focus-visible {
   width: 100%; margin-top: 0.75rem; padding: 0.6rem;
   background: var(--surface2); border: none; border-radius: var(--radius);
   color: var(--text-2); font-size: 0.82rem; font-weight: 500; font-family: var(--font); cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .plan-edit-btn:hover { background: var(--accent-bg); color: var(--accent); }
 .plan-edit { display: flex; flex-direction: column; gap: 8px; }
@@ -864,7 +887,7 @@ a:focus-visible {
 .wd-header {
   background: var(--surface); border-radius: var(--radius-lg);
   padding: 1.25rem; box-shadow: var(--shadow-card); margin-bottom: 1rem;
-  cursor: pointer; transition: background 0.15s, transform 0.12s ease;
+  cursor: pointer; transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
   position: relative; /* 시트 바로가기 칩의 기준 */
 }
 /* 검증 시트 바로가기 칩 — 헤더 오른쪽 위 */
@@ -874,7 +897,7 @@ a:focus-visible {
   padding: 5px 12px; border-radius: 20px;
   background: var(--accent-bg); color: var(--accent);
   font-size: 0.78rem; font-weight: 600; text-decoration: none;
-  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .wd-sheet-link:hover { background: var(--accent-fill); color: #fff; }
 .wd-sheet-link:active { transform: scale(0.96); }
@@ -983,7 +1006,7 @@ a:focus-visible {
   margin: 10px 1.5rem 0; padding: 0.65rem 1rem;
   background: var(--accent-bg); color: var(--accent);
   border-radius: var(--radius); font-size: 0.82rem; font-weight: 600;
-  cursor: pointer; transition: filter 0.15s, transform 0.12s ease;
+  cursor: pointer; transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wd-banner:hover { filter: brightness(0.96); }
@@ -1082,7 +1105,7 @@ a:focus-visible {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 3px; padding: 0.6rem 0; border: none; background: none; cursor: pointer;
   font-size: 0.7rem; color: var(--text-3); font-family: var(--font);
-  transition: color 0.15s, transform 0.12s ease;
+  transition: color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .mob-tab.active { color: var(--accent); font-weight: 600; }
 .mob-tab.add-center {
@@ -1101,7 +1124,7 @@ a:focus-visible {
 /* ── 클릭 가능한 카드·행에도 버튼과 같은 눌림 촉감 ── */
 .tx-item, .fixed-item, .budget-card, .cal-cell, .cd-row,
 .cat-bar-item.clickable, .mc-col {
-  transition: background 0.15s, transform 0.12s ease;
+  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .tx-item:active, .fixed-item:active, .budget-card:active, .cal-cell:active,
 .cd-row:active, .cat-bar-item.clickable:active, .mc-col:active {
@@ -1111,7 +1134,14 @@ a:focus-visible {
 
 /* ── 반응형 ── */
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+  .sidebar { transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease-sheet); }
+  /* 서랍 뒤 어두운 막 — 누르면 닫힌다 (예전엔 서랍 밖을 눌러도 닫히지 않았다) */
+  .sidebar-scrim {
+    display: block; position: fixed; inset: 0; z-index: 99;
+    background: var(--overlay); opacity: 0; pointer-events: none;
+    transition: opacity var(--dur-slow) var(--ease-sheet);
+  }
+  .sidebar.open + .sidebar-scrim { opacity: 1; pointer-events: auto; }
   .sidebar.open { transform: translateX(0); }
   .mobile-menu-btn { display: flex; }
   .main-content { margin-left: 0; padding-bottom: 70px; }
@@ -1142,14 +1172,10 @@ a:focus-visible {
     max-width: 100%; max-height: 92vh;
     border-radius: 24px 24px 0 0;
     padding-bottom: env(safe-area-inset-bottom);
-    animation: sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: m-sheet-up 480ms var(--ease-sheet) backwards; /* iOS 시트: 화면 아래에서 끝까지 올라온다 */
   }
   /* 확인 다이얼로그는 바텀시트가 아니라 가운데 유지 */
   .modal-overlay.confirm-overlay { align-items: center; padding: 1.5rem; }
-}
-@keyframes sheet-up {
-  from { transform: translateY(48px); opacity: 0.5; }
-  to   { transform: none; opacity: 1; }
 }
 @media (max-width: 480px) {
   .cal-cell { min-height: 58px; padding: 4px; position: relative; }
@@ -1216,3 +1242,135 @@ a:focus-visible {
 
 /* 체크박스를 감싸는 누름 영역 — 행 클릭(수정 모달)과 분리 */
 .wd-task-chk-hit { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+
+/* ================================================================
+   모션 (iOS·토스 참고) — js/motion.js와 짝
+   transform·opacity만 움직인다. 동작 줄이기 설정은 위 prefers-reduced-motion 규칙이 처리.
+   ================================================================ */
+
+/* ── 공통 키프레임 ── */
+@keyframes m-fade-in   { from { opacity: 0; } }
+@keyframes m-fade-out  { to   { opacity: 0; } }
+@keyframes m-rise      { from { opacity: 0; transform: translateY(12px); } }
+@keyframes m-pop-in    { from { opacity: 0; transform: scale(0.94) translateY(8px); } }
+@keyframes m-pop-out   { to   { opacity: 0; transform: scale(0.96) translateY(6px); } }
+@keyframes m-alert-in  { from { opacity: 0; transform: scale(1.08); } }
+@keyframes m-sheet-up  { from { transform: translateY(100%); } }
+@keyframes m-sheet-down{ to   { transform: translateY(100%); } }
+
+/* ── 모달 배경막: 배경을 가상 요소로 분리해 따로 페이드 (시트를 끌면 --scrim으로 옅어진다) ── */
+.modal-overlay { background: transparent; }
+.modal-overlay::before {
+  content: ""; position: absolute; inset: 0;
+  background: var(--overlay); opacity: var(--scrim, 1);
+  animation: m-fade-in var(--dur-base) ease backwards;
+}
+.modal-overlay > * { position: relative; } /* 배경막(::before) 위에 그려지도록 */
+.modal-overlay.is-closing { pointer-events: none; }
+.modal-overlay.is-closing::before { animation: m-fade-out 220ms ease forwards; }
+.modal-overlay.is-closing > .modal,
+.modal-overlay.is-closing > .confirm-box { animation: m-pop-out 200ms var(--ease-in) forwards; }
+
+/* ── 모바일 바텀시트: 손잡이 + 끌어서 닫기 영역(제목줄) ── */
+@media (max-width: 768px) {
+  .modal-overlay:not(.confirm-overlay) .modal-header {
+    position: relative; padding-top: 1.6rem;
+    touch-action: none; /* 제목줄을 끄는 동안 브라우저가 스크롤로 가로채지 않게 */
+  }
+  .modal-overlay:not(.confirm-overlay) .modal-header::before {
+    content: ""; position: absolute; top: 8px; left: 50%;
+    width: 36px; height: 5px; margin-left: -18px; border-radius: 3px;
+    background: var(--border-strong);
+  }
+  .modal-overlay.is-closing:not(.confirm-overlay) > .modal { animation: m-sheet-down 220ms var(--ease-in) forwards; }
+}
+
+/* ── 서랍 배경막은 모바일에서만 (위 반응형 블록) ── */
+.sidebar-scrim { display: none; }
+
+/* ── 앱·로그인 등장 ── */
+.login-box { animation: m-rise 600ms var(--ease-out) backwards; }
+.app { animation: m-fade-in var(--dur-slow) ease backwards; }
+.wd-banner:not(.hidden) { animation: m-rise var(--dur-slow) var(--ease-out) backwards; }
+
+/* ── 화면 등장 (motion.playEntrance) ──
+   탭 전환: 카드·행이 28ms 간격으로 떠오른다 / 월 이동: 화면 전체가 넘긴 방향에서 밀려온다 */
+.view.entering:not(.dir-next):not(.dir-prev) :is(
+  .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
+  .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state) {
+  animation: m-rise 480ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+@keyframes m-slide-next { from { opacity: 0; transform: translateX(32px); } }
+@keyframes m-slide-prev { from { opacity: 0; transform: translateX(-32px); } }
+.view.entering.dir-next { animation: m-slide-next 420ms var(--ease-out) backwards; }
+.view.entering.dir-prev { animation: m-slide-prev 420ms var(--ease-out) backwards; }
+
+/* 월 라벨도 같은 방향으로 */
+.month-label.label-next { animation: m-slide-next 360ms var(--ease-out); }
+.month-label.label-prev { animation: m-slide-prev 360ms var(--ease-out); }
+
+/* 막대는 왼쪽에서 자라난다 (토스) — 등장할 때만 */
+@keyframes m-bar-grow { from { transform: scaleX(0); } }
+.view.entering .pfill {
+  transform-origin: left center;
+  animation: m-bar-grow 700ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms + 120ms);
+}
+/* 월별 누적 막대는 아래에서 위로, 열마다 조금씩 늦게 (--c: stats.js가 매김) */
+@keyframes m-col-grow { from { transform: scaleY(0); } }
+.view.entering .mc-stack {
+  transform-origin: bottom center;
+  animation: m-col-grow 650ms var(--ease-out) backwards;
+  animation-delay: calc(var(--c, 0) * 45ms + 80ms);
+}
+/* 예산안 도넛: 각 조각이 제자리에서 시계 방향으로 그려진다 */
+@keyframes m-donut { from { stroke-dasharray: 0 339.292; } }
+.view.entering .plan-donut-seg { animation: m-donut 800ms var(--ease-out) backwards; animation-delay: 150ms; }
+
+/* ── 세그먼트 컨트롤 슬라이딩 배경 (motion.setupSegmentThumbs) ── */
+.scope-toggle, .type-toggle, .kind-toggle { position: relative; }
+.seg-thumb {
+  position: absolute; left: 0; top: 0; z-index: 0;
+  border-radius: 8px; background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: transform 420ms var(--ease-spring), width 420ms var(--ease-spring), height 420ms var(--ease-spring);
+  pointer-events: none;
+}
+.type-toggle .seg-thumb, .kind-toggle .seg-thumb { border-radius: 9px; }
+.has-thumb > button { position: relative; z-index: 1; transition: color var(--dur-base) ease, transform var(--dur-base) var(--ease-spring); }
+.has-thumb > button.active { background: transparent; box-shadow: none; }
+
+/* ── 토스트: 아래에서 스프링으로 떠오르고, 가라앉으며 사라진다 ── */
+@keyframes m-toast-in  { from { opacity: 0; transform: translate(-50%, 16px) scale(0.96); } }
+@keyframes m-toast-out { to   { opacity: 0; transform: translate(-50%, 8px) scale(0.98); } }
+@keyframes m-toast-bump { 50% { transform: translate(-50%, 0) scale(1.04); } }
+.toast:not(.hidden) { animation: m-toast-in 420ms var(--ease-spring) backwards; }
+.toast.toast-bump { animation: m-toast-bump 260ms var(--ease-out); }
+.toast.toast-out { animation: m-toast-out 200ms var(--ease-in) forwards; }
+
+/* ── 방금 저장한 항목 반짝임 (motion.flash) ── */
+@keyframes m-flash {
+  0%, 30% { box-shadow: inset 0 0 0 2px var(--accent); background-color: var(--accent-bg); }
+}
+.m-flash { animation: m-flash 1400ms ease-out; }
+
+/* ── 체크리스트 완료 체크: 톡 튀어 오른다 ── */
+@keyframes m-check-pop { 0% { transform: scale(0.6); } }
+.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 480ms var(--ease-bounce); }
+.wd-task-row.m-pop .wd-task-title { animation: m-fade-in 300ms ease; }
+
+/* ── 불러오는 동안 스켈레톤 (토스) — 문구 대신 반짝이는 자리표시 ── */
+@keyframes m-shimmer { to { background-position: -200% 0; } }
+.skeleton {
+  display: block; height: 14px; border-radius: 7px;
+  background: linear-gradient(90deg, var(--surface2) 0%, var(--surface3) 50%, var(--surface2) 100%);
+  background-size: 200% 100%;
+  animation: m-shimmer 1.4s linear infinite;
+}
+.skeleton + .skeleton { margin-top: 10px; }
+.skeleton-card {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); padding: 1.1rem 1.25rem; margin-bottom: 10px;
+}
+.skeleton.tall { height: 72px; border-radius: 12px; }

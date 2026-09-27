@@ -16,6 +16,7 @@ import {
   openWeddingTaskModal, openWeddingVendorModal
 } from "../modals/weddingModal.js";
 import { refreshAddButton } from "../app.js";
+import { animateCount, animateWidth } from "../motion.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
 import { renderEventsSegment } from "./weddingEvents.js";
@@ -81,7 +82,11 @@ export function renderWeddingView() {
 
   if (!loaded) {
     stale = false;
-    container.innerHTML = `<p class="list-loading">결혼 준비 데이터를 불러오는 중…</p>`;
+    container.innerHTML = `
+      <div aria-label="결혼 준비 데이터를 불러오는 중">
+        <div class="skeleton-card"><span class="skeleton" style="width:25%;height:28px"></span><span class="skeleton" style="width:45%"></span><span class="skeleton"></span></div>
+        ${[60, 75, 50].map(w => `<div class="skeleton-card"><span class="skeleton" style="width:${w}%"></span><span class="skeleton" style="width:90%"></span></div>`).join("")}
+      </div>`;
     ensureLoaded().then(() => {
       if (state.currentView === "wedding") renderWeddingView(); // 뷰 이탈 시 무시
     });
@@ -101,6 +106,11 @@ export function renderWeddingView() {
   container.innerHTML = `${renderHeader()}${renderSegBar()}<div id="wdSegBody"></div>`;
   renderSegmentBody(container.querySelector("#wdSegBody"));
   bindEvents(container);
+  // 총지출이 바뀌면 숫자가 굴러가고 막대가 새 폭으로 이어서 움직인다
+  const spentEl = container.querySelector("[data-count-key=\"wd-spent\"]");
+  if (spentEl) animateCount(spentEl, "wd-spent", Number(spentEl.dataset.count), v => `${fmtMoney(v)}원`);
+  const totalFill = container.querySelector(".wd-total-fill");
+  if (totalFill) animateWidth(totalFill, "wd-total-bar", parseFloat(totalFill.style.width));
 }
 
 async function ensureLoaded() {
@@ -137,10 +147,10 @@ function renderHeader() {
     const color  = over ? "var(--expense)" : pct >= 80 ? "var(--warn)" : "var(--accent)";
     budgetLine = `
       <div class="wd-budget-line">
-        <span>지출 <strong>${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(totals.planned)}원</span>
+        <span>지출 <strong data-count="${totals.spent}" data-count-key="wd-spent">${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(totals.planned)}원</span>
         <span>${pct}%</span>
       </div>
-      <div class="pbar"><div class="pfill" style="width:${barPct}%;background:${color}"></div></div>`;
+      <div class="pbar"><div class="pfill wd-total-fill" style="width:${barPct}%;background:${color}"></div></div>`;
   } else if (totals.spent > 0) {
     budgetLine = `<div class="wd-budget-line"><span>지금까지 지출 <strong>${fmtMoney(totals.spent)}원</strong></span></div>`;
   }

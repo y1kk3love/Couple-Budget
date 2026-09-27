@@ -3,6 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
+import { openOverlay, closeOverlay } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, runWrite } from "../utils.js";
 import { saveBudget, saveMonthBudget, deleteBudget, deleteMonthBudget } from "../db.js";
 import { renderAll } from "../app.js";
@@ -21,11 +22,11 @@ export function openBudgetModal() {
   document.getElementById("budgetMonthOnlyText").textContent =
     `이번 달(${state.currentYear}년 ${state.currentMonth}월)에만 적용`;
   document.getElementById("budgetDeleteBtn").classList.toggle("hidden", state.budget == null);
-  document.getElementById("budgetModal").classList.remove("hidden");
+  openOverlay(document.getElementById("budgetModal"));
 }
 
 function closeModal() {
-  document.getElementById("budgetModal").classList.add("hidden");
+  closeOverlay(document.getElementById("budgetModal"));
 }
 
 // ── 이벤트 바인딩 ─────────────────────────────────────────────

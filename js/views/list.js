@@ -35,7 +35,7 @@ export function renderListView() {
     ${renderFilterPanel()}
     <div id="listContent">${
       scope === "all"
-        ? `<p class="list-loading">전체 기간 내역을 불러오는 중…</p>`
+        ? `<div aria-label="전체 기간 내역을 불러오는 중">${[70, 55, 80].map(w => `<div class="skeleton-card"><span class="skeleton" style="width:30%"></span><span class="skeleton" style="width:${w}%"></span></div>`).join("")}</div>`
         : renderContent(applyFilters(state.transactions))
     }</div>`;
 
