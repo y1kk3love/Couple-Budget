@@ -234,7 +234,7 @@ function renderBudgetSegment() {
     // 오른쪽 숫자: 계획 대비 사용률 (지출액은 메타 줄에 이미 있어 반복하지 않는다)
     const usedPct = it.planned > 0 ? Math.round(spent / it.planned * 100) : null;
     const pctCls  = over ? "over" : spent === 0 ? "zero" : "";
-    // 그래프 두 겹: 진한 색 = 정산 완료, 연한 색 = 아직 미정산인 지출
+    // 그래프 두 겹: 채운 색 = 정산 완료, 빗금 = 아직 미정산인 지출
     return `
       <div class="fixed-item" data-wd-item="${escapeHtml(it.id)}" role="button" tabindex="0">
         <span class="pe-drag wd-item-drag" title="드래그로 순서 변경">⠿</span>
@@ -242,7 +242,7 @@ function renderBudgetSegment() {
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(it.name)} <span class="tag ${it.payer === "both" ? "fixed" : "variable"}">${escapeHtml(payer)}</span></div>
           <div class="wd-item-plan">${fmtMoney(spent)}원 / ${fmtMoney(it.planned ?? 0)}원${catMeta}</div>
-          <div class="pbar wd-pbar-layered" style="margin-top:5px" title="진한 색: 정산 완료 · 연한 색: 미정산">
+          <div class="pbar wd-pbar-layered" style="margin-top:5px" title="채운 색: 정산 완료 · 빗금: 미정산">
             <div class="pfill wd-fill-spent" style="width:${pctSpent}%;background:${color}"></div>
             <div class="pfill" style="width:${pctSettled}%;background:${color}"></div>
           </div>

@@ -35,6 +35,7 @@
   --overlay: rgba(0, 0, 0, 0.4);
   --shadow-card: 0 1px 3px rgba(2, 32, 71, 0.04);
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.18);
+  --dot-ring: rgba(2, 32, 71, 0.1); /* 파스텔 카테고리 점 윤곽 — 가장 연한 색도 흰 카드에서 보이게 */
   --radius: 12px;
   --radius-lg: 18px;
   --sidebar-w: 200px;
@@ -97,6 +98,7 @@
     --overlay: rgba(0, 0, 0, 0.6);
     --shadow-card: none;
     --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.5);
+    --dot-ring: transparent; /* 어두운 카드 위 파스텔은 윤곽 없이도 또렷 */
   }
 }
 
@@ -130,6 +132,7 @@
   --overlay: rgba(0, 0, 0, 0.6);
   --shadow-card: none;
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --dot-ring: transparent;
 }
 
 /* 수동 라이트 강제 — 토큰은 :root 기본값 그대로, 폼 컨트롤 색만 고정 */
@@ -574,6 +577,11 @@ a:focus-visible {
   display: inline-block; width: 10px; height: 10px;
   border-radius: 3px; margin-right: 4px; vertical-align: middle;
 }
+/* 카테고리·사람 색 점 — 파스텔 팔레트(js/constants.js)의 가장 연한 색(크림 옐로·스카이)은
+   흰 카드·회색 칩 위에서 가장자리가 흐려, 라이트 테마에서만 옅은 윤곽을 두른다 */
+:is(.tx-cat-dot, .fixed-cat-dot, .cat-chip i, .mc-dot, .cd-cat-dot, .plan-dot, .owner-dot) {
+  box-shadow: inset 0 0 0 1px var(--dot-ring);
+}
 
 /* ── 고정비 뷰 ── */
 .fixed-list { display: flex; flex-direction: column; gap: 8px; }
@@ -923,10 +931,14 @@ a:focus-visible {
 .wd-item-pct.zero { color: var(--text-3); font-weight: 500; }
 .wd-settled { color: var(--income); font-weight: 600; }
 .wd-unsettled { color: var(--warn-text); font-weight: 600; }
-/* 예산 항목 그래프 두 겹 — 진한 색: 정산 완료, 연한 색: 미정산 지출 */
+/* 예산 항목 그래프 두 겹 — 채운 색: 정산 완료, 빗금: 미정산 지출.
+   카테고리 색이 파스텔이라 예전처럼 35% 투명도로 그리면 미정산 부분이 거의 보이지 않았다 */
 .wd-pbar-layered { position: relative; }
 .wd-pbar-layered .pfill { position: absolute; left: 0; top: 0; height: 100%; }
-.wd-pbar-layered .wd-fill-spent { opacity: 0.35; }
+.wd-pbar-layered .wd-fill-spent::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--surface) 3px 5px);
+}
 /* 결제 내역 정산 금액 입력 (항목 모달) — 결제 행 아래 한 줄 전체를 차지 */
 .wd-pay-settle {
   display: flex; align-items: center; gap: 6px; flex-basis: 100%;

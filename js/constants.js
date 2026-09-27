@@ -2,60 +2,63 @@
 // js/constants.js — 상수 및 카테고리 설정
 // ================================================================
 
-// 토스 톤 팔레트 — 파스텔보다 채도를 한 단계 올려 차트가 또렷하게,
-// 명도는 비슷하게 맞춰 점/도넛 표시가 라이트·다크 모두에서 조화롭게 보이도록.
+// 파스텔 투톤 팔레트 — 팬톤 파스텔 배색(Double Cream·Meadow Mist·Ballad Blue·Ballerina·
+// Soft Pink·Buttercream·Silver Birch)의 색상을 따르되, 원본은 흰 카드 대비 1.1~1.6:1이라
+// 흰 카드에서 보이도록 명도를 한 단계 낮추고 채도를 조금 올렸다 (OKLCH로 계산).
+// 채도가 낮은 파스텔은 색상 차이만으로는 잘 안 갈라져서, 정의 순서대로 밝은 톤·짙은 톤을
+// 번갈아 둔다 — 통계 누적 막대에서 맞닿는 이웃이 명도로도 구분된다. 지출 빨강(--expense)과
+// 헷갈리지 않게 빨강은 쓰지 않는다. 순서를 바꾸면 이웃 대비를 다시 확인할 것.
 export const CATEGORIES = {
   expense: [
-    { id: "food",      name: "식비",     color: "#ff9e45" },
-    { id: "transport", name: "교통",     color: "#4da3f5" },
-    { id: "housing",   name: "주거",     color: "#9b7df0" },
-    { id: "rent",      name: "월세",     color: "#f272b6" },
-    { id: "mgmt",      name: "관리비",   color: "#c29063" },
-    { id: "health",    name: "의료/건강", color: "#35c08e" },
-    // 쇼핑은 빨강(#f56a6a)이었으나 지출 빨강(--expense)과 겹치고, 미용(코랄)·식비(주황)와
-    // 월별 누적 막대에서 구분이 어려워 금색으로 — 미용은 연두로 (통계 색 정리)
-    { id: "shopping",  name: "쇼핑",     color: "#e2b128" },
-    { id: "culture",   name: "문화/여가", color: "#2fb8ac" },
-    { id: "sub",       name: "구독",     color: "#7a85f0" },
-    { id: "beauty",    name: "미용",     color: "#8bc34a" },
-    { id: "edu",       name: "교육",     color: "#66c6ea" },
-    { id: "etc",       name: "기타",     color: "#9aa5b1" },
+    { id: "food",      name: "식비",     color: "#fac7b1" }, // 밝음 · 피치 (Soft Pink)
+    { id: "transport", name: "교통",     color: "#92b6d5" }, // 짙음 · 블루 (Ballad Blue)
+    { id: "housing",   name: "주거",     color: "#d2c6f1" }, // 밝음 · 라벤더
+    { id: "rent",      name: "월세",     color: "#abc093" }, // 짙음 · 세이지 (Meadow Mist)
+    { id: "mgmt",      name: "관리비",   color: "#f5c5d8" }, // 밝음 · 핑크 (Ballerina)
+    { id: "health",    name: "의료/건강", color: "#8ec3c0" }, // 짙음 · 아쿠아
+    { id: "shopping",  name: "쇼핑",     color: "#f6e09f" }, // 밝음 · 크림 옐로 (Double Cream)
+    { id: "culture",   name: "문화/여가", color: "#aba6d4" }, // 짙음 · 페리윙클
+    { id: "sub",       name: "구독",     color: "#bbe3c8" }, // 밝음 · 민트
+    { id: "beauty",    name: "미용",     color: "#caa2c5" }, // 짙음 · 오키드
+    { id: "edu",       name: "교육",     color: "#bde1f3" }, // 밝음 · 스카이
+    { id: "etc",       name: "기타",     color: "#c5c5b9" }, // 그레이지 (Silver Birch)
   ],
   income: [
-    { id: "salary",   name: "월급",   color: "#35c075" },
-    { id: "extra",    name: "부수입", color: "#4da3f5" },
-    { id: "transfer", name: "이체",   color: "#9b7df0" },
-    { id: "etc_in",   name: "기타",   color: "#9aa5b1" },
+    { id: "salary",   name: "월급",   color: "#abc093" },
+    { id: "extra",    name: "부수입", color: "#92b6d5" },
+    { id: "transfer", name: "이체",   color: "#aba6d4" },
+    { id: "etc_in",   name: "기타",   color: "#c5c5b9" },
   ]
 };
 
 // 사람별 지출 카드 등 사용자 구분용 색 — 카테고리 색과 같은 '데이터 색'이라
 // 테마와 무관하게 고정 (JS/HTML 템플릿에 hex를 흩뿌리지 않도록 여기서만 정의)
-export const OWNER_COLORS = ["#4da3f5", "#f272b6", "#9aa5b1", "#35c08e"];
+// [0] 첫 번째 계정 블루 · [1] 두 번째 계정 핑크 · [2] 함께(작성자 없음) 그레이지 · [3] 그 밖
+export const OWNER_COLORS = ["#92b6d5", "#e3abc3", "#c5c5b9", "#abc093"];
 
 export function getCategoryInfo(id, type) {
   const list = type === "income" ? CATEGORIES.income : CATEGORIES.expense;
-  return list.find(c => c.id === id) ?? { name: id, color: "#95a5a6" };
+  return list.find(c => c.id === id) ?? { name: id, color: "#c5c5b9" };
 }
 
 // ── 결혼 준비 탭 ──────────────────────────────────────────────
 
 // 결혼 준비 예산 카테고리 — 지출 카테고리와 같은 '데이터 색' (테마 무관)
 export const WEDDING_CATEGORIES = [
-  { id: "venue",     name: "예식장",         color: "#f272b6" },
-  { id: "sdm",       name: "스드메",         color: "#9b7df0" },
-  { id: "jewelry",   name: "예물·예단",      color: "#ff9e45" },
-  { id: "attire",    name: "한복·예복",      color: "#4da3f5" },
-  { id: "honeymoon", name: "신혼여행",       color: "#35c08e" },
-  { id: "appliance", name: "혼수·가전",      color: "#2fb8ac" },
-  { id: "house",     name: "신혼집",         color: "#c29063" },
-  { id: "invite",    name: "청첩장·식전영상", color: "#7a85f0" },
-  { id: "flower",    name: "부케·꽃장식",    color: "#ff8a66" },
-  { id: "etc_w",     name: "기타",           color: "#9aa5b1" },
+  { id: "venue",     name: "예식장",         color: "#f5c5d8" },
+  { id: "sdm",       name: "스드메",         color: "#d2c6f1" },
+  { id: "jewelry",   name: "예물·예단",      color: "#f6e09f" },
+  { id: "attire",    name: "한복·예복",      color: "#92b6d5" },
+  { id: "honeymoon", name: "신혼여행",       color: "#8ec3c0" },
+  { id: "appliance", name: "혼수·가전",      color: "#abc093" },
+  { id: "house",     name: "신혼집",         color: "#eed7ba" }, // Buttercream
+  { id: "invite",    name: "청첩장·식전영상", color: "#aba6d4" },
+  { id: "flower",    name: "부케·꽃장식",    color: "#fac7b1" },
+  { id: "etc_w",     name: "기타",           color: "#c5c5b9" },
 ];
 
 export function getWeddingCategory(id) {
-  return WEDDING_CATEGORIES.find(c => c.id === id) ?? { id, name: id ?? "기타", color: "#9aa5b1" };
+  return WEDDING_CATEGORIES.find(c => c.id === id) ?? { id, name: id ?? "기타", color: "#c5c5b9" };
 }
 
 // 체크리스트 시기 그룹 — 배열 순서가 곧 표시 순서
