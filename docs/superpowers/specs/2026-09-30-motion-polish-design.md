@@ -99,6 +99,8 @@ JS에서 쓰는 값은 `motion.js` 상수로 둔다.
 6. **끄는 동안 다시 그리기 제거.** 시트 높이는 끌기 시작할 때 한 번만 잰다. 배경막을 `.modal-overlay::before`에서
    실제 요소 `.modal-scrim`(오버레이 첫 자식)으로 바꾸고, 끄는 동안 그 요소의 `style.opacity`만 바꾼다
    (지금은 오버레이의 `--scrim` 변수를 매 이동마다 바꿔 모달 전체 스타일을 다시 계산한다).
+   `.modal-scrim`은 `pointer-events: none` — 배경을 눌러 닫는 처리(`e.target === overlay`, 모달 4곳과
+   `showConfirm`)가 그대로 오버레이를 클릭 대상으로 받도록.
 7. **퇴장은 즉시 출발.** 시트·팝업·확인창·토스트의 퇴장 곡선을 `--ease-out`으로, 길이는 위 표.
    `motion.js`의 `CLOSE_MS`는 240(가장 긴 퇴장).
 8. **테마 전환 얼룩 제거.** `transition: all` 5곳(`.nav-btn`, `.add-fixed-btn`, `.type-btn/.kind-btn`,
