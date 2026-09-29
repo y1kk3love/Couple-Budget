@@ -206,42 +206,79 @@ export function slideLabel(el, dir) {
   el.classList.add(dir > 0 ? "label-next" : "label-prev");
 }
 
-// ── 숫자 굴리기 (토스) ────────────────────────────────────────
-// key마다 마지막 값을 기억해, 값이 바뀌면 이전 값에서 새 값까지 굴려 보여준다.
-// 처음 보이는 값은 0부터. format은 호출부가 정한다 (부호·"원" 등).
+// ── 숫자 굴리기 (토스·NumberFlow) ─────────────────────────────
+// 바뀐 자리만 슬롯처럼 굴러간다. 숫자 칸마다 0~9를 두 번 쌓은 띠를 두고 옮긴다 — 금액이 늘면 위로,
+// 줄면 아래로 한 방향으로만 돈다(9→0도 같은 방향). 자리는 오른쪽(일의 자리)끼리 짝지어, 앞에 새로
+// 생긴 자리는 흐리게 나타난다. key마다 마지막 값을 기억해 이전 값에서 굴린다(처음 보이는 값은 0에서).
+// format은 호출부가 정한다(부호·"원" 등). 끝나면 일반 텍스트로 되돌린다 — 복사나 다른 코드에
+// 굴림용 DOM이 남지 않게. 화면 낭독기는 굴리는 동안에도 .sr-only의 최종 금액을 읽는다.
 
+const ROLL_MS = 520;
+const ROLL_FADE_MS = 300;
 const lastCounts = new Map();
-const countRuns = new Map(); // key → { frame, timer }
-const easeOutExpo = p => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+const DIGIT_STRIP = `<span class="roll-s">${[..."01234567890123456789"].map(d => `<i>${d}</i>`).join("")}</span>`;
+const isDigit = ch => ch >= "0" && ch <= "9";
 
-export function animateCount(el, key, to, format, duration = 650) {
+export function rollNumber(el, key, to, format) {
   const from = lastCounts.has(key) ? lastCounts.get(key) : 0;
   lastCounts.set(key, to);
-  const prevRun = countRuns.get(key);
-  if (prevRun) { cancelAnimationFrame(prevRun.frame); clearTimeout(prevRun.timer); countRuns.delete(key); }
-  // 보이지 않는 탭에선 프레임 콜백이 멈춰 시작값에 머문다 — 이때는 바로 최종값으로
-  if (from === to || reducedMotion() || document.hidden || !Number.isFinite(to)) {
-    el.textContent = format(to);
+  const final = format(to);
+  const token = {};
+  el._rollToken = token;
+  // 보이지 않는 탭에선 전환이 진행되지 않는다 — 이때와 동작 줄이기는 바로 최종값으로
+  if (from === to || reducedMotion() || document.hidden || !Number.isFinite(to) || !Number.isFinite(from)) {
+    el.textContent = final;
     return;
   }
-  const run = {};
-  const finish = () => {
-    cancelAnimationFrame(run.frame); clearTimeout(run.timer);
-    el.textContent = format(to);
-    if (countRuns.get(key) === run) countRuns.delete(key);
-  };
-  const start = performance.now();
-  const step = now => {
-    const p = Math.min(1, (now - start) / duration);
-    if (p >= 1) { finish(); return; }
-    el.textContent = format(Math.round(from + (to - from) * easeOutExpo(p)));
-    run.frame = requestAnimationFrame(step);
-  };
-  el.textContent = format(from);
-  run.frame = requestAnimationFrame(step);
-  // 도중에 탭을 떠나 프레임이 멈춰도 결국 정확한 값이 되도록 안전장치
-  run.timer = setTimeout(finish, duration + 150);
-  countRuns.set(key, run);
+  try {
+    const old = format(from);
+    const up = to >= from;
+    const roll = document.createElement("span");
+    roll.className = "roll";
+    roll.setAttribute("aria-hidden", "true");
+    const moves = [];
+    [...final].forEach((ch, i) => {
+      if (!isDigit(ch)) {
+        const c = document.createElement("span");
+        c.className = "roll-c";
+        c.textContent = ch;
+        roll.append(c);
+        return;
+      }
+      const oc = old[old.length - (final.length - i)];
+      const d = Number(ch);
+      const od = isDigit(oc ?? "") ? Number(oc) : null;
+      let start, end;
+      if (od === null) { start = end = d; }                    // 새로 생긴 자리 — 굴리지 않고 흐리게 나타남
+      else if (up) { start = od; end = d >= od ? d : d + 10; } // 위로 — 작아지면 다음 바퀴로
+      else { start = od + 10; end = d <= od ? d + 10 : d; }    // 아래로
+      const cell = document.createElement("span");
+      cell.className = "roll-d";
+      cell.innerHTML = DIGIT_STRIP;
+      const strip = cell.firstChild;
+      strip.style.transform = `translateY(${-start * 5}%)`;
+      if (od === null) cell.style.opacity = "0";
+      moves.push({ cell, strip, end, fresh: od === null });
+      roll.append(cell);
+    });
+    const sr = document.createElement("span");
+    sr.className = "sr-only";
+    sr.textContent = final;
+    el.replaceChildren(sr, roll);
+    void roll.offsetWidth; // 시작 위치를 확정한 뒤 전환 (requestAnimationFrame 없이)
+    for (const { cell, strip, end, fresh } of moves) {
+      strip.style.transition = `transform ${ROLL_MS}ms ${EASE_OUT}`;
+      strip.style.transform = `translateY(${-end * 5}%)`;
+      if (fresh) {
+        cell.style.transition = `opacity ${ROLL_FADE_MS}ms ease`;
+        cell.style.opacity = "1";
+      }
+    }
+    setTimeout(() => { if (el._rollToken === token) el.textContent = final; }, ROLL_MS + 60);
+  } catch (err) {
+    console.warn("금액 굴리기 실패 — 최종값으로 표시:", err);
+    el.textContent = final;
+  }
 }
 
 // 막대 폭을 이전 값에서 새 값으로 (다시 그려진 요소라 CSS 전환이 자동으로 걸리지 않는다)

@@ -8,7 +8,7 @@ import { CATEGORIES } from "../constants.js";
 import { fetchBudgetPlans, saveBudgetPlan } from "../db.js";
 import { renderAll } from "../app.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
-import { animateCount } from "../motion.js";
+import { rollNumber } from "../motion.js";
 
 // 항목 색은 파스텔 팔레트를 순서대로 자동 배정
 const PLAN_COLORS = CATEGORIES.expense.map(c => c.color);
@@ -51,7 +51,7 @@ export function renderPlanView() {
   // 도넛 가운데 남은 금액이 바뀌면 굴러가며 바뀐다 (토스)
   container.querySelectorAll(".plan-donut-val[data-count]").forEach(el => {
     const v = Number(el.dataset.count);
-    animateCount(el, el.dataset.countKey, v, n => `${n < 0 ? "-" : ""}${fmtMoney(n)}`);
+    rollNumber(el, el.dataset.countKey, v, n => `${n < 0 ? "-" : ""}${fmtMoney(n)}`);
   });
 }
 

@@ -26,7 +26,7 @@ import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 import { startSync } from "./sync.js";
 import {
-  playEntrance, slideLabel, animateCount, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback
+  playEntrance, slideLabel, rollNumber, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback
 } from "./motion.js";
 
 // 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
@@ -252,7 +252,7 @@ async function renderSummary() {
     </div>`;
 
   bar.querySelectorAll("[data-count]").forEach(el =>
-    animateCount(el, el.dataset.countKey, Number(el.dataset.count), COUNT_FORMATS[el.dataset.countFmt])
+    rollNumber(el, el.dataset.countKey, Number(el.dataset.count), COUNT_FORMATS[el.dataset.countFmt])
   );
   const budgetFill = bar.querySelector(".budget-pbar .pfill");
   if (budgetFill) animateWidth(budgetFill, "sum-budget-bar", parseFloat(budgetFill.style.width));

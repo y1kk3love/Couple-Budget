@@ -1367,6 +1367,24 @@ a:focus-visible {
 @keyframes m-donut { from { stroke-dasharray: 0 339.292; } }
 .view.entering .plan-donut-seg { animation: m-donut 500ms var(--ease-out) backwards; animation-delay: 60ms; }
 
+/* ── 자리마다 굴러가는 금액 (motion.rollNumber, 토스·NumberFlow) ──
+   숫자 칸(.roll-d) 안의 띠(.roll-s, 0~9 두 번)를 translateY로 옮긴다. 칸 높이 1lh — 끝난 뒤 되돌아가는
+   일반 텍스트와 줄 높이가 같다. lh를 모르는 브라우저는 1.2em (대체값이 없으면 띠 20칸이 한꺼번에 보인다).
+   위아래 가장자리는 mask로 흐리게 — 굴러가는 숫자가 칸 경계에서 뚝 잘려 보이지 않도록 */
+.roll { display: inline-flex; vertical-align: top; user-select: none; }
+.roll-d, .roll-c, .roll-s > i { display: block; height: 1.2em; height: 1lh; font-style: normal; }
+.roll-d {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+}
+.roll-s { display: flex; flex-direction: column; }
+/* 화면 낭독기 전용 글자 (굴리는 동안 최종 금액을 읽게) */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
 /* ── 세그먼트 컨트롤 슬라이딩 배경 (motion.setupSegmentThumbs) ── */
 .scope-toggle, .type-toggle, .kind-toggle { position: relative; }
 .seg-thumb {

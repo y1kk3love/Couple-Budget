@@ -16,7 +16,7 @@ import {
   openWeddingTaskModal, openWeddingVendorModal
 } from "../modals/weddingModal.js";
 import { refreshAddButton } from "../app.js";
-import { animateCount, animateWidth } from "../motion.js";
+import { rollNumber, animateWidth } from "../motion.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
 import { renderEventsSegment } from "./weddingEvents.js";
@@ -108,7 +108,7 @@ export function renderWeddingView() {
   bindEvents(container);
   // 총지출이 바뀌면 숫자가 굴러가고 막대가 새 폭으로 이어서 움직인다
   const spentEl = container.querySelector("[data-count-key=\"wd-spent\"]");
-  if (spentEl) animateCount(spentEl, "wd-spent", Number(spentEl.dataset.count), v => `${fmtMoney(v)}원`);
+  if (spentEl) rollNumber(spentEl, "wd-spent", Number(spentEl.dataset.count), v => `${fmtMoney(v)}원`);
   const totalFill = container.querySelector(".wd-total-fill");
   if (totalFill) animateWidth(totalFill, "wd-total-bar", parseFloat(totalFill.style.width));
 }
