@@ -1385,12 +1385,19 @@ a:focus-visible {
 .wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 480ms var(--ease-bounce); }
 .wd-task-row.m-pop .wd-task-title { animation: m-fade-in 300ms ease; }
 
-/* ── 불러오는 동안 스켈레톤 (토스) — 문구 대신 반짝이는 자리표시 ── */
-@keyframes m-shimmer { to { background-position: -200% 0; } }
+/* ── 불러오는 동안 스켈레톤 (토스) — 문구 대신 반짝이는 자리표시 ──
+   반짝이는 띠(::after)를 transform으로 옮긴다. 예전엔 background-position을 움직여
+   매 프레임 다시 그렸다(저사양 폰에서 끊김·배터리) — transform은 합성 단계에서 끝난다 */
+@keyframes m-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .skeleton {
   display: block; height: 14px; border-radius: 7px;
-  background: linear-gradient(90deg, var(--surface2) 0%, var(--surface3) 50%, var(--surface2) 100%);
-  background-size: 200% 100%;
+  position: relative; overflow: hidden; background: var(--surface2);
+}
+.skeleton::after,
+.login-screen.auth-pending .google-btn::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--surface3) 50%, transparent 100%);
+  transform: translateX(-100%);
   animation: m-shimmer 1.4s linear infinite;
 }
 .skeleton + .skeleton { margin-top: 10px; }
@@ -1404,8 +1411,6 @@ a:focus-visible {
    이때 누르면 팝업이 열린 채 뒤에서 이미 로그인된 앱이 떠 버렸다. 버튼은 disabled라 클릭·포커스도 안 된다 */
 .login-screen.auth-pending .google-btn {
   opacity: 1; color: transparent; border-color: transparent;
-  background: linear-gradient(90deg, var(--surface2) 0%, var(--surface3) 50%, var(--surface2) 100%);
-  background-size: 200% 100%;
-  animation: m-shimmer 1.4s linear infinite;
+  position: relative; overflow: hidden; background: var(--surface2);
 }
 .login-screen.auth-pending .google-btn svg { visibility: hidden; }
