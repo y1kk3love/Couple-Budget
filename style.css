@@ -355,7 +355,7 @@ a:focus-visible {
 
 /* ── 뷰 컨테이너 ── */
 .view-container { flex: 1; padding: 1.5rem; overflow-y: auto; }
-.view { display: none; }
+.view { display: none; position: relative; } /* 지운 행의 유령(motion.playLayout)이 이 안에서 제자리를 잡는다 */
 .view.active { display: block; }
 
 /* ── 달력 ── */

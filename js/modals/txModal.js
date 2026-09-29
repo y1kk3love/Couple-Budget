@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { openOverlay, closeOverlay, flash, reducedMotion } from "../motion.js";
+import { openOverlay, closeOverlay, flash, reducedMotion, animateNextRender } from "../motion.js";
 import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml, runWrite } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName, moveFixedTransaction } from "../db.js";
@@ -249,6 +249,7 @@ export function setupTxModal() {
     closeModal();
     showToast(toastMsg);
     await fetchTransactions();
+    animateNextRender(); // 목록이면 새 행이 나타나고 나머지가 제자리로 (다시 그리기 바로 앞에서만 유효)
     renderAll();
     // 전체 기간 목록은 한 박자 늦게(프로미스 뒤) 그려지므로 다음 작업에서 찾는다.
     // (requestAnimationFrame은 숨겨진 탭에서 멈춰 쓰지 않는다)
@@ -263,6 +264,7 @@ export function setupTxModal() {
     closeModal();
     showToast("삭제되었습니다");
     await fetchTransactions();
+    animateNextRender(); // 지운 행은 흐려지며 빠지고 아래 행이 올라온다
     renderAll();
   });
 

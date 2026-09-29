@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { openOverlay, closeOverlay } from "../motion.js";
+import { openOverlay, closeOverlay, animateNextRender } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, runWrite } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import {
@@ -120,6 +120,7 @@ export function setupFixedModal() {
     // 저장 즉시 이번 달에 반영 — 예전에는 월 이동/새로고침 전까지 보이지 않았다
     await applyFixedItemsToMonth(state.currentYear, state.currentMonth);
     await fetchTransactions();
+    animateNextRender(); // 새·바뀐 행이 제자리로 (다시 그리기 바로 앞에서만 유효)
     renderAll();
   });
 
@@ -134,6 +135,7 @@ export function setupFixedModal() {
     showToast("삭제되었습니다");
     await fetchFixedItems();
     await fetchTransactions(); // 미래 달을 보고 있었다면 지워진 복사본이 목록에서 빠지도록
+    animateNextRender();
     renderAll();
   });
 }

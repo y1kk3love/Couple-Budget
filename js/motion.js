@@ -162,6 +162,7 @@ function clearEntrance(view) {
 }
 
 export function playEntrance(view, dir = 0, { first = false } = {}) {
+  layoutArmed = false; // 탐색이면 등장이 우선 — 목록 자리 이동은 하지 않는다
   if (!view || reducedMotion()) return;
   // 월을 빠르게 연달아 넘기면 진행 중인 슬라이드를 처음부터 다시 재생하지 않고 그냥 바꾼다
   if (dir && view.classList.contains("entering") &&
@@ -290,6 +291,89 @@ export function animateWidth(el, key, pct) {
   el.style.width = `${prev}%`;
   void el.offsetWidth;
   el.style.width = `${pct}%`;
+}
+
+// ── 목록 자리 이동 (FLIP — Paul Lewis, AutoAnimate) ───────────
+// 내가 저장·삭제·정렬하면 남은 행은 새 자리로 미끄러지고, 새 행은 살짝 커지며 나타나고, 지운 행은
+// 흐려지며 사라진다. 다시 그리기 전에 [data-flip-key] 행의 위치를 기록(captureLayout)하고, 그린 뒤
+// 같은 키끼리 비교해 이전 자리에서 새 자리로 옮긴다(playLayout).
+// 스위치(animateNextRender)는 같은 동기 호출 안에서만 켜져 있다 — 다시 그리기 바로 앞에서 부르고,
+// 쓰이지 않으면 마이크로태스크에서 저절로 꺼진다. 실시간 반영·탭 이동에는 움직이지 않는다
+// (읽던 화면이 스스로 움직이면 산만하다). 화면(위아래 100px 여유) 밖 행은 건너뛰고 최대 60개만.
+
+const LAYOUT_MOVE_MS = 280;
+const LAYOUT_ADD_MS = 240;
+const LAYOUT_REMOVE_MS = 200;
+const LAYOUT_MAX = 60;
+const LAYOUT_MARGIN = 100;
+let layoutArmed = false;
+
+export function animateNextRender() {
+  layoutArmed = true;
+  queueMicrotask(() => { layoutArmed = false; });
+}
+
+export function captureLayout(root) {
+  const armed = layoutArmed;
+  layoutArmed = false;
+  if (!armed || !root || reducedMotion()) return null;
+  const snap = new Map();
+  root.querySelectorAll("[data-flip-key]:not(.flip-ghost)").forEach(el =>
+    snap.set(el.dataset.flipKey, { rect: el.getBoundingClientRect(), node: el }));
+  return snap;
+}
+
+export function playLayout(root, snap) {
+  if (!snap || !root?.isConnected) return;
+  try {
+    const onScreen = r => r.bottom > -LAYOUT_MARGIN && r.top < innerHeight + LAYOUT_MARGIN;
+    // 읽기를 모두 끝낸 뒤 쓴다 (읽기·쓰기가 섞이면 행마다 레이아웃을 다시 계산한다)
+    const rootRect = root.getBoundingClientRect();
+    const moves = [], adds = [], seen = new Set();
+    root.querySelectorAll("[data-flip-key]:not(.flip-ghost)").forEach(el => {
+      const key = el.dataset.flipKey;
+      seen.add(key);
+      const now = el.getBoundingClientRect();
+      const prev = snap.get(key);
+      if (prev) {
+        const dx = prev.rect.left - now.left, dy = prev.rect.top - now.top;
+        if ((Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) && (onScreen(prev.rect) || onScreen(now))) moves.push({ el, dx, dy });
+      } else if (onScreen(now)) {
+        adds.push(el);
+      }
+    });
+    const removes = [];
+    snap.forEach((prev, key) => { if (!seen.has(key) && onScreen(prev.rect)) removes.push(prev); });
+
+    let budget = LAYOUT_MAX;
+    for (const { el, dx, dy } of moves) {
+      if (budget-- <= 0) break;
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
+        { duration: LAYOUT_MOVE_MS, easing: EASE_OUT });
+    }
+    for (const el of adds) {
+      if (budget-- <= 0) break;
+      el.animate([{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "none" }],
+        { duration: LAYOUT_ADD_MS, easing: EASE_OUT });
+    }
+    // 지운 행: 이전 노드를 원래 자리에 유령으로 다시 붙여 흐려지게 한 뒤 뗀다 (눌리지 않고, 읽히지 않게)
+    for (const { rect, node } of removes) {
+      if (budget-- <= 0) break;
+      node.classList.add("flip-ghost");
+      node.setAttribute("aria-hidden", "true");
+      Object.assign(node.style, {
+        position: "absolute", margin: "0", pointerEvents: "none",
+        top: `${rect.top - rootRect.top}px`, left: `${rect.left - rootRect.left}px`, width: `${rect.width}px`,
+      });
+      root.appendChild(node);
+      const drop = () => node.remove();
+      node.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(0.98)" }],
+        { duration: LAYOUT_REMOVE_MS, easing: "ease-out", fill: "forwards" }).finished.then(drop, drop);
+      setTimeout(drop, LAYOUT_REMOVE_MS + 100); // 숨은 탭처럼 애니메이션이 끝나지 않을 때
+    }
+  } catch (err) {
+    console.warn("목록 자리 이동 애니메이션 실패:", err);
+  }
 }
 
 // ── 세그먼트 컨트롤 슬라이딩 배경 (iOS) ───────────────────────

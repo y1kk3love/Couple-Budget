@@ -6,9 +6,11 @@ import state from "../state.js";
 import { fmtMoney, escapeHtml } from "../utils.js";
 import { getCategoryInfo } from "../constants.js";
 import { openFixedEditModal } from "../modals/fixedModal.js";
+import { captureLayout, playLayout } from "../motion.js";
 
 export function renderFixedView() {
   const container = document.getElementById("view-fixed");
+  const layout = captureLayout(container); // 저장·삭제 직후면 행이 새 자리로 (motion.animateNextRender)
 
   const rows = state.fixedItems.map(item => renderFixedRow(item)).join("");
 
@@ -35,6 +37,8 @@ export function renderFixedView() {
 
   // 추가 버튼
   document.getElementById("addFixedBtn").addEventListener("click", () => openFixedEditModal(null));
+
+  playLayout(container, layout);
 }
 
 function renderFixedRow(item) {
@@ -43,7 +47,7 @@ function renderFixedRow(item) {
   const sign      = item.type === "income" ? "+" : "-";
 
   return `
-    <div class="fixed-item" data-id="${escapeHtml(item.id)}" role="button" tabindex="0">
+    <div class="fixed-item" data-id="${escapeHtml(item.id)}" data-flip-key="${escapeHtml(item.id)}" role="button" tabindex="0">
       <div class="fixed-cat-dot" style="background:${cat.color}"></div>
       <div class="fixed-info">
         <div class="fixed-name">${escapeHtml(item.name)} ${renderStatusTag(item)}</div>

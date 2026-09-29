@@ -90,7 +90,7 @@ function renderEventList() {
   const past     = events.filter(e => e.date < today).slice().reverse(); // 최근에 지난 순
 
   const row = (e, isPast) => `
-    <div class="fixed-item ${isPast ? "wd-event-past" : ""}" data-wd-event="${escapeHtml(e.id)}" role="button" tabindex="0">
+    <div class="fixed-item ${isPast ? "wd-event-past" : ""}" data-wd-event="${escapeHtml(e.id)}" data-flip-key="${escapeHtml(e.id)}" role="button" tabindex="0">
       <span class="wd-event-dday">${dLabel(e.date)}</span>
       <div class="fixed-info">
         <div class="fixed-name">${escapeHtml(e.title)}</div>

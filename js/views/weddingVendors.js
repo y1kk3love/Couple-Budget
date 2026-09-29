@@ -30,7 +30,7 @@ export function renderVendorsSegment(container) {
     const chosen = v.status === "chosen";
     const meta   = [cat.name, v.contact, v.memo].filter(Boolean).map(escapeHtml).join(" · ");
     return `
-      <div class="fixed-item" data-wd-vendor="${escapeHtml(v.id)}" role="button" tabindex="0">
+      <div class="fixed-item" data-wd-vendor="${escapeHtml(v.id)}" data-flip-key="${escapeHtml(v.id)}" role="button" tabindex="0">
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
           <div class="fixed-name">${escapeHtml(v.name)} ${chosen ? `<span class="tag applied">확정</span>` : ""}</div>

@@ -7,6 +7,7 @@ import { fmtMoney, emptyStateHTML, escapeHtml, ownerName } from "../utils.js";
 import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { openEditModal } from "../modals/txModal.js";
 import { fetchAllTransactions } from "../db.js";
+import { animateNextRender, captureLayout, playLayout } from "../motion.js";
 
 // ── 조회 범위 ─────────────────────────────────────────────────
 // "month": 현재 달(state.transactions), "all": 전체 기간(fetchAllTransactions)
@@ -28,6 +29,8 @@ let visibleCount = LIST_CHUNK;
 
 export function renderListView() {
   const container = document.getElementById("view-list");
+  // 내 저장·삭제·정렬 직후면 행 위치를 기록해 두었다가 새 자리로 옮긴다 (motion.animateNextRender)
+  const layout = captureLayout(container);
 
   container.innerHTML = `
     ${renderToolbar()}
@@ -45,8 +48,10 @@ export function renderListView() {
 
   if (scope === "month") {
     bindRowEvents(container);
+    playLayout(container, layout);
   } else {
-    // 전체 기간은 비동기 조회 — 완료 시점에 다른 뷰/범위로 이동했으면 무시
+    // 전체 기간은 비동기 조회 — 완료 시점에 다른 뷰/범위로 이동했으면 무시.
+    // 행 자리 이동은 실제 행이 그려진 뒤에 재생한다 (그 전엔 자리표시만 있다)
     fetchAllTransactions().then(txs => {
       if (state.currentView !== "list" || scope !== "all") return;
       const content = container.querySelector("#listContent");
@@ -55,6 +60,7 @@ export function renderListView() {
       content.innerHTML = renderContent(filtered);
       bindRowEvents(content, new Map(filtered.map(t => [t.id, t])));
       bindMoreBtn(content);
+      playLayout(container, layout);
     });
   }
 }
@@ -191,11 +197,13 @@ function bindFilterEvents(container) {
     filters.dateFrom   = container.querySelector("#f-from").value;
     filters.dateTo     = container.querySelector("#f-to").value;
     visibleCount = LIST_CHUNK;
+    animateNextRender(); // 걸러진 행은 흐려지며 빠지고, 남은 행은 제자리로 모인다
     renderListView();
   });
   container.querySelector("#filterResetBtn")?.addEventListener("click", () => {
     filters = { name: "", category: "", minAmount: "", maxAmount: "", dateFrom: "", dateTo: "" };
     visibleCount = LIST_CHUNK;
+    animateNextRender();
     renderListView();
   });
 }
@@ -223,10 +231,12 @@ function renderSortControls() {
 
 function bindSortEvents(container) {
   container.querySelectorAll(".sort-key-btn").forEach(btn => {
-    btn.addEventListener("click", () => { sortKey = btn.dataset.sortKey; renderListView(); });
+    // 정렬을 바꾸면 행이 새 순서의 자리로 미끄러진다
+    btn.addEventListener("click", () => { sortKey = btn.dataset.sortKey; animateNextRender(); renderListView(); });
   });
   container.querySelector("#sortDirBtn")?.addEventListener("click", () => {
     sortDir = sortDir === "asc" ? "desc" : "asc";
+    animateNextRender();
     renderListView();
   });
 }
@@ -301,7 +311,7 @@ function renderTxRow(t) {
   const dateTag  = scope === "all" && sortKey !== "date" ? `<span>${escapeHtml(t.date)}</span>` : "";
 
   return `
-    <div class="tx-item" data-id="${escapeHtml(t.id)}" role="button" tabindex="0">
+    <div class="tx-item" data-id="${escapeHtml(t.id)}" data-flip-key="${escapeHtml(t.id)}" role="button" tabindex="0">
       <div class="tx-cat-dot" style="background:${cat.color}"></div>
       <div class="tx-info">
         <div class="tx-name">${escapeHtml(t.name)}</div>

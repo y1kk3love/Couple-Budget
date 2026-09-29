@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { openOverlay, closeOverlay } from "../motion.js";
+import { openOverlay, closeOverlay, animateNextRender } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName, runWrite } from "../utils.js";
 import { WEDDING_CATEGORIES, WEDDING_PERIODS, getWeddingCategory } from "../constants.js";
 import {
@@ -381,6 +381,7 @@ export function setupWeddingModals() {
       showToast((itemId ? "수정되었습니다" : "추가되었습니다") + (pending === "added" ? " · 입력 중이던 결제도 함께 저장했어요" : ""));
     }
     await fetchWeddingItems();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -403,6 +404,7 @@ export function setupWeddingModals() {
     closeTask();
     showToast(editingTaskId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingTasks();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -415,6 +417,7 @@ export function setupWeddingModals() {
     closeTask();
     showToast("삭제되었습니다");
     await fetchWeddingTasks();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -428,6 +431,7 @@ export function setupWeddingModals() {
     closeVendor();
     showToast(editingVendorId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingVendors();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -440,6 +444,7 @@ export function setupWeddingModals() {
     closeVendor();
     showToast("삭제되었습니다");
     await fetchWeddingVendors();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -476,6 +481,7 @@ export function setupWeddingModals() {
     closeVendor();
     showToast("확정했습니다 💍");
     await Promise.all([fetchWeddingVendors(), fetchWeddingItems()]);
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -497,6 +503,7 @@ export function setupWeddingModals() {
     closeEvent();
     showToast(editingEventId ? "수정되었습니다" : "추가되었습니다");
     await fetchWeddingEvents();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -509,6 +516,7 @@ export function setupWeddingModals() {
     closeEvent();
     showToast("삭제되었습니다");
     await fetchWeddingEvents();
+    animateNextRender();
     renderWeddingView();
   });
 
@@ -521,6 +529,7 @@ export function setupWeddingModals() {
     closeItem();
     showToast("삭제되었습니다");
     await fetchWeddingItems();
+    animateNextRender();
     renderWeddingView();
   });
 }

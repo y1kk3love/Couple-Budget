@@ -16,7 +16,7 @@ import {
   openWeddingTaskModal, openWeddingVendorModal
 } from "../modals/weddingModal.js";
 import { refreshAddButton } from "../app.js";
-import { rollNumber, animateWidth } from "../motion.js";
+import { rollNumber, animateWidth, captureLayout, playLayout } from "../motion.js";
 import { renderChecklistSegment } from "./weddingChecklist.js";
 import { renderVendorsSegment } from "./weddingVendors.js";
 import { renderEventsSegment } from "./weddingEvents.js";
@@ -103,9 +103,11 @@ export function renderWeddingView() {
     });
   }
 
+  const layout = captureLayout(container); // 저장·삭제 직후면 행이 새 자리로 (motion.animateNextRender)
   container.innerHTML = `${renderHeader()}${renderSegBar()}<div id="wdSegBody"></div>`;
   renderSegmentBody(container.querySelector("#wdSegBody"));
   bindEvents(container);
+  playLayout(container, layout);
   // 총지출이 바뀌면 숫자가 굴러가고 막대가 새 폭으로 이어서 움직인다
   const spentEl = container.querySelector("[data-count-key=\"wd-spent\"]");
   if (spentEl) rollNumber(spentEl, "wd-spent", Number(spentEl.dataset.count), v => `${fmtMoney(v)}원`);
@@ -236,7 +238,7 @@ function renderBudgetSegment() {
     const pctCls  = over ? "over" : spent === 0 ? "zero" : "";
     // 그래프 두 겹: 채운 색 = 정산 완료, 빗금 = 아직 미정산인 지출
     return `
-      <div class="fixed-item" data-wd-item="${escapeHtml(it.id)}" role="button" tabindex="0">
+      <div class="fixed-item" data-wd-item="${escapeHtml(it.id)}" data-flip-key="${escapeHtml(it.id)}" role="button" tabindex="0">
         <span class="pe-drag wd-item-drag" title="드래그로 순서 변경">⠿</span>
         <div class="fixed-cat-dot" style="background:${cat.color}"></div>
         <div class="fixed-info">
