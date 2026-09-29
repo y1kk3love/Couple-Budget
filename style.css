@@ -141,7 +141,8 @@
 /* 수동 라이트 강제 — 토큰은 :root 기본값 그대로, 폼 컨트롤 색만 고정 */
 :root[data-theme="light"] { color-scheme: light; }
 
-html { font-size: 15px; }
+/* 모바일 기본 탭 하이라이트(회색·파란 사각형)는 끈다 — 버튼 축소·행 음영이 눌림을 대신 보여 준다 */
+html { font-size: 15px; -webkit-tap-highlight-color: transparent; }
 body {
   font-family: var(--font); background: var(--bg); color: var(--text);
   min-height: 100vh; overflow-x: hidden;
@@ -1141,16 +1142,19 @@ a:focus-visible {
 .empty-state .load-error-hint { font-size: 0.82rem; color: var(--text-2); margin-top: 6px; line-height: 1.5; }
 .empty-state .load-retry-btn { margin-top: 1rem; }
 
-/* ── 클릭 가능한 카드·행에도 버튼과 같은 눌림 촉감 ── */
+/* ── 클릭 가능한 카드·행의 눌림 촉감 ──
+   목록 행·달력 칸은 배경 음영 (토스 TDS·iOS 목록). 예전엔 통째로 0.98배 작아져, 스크롤하려고
+   손을 댈 때도 행이 움찔했다. 음영은 호버(--surface-hover)보다 한 단계 짙은 --surface2 —
+   호버 색은 흰 배경과 거의 같아(1.03:1) 폰에서는 보이지 않는다. 카드는 버튼처럼 살짝 작아진다 */
 .tx-item, .fixed-item, .budget-card, .cal-cell, .cd-row,
 .cat-bar-item.clickable, .mc-col {
   transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
-.tx-item:active, .fixed-item:active, .budget-card:active, .cal-cell:active,
-.cd-row:active, .cat-bar-item.clickable:active, .mc-col:active {
-  transform: scale(0.98);
+.tx-item:active, .fixed-item:active, .cd-row:active,
+.cat-bar-item.clickable:active, .cal-cell:not(.empty):active {
+  background: var(--surface2);
 }
-.cal-cell.empty:active { transform: none; }
+.budget-card:active, .mc-col:active { transform: scale(0.98); }
 
 /* ── 반응형 ── */
 @media (max-width: 768px) {

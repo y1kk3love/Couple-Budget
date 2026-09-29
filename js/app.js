@@ -26,7 +26,7 @@ import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 import { startSync } from "./sync.js";
 import {
-  playEntrance, slideLabel, animateCount, animateWidth, setupSegmentThumbs, setupSheetDrag
+  playEntrance, slideLabel, animateCount, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback
 } from "./motion.js";
 
 // 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
@@ -467,6 +467,7 @@ setupAuth();
 setupThemeToggle();
 setupSegmentThumbs(); // 세그먼트 컨트롤 슬라이딩 배경 (어느 화면이든 자동)
 setupSheetDrag();     // 모바일 바텀시트 끌어서 닫기
+setupTouchFeedback(); // 아이폰에서도 :active 눌림 효과가 보이도록
 document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
 document.getElementById("sideExportBtn").addEventListener("click", exportAllCsv); // 모바일 햄버거 메뉴
 document.getElementById("addTxBtn").addEventListener("click", onAddClick);

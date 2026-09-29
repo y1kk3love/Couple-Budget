@@ -48,6 +48,13 @@ export function closeOverlay(overlay) {
   }, CLOSE_MS));
 }
 
+// ── 눌림 효과가 아이폰에서도 보이도록 ─────────────────────────
+// iOS Safari는 touchstart 리스너가 하나도 없으면 :active를 적용하지 않는다(MDN :active 호환성 표).
+// 이 앱엔 없었기 때문에 버튼·행의 눌림 효과가 아이폰에서는 보이지 않았다. 빈 리스너 하나로 켠다.
+export function setupTouchFeedback() {
+  document.addEventListener("touchstart", () => {}, { passive: true });
+}
+
 // ── 바텀시트 끌어서 닫기 (iOS) ────────────────────────────────
 // 모바일에서 시트 윗부분(손잡이·제목)을 아래로 끌면 따라 내려오고, 충분히 끌었거나
 // 빠르게 튕기면 닫힌다. 모달별 정리 로직을 그대로 타도록 닫기는 .modal-close 클릭으로 한다.
