@@ -376,6 +376,30 @@ export function playLayout(root, snap) {
   }
 }
 
+// ── 상대가 바꾼 행 반짝임 ─────────────────────────────────────
+// 상대가 다른 기기에서 추가·수정한 행을 1.6초 동안 은은한 파란 음영으로 표시한다(.m-remote).
+// 내가 저장한 행의 반짝임(m-flash, 파란 테두리)과 모양이 다르다. 색만 바뀌어 동작 줄이기에서도 유지.
+export function highlightRows(root, ids) {
+  if (!root || !ids) return;
+  try {
+    for (const id of ids) {
+      const el = root.querySelector(`[data-flip-key="${CSS.escape(id)}"]:not(.flip-ghost)`);
+      if (!el) continue;
+      el.classList.remove("m-remote");
+      void el.offsetWidth; // 이미 반짝이는 중이면 처음부터 다시
+      el.classList.add("m-remote");
+      const end = e => {
+        if (e.target !== el || e.animationName !== "m-remote") return;
+        el.classList.remove("m-remote");
+        el.removeEventListener("animationend", end);
+      };
+      el.addEventListener("animationend", end);
+    }
+  } catch (err) {
+    console.warn("상대 변경 표시 실패:", err);
+  }
+}
+
 // ── 세그먼트 컨트롤 슬라이딩 배경 (iOS) ───────────────────────
 // 선택된 버튼 뒤에 흰 '엄지'가 미끄러져 따라간다. 화면을 innerHTML로 다시 그리면 엄지도 새로
 // 생기므로, 컨트롤마다 마지막 위치를 기억했다가 거기서 새 위치로 옮긴다 (FLIP).

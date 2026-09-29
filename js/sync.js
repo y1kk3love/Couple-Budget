@@ -22,12 +22,23 @@ import { renderRemoteChange } from "./app.js";
 
 let unsubs = [];
 let renderTimer = null;
+let pendingIds = new Set(); // 이번에 모은 상대의 변경 문서 ID — 다시 그린 뒤 그 행을 반짝인다
 
 // 여러 리스너가 한꺼번에 알려도 한 번만 그리도록 잠깐 모았다가 렌더
-function scheduleRender() {
+function scheduleRender(ids = []) {
+  for (const id of ids) pendingIds.add(id);
   clearTimeout(renderTimer);
-  renderTimer = setTimeout(renderRemoteChange, 120);
+  renderTimer = setTimeout(() => {
+    const changed = pendingIds;
+    pendingIds = new Set();
+    renderRemoteChange(changed);
+  }, 120);
 }
+
+// 컬렉션 스냅샷에서 추가·수정된 문서 ID (문서 하나를 구독하는 설정 스냅샷엔 없다)
+const changedIds = snap => typeof snap.docChanges === "function"
+  ? snap.docChanges().filter(c => c.type !== "removed").map(c => c.doc.id)
+  : [];
 
 // ref를 구독해 apply로 state에 반영. 첫 스냅샷(이미 조회한 내용)과 내 쓰기는 다시 그리지 않는다.
 // afterRemote: 상대의 변경을 반영한 뒤 렌더 전에 할 추가 작업
@@ -37,8 +48,9 @@ function listen(ref, apply, afterRemote = null) {
     apply(snap);
     if (first) { first = false; return; }
     if (snap.metadata.hasPendingWrites) return;
-    if (afterRemote) afterRemote().catch(err => console.warn("실시간 반영 후처리 실패:", err)).finally(scheduleRender);
-    else scheduleRender();
+    const ids = changedIds(snap);
+    if (afterRemote) afterRemote().catch(err => console.warn("실시간 반영 후처리 실패:", err)).finally(() => scheduleRender(ids));
+    else scheduleRender(ids);
   }, err => {
     console.warn("실시간 동기화 중단:", ref.path ?? ref.id ?? "", err.code ?? err);
   });
@@ -72,4 +84,5 @@ export function stopSync() {
   unsubs.forEach(u => u());
   unsubs = [];
   clearTimeout(renderTimer);
+  pendingIds = new Set();
 }

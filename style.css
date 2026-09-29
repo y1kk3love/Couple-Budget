@@ -1412,6 +1412,10 @@ a:focus-visible {
 }
 .m-flash { animation: m-flash 1400ms ease-out; }
 
+/* ── 상대가 방금 추가·수정한 행 (motion.highlightRows) — 테두리 없이 은은한 음영만 1.6초 ── */
+@keyframes m-remote { 0%, 30% { background-color: var(--accent-bg); } }
+.m-remote { animation: m-remote 1600ms ease-out; }
+
 /* ── 체크리스트 완료 체크: 톡 튀어 오른다 ── */
 @keyframes m-check-pop { 0% { transform: scale(0.6); } }
 .wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 480ms var(--ease-bounce); }

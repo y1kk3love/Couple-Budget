@@ -64,7 +64,10 @@ export function watchTransactions(onRemoteChange) {
     invalidateBalanceCache();
     deriveMonth(state.currentYear, state.currentMonth);
     if (first) { first = false; resolveReady(); return; }
-    if (!snap.metadata.hasPendingWrites) onRemoteChange();
+    // 상대가 추가·수정한 문서 ID를 넘겨, 다시 그린 뒤 그 행을 반짝이게 한다 (삭제는 행이 없어 제외)
+    if (!snap.metadata.hasPendingWrites) {
+      onRemoteChange(snap.docChanges().filter(c => c.type !== "removed").map(c => c.doc.id));
+    }
   }, err => {
     console.warn("거래 실시간 동기화 중단 — 조회 방식으로 계속합니다:", err.code ?? err);
     txUnsub = null; liveTx = null; liveReady = null;

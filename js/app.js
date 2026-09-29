@@ -26,7 +26,8 @@ import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 import { startSync } from "./sync.js";
 import {
-  playEntrance, slideLabel, rollNumber, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback
+  playEntrance, slideLabel, rollNumber, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback,
+  highlightRows
 } from "./motion.js";
 
 // 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
@@ -77,7 +78,7 @@ export function resetSessionUI() {
 // ── 상대 기기의 변경 반영 (sync.js가 호출) ─────────────────────
 // state는 리스너가 이미 최신으로 바꿔 두었다. 입력 중인 화면은 다시 그리면 입력이 날아가므로
 // 그 화면은 그대로 두고 요약·배너만 갱신한다 — 화면은 다음 렌더 때 최신으로 그려진다.
-export function renderRemoteChange() {
+export function renderRemoteChange(changedIds = new Set()) {
   if (loadError) { loadAllData(); return; } // 로드 실패 중이었다면 연결이 돌아온 것 — 다시 로드
   const view = document.getElementById(`view-${state.currentView}`);
   if (view && hasUnsavedInput(view)) {
@@ -86,6 +87,9 @@ export function renderRemoteChange() {
     return;
   }
   renderAll();
+  // 상대가 방금 추가·수정한 행을 은은하게 표시 — 자리 이동은 하지 않는다(읽던 화면이 스스로 움직이지 않게).
+  // 전체 기간 목록은 한 박자 늦게 그려지므로 다음 작업에서 찾는다 (requestAnimationFrame 대신 setTimeout)
+  if (changedIds.size) setTimeout(() => highlightRows(view, changedIds), 0);
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────
