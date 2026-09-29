@@ -8,7 +8,7 @@ import { CATEGORIES } from "../constants.js";
 import { fetchBudgetPlans, saveBudgetPlan } from "../db.js";
 import { renderAll } from "../app.js";
 import { ALLOWED_EMAILS } from "../../firebase.js";
-import { rollNumber } from "../motion.js";
+import { rollNumber, setupDragReorder } from "../motion.js";
 
 // 항목 색은 파스텔 팔레트를 순서대로 자동 배정
 const PLAN_COLORS = CATEGORIES.expense.map(c => c.color);
@@ -268,37 +268,14 @@ function bindEvents(container, myEmail) {
     });
   });
 
-  // 드래그로 항목 순서 변경 (pointer 이벤트라 터치에서도 동작)
-  // 주의: 드래그 중 행을 DOM에서 재배치하면(제거+재삽입) 포인터 캡처가 풀리므로,
-  // setPointerCapture 대신 document에 리스너를 걸어 이벤트를 계속 받는다.
-  container.querySelectorAll(".pe-drag").forEach(handle => {
-    handle.addEventListener("pointerdown", e => {
-      e.preventDefault(); // 텍스트 선택 방지 (터치 스크롤은 CSS touch-action:none이 차단)
-      const row = handle.closest(".plan-edit-row");
-      row.classList.add("dragging");
-
-      const onMove = ev => {
-        // 포인터 세로 위치가 중간점보다 위인 첫 행 앞에 삽입, 없으면 맨 뒤로
-        const others = [...container.querySelectorAll(".plan-edit-row")].filter(r => r !== row);
-        const next = others.find(o => {
-          const r = o.getBoundingClientRect();
-          return ev.clientY < r.top + r.height / 2;
-        });
-        if (next) next.before(row);
-        else others[others.length - 1]?.after(row);
-      };
-      const onUp = () => {
-        document.removeEventListener("pointermove", onMove);
-        document.removeEventListener("pointerup", onUp);
-        document.removeEventListener("pointercancel", onUp);
-        row.classList.remove("dragging");
-        syncDraft(container); // DOM 순서 그대로 draft에 회수
-        renderPlanView();     // data-idx 재부여를 위해 재렌더
-      };
-      document.addEventListener("pointermove", onMove);
-      document.addEventListener("pointerup", onUp);
-      document.addEventListener("pointercancel", onUp);
-    });
+  // 드래그로 항목 순서 변경 — 들어 올린 행이 손가락을 따라오고 나머지가 비켜난다 (motion.setupDragReorder)
+  setupDragReorder(container, {
+    rowSelector: ".plan-edit-row",
+    handleSelector: ".pe-drag",
+    onDrop: () => {
+      syncDraft(container); // DOM 순서 그대로 draft에 회수
+      renderPlanView();     // data-idx 재부여를 위해 재렌더
+    },
   });
 
   container.querySelector("#peCancelBtn")?.addEventListener("click", () => {

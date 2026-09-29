@@ -418,6 +418,100 @@ export function revealTheme(originEl, update) {
   }
 }
 
+// ── 드래그 정렬 (iOS 목록 편집) ───────────────────────────────
+// 손잡이를 잡으면 행이 살짝 떠오르고(1.02배·그림자) 손가락을 그대로 따라오며, 지나가는 자리의 행들은
+// 부드럽게 비켜난다(FLIP 180ms). 놓거나 취소하면 스프링으로 제자리에 앉은 뒤 onDrop(새 순서의 행들).
+// 포인터 캡처 대신 document 리스너 — 드래그 중 행을 DOM에서 옮기면 캡처가 풀리기 때문.
+// 예산안 편집 행과 결혼 예산 행이 같이 쓴다 (예전엔 두 화면에 같은 코드가 복사돼 있었다).
+
+const DRAG_SHIFT_MS = 180;
+const DRAG_SETTLE_MS = 250;
+
+export function setupDragReorder(container, { rowSelector, handleSelector, onDrop }) {
+  const rows = () => [...container.querySelectorAll(rowSelector)];
+  container.querySelectorAll(handleSelector).forEach(handle => {
+    // 드래그 뒤 이어지는 click이 행 클릭(수정 모달 등)으로 번지지 않게
+    handle.addEventListener("click", e => e.stopPropagation());
+    handle.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      const row = handle.closest(rowSelector);
+      if (!row) return;
+      e.preventDefault(); // 텍스트 선택 방지 (터치 스크롤은 CSS touch-action:none이 막는다)
+      const calm = reducedMotion();
+      const lift = calm ? "" : " scale(1.02)";
+      const startY = e.clientY;
+      const startTop = row.offsetTop;
+      row.classList.add("drag-lift");
+      row.style.transition = "none";
+      row.style.transform = `translateY(0px)${lift}`;
+      haptic(8);
+
+      // 잡은 행은 DOM 자리가 바뀌어도 손가락 아래에 그대로 (레이아웃 이동만큼 되돌린다)
+      const follow = y => {
+        row.style.transform = `translateY(${(y - startY) - (row.offsetTop - startTop)}px)${lift}`;
+      };
+      // 형제 행 FLIP — 옮기기 전 보이는 위치에서 옮긴 뒤 자리로
+      const shiftSiblings = mutate => {
+        const sibs = rows().filter(r => r !== row);
+        const first = calm ? null : new Map(sibs.map(s => [s, s.getBoundingClientRect().top]));
+        sibs.forEach(s => s._dragShift?.cancel());
+        mutate();
+        if (calm) return;
+        for (const s of sibs) {
+          const dy = first.get(s) - s.getBoundingClientRect().top;
+          if (Math.abs(dy) > 0.5) {
+            s._dragShift = s.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }],
+              { duration: DRAG_SHIFT_MS, easing: EASE_OUT });
+          }
+        }
+      };
+
+      const onMove = ev => {
+        try {
+          // 포인터가 중간점보다 위인 첫 행 앞에, 없으면 맨 뒤로 — 판단은 변형을 뺀 레이아웃 위치로
+          // (비켜나는 중인 행의 움직이는 위치로 판단하면 자리가 앞뒤로 흔들린다)
+          const all = rows();
+          const others = all.filter(r => r !== row);
+          const base = row.offsetParent?.getBoundingClientRect().top ?? 0;
+          const py = ev.clientY - base;
+          const next = others.find(o => py < o.offsetTop + o.offsetHeight / 2) ?? null;
+          const curNext = all[all.indexOf(row) + 1] ?? null;
+          if (next !== curNext) {
+            shiftSiblings(() => (next ? next.before(row) : others[others.length - 1]?.after(row)));
+          }
+          follow(ev.clientY);
+        } catch (err) {
+          console.warn("드래그 정렬 이동 실패:", err);
+        }
+      };
+      const onEnd = () => {
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onEnd);
+        document.removeEventListener("pointercancel", onEnd);
+        let done = false;
+        const settle = () => {
+          if (done) return;
+          done = true;
+          row.classList.remove("drag-lift");
+          row.style.transition = "";
+          row.style.transform = "";
+          haptic(8);
+          onDrop(rows());
+        };
+        if (calm) { settle(); return; }
+        // 제자리로 스프링 — 끝나면(숨은 탭 대비 타이머도) 정리하고 새 순서를 넘긴다
+        row.style.transition = `transform ${DRAG_SETTLE_MS}ms var(--ease-spring)`;
+        row.style.transform = "";
+        row.addEventListener("transitionend", settle, { once: true });
+        setTimeout(settle, DRAG_SETTLE_MS + 50);
+      };
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onEnd);
+      document.addEventListener("pointercancel", onEnd);
+    });
+  });
+}
+
 // ── 상대가 바꾼 행 반짝임 ─────────────────────────────────────
 // 상대가 다른 기기에서 추가·수정한 행을 1.6초 동안 은은한 파란 음영으로 표시한다(.m-remote).
 // 내가 저장한 행의 반짝임(m-flash, 파란 테두리)과 모양이 다르다. 색만 바뀌어 동작 줄이기에서도 유지.

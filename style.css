@@ -882,8 +882,11 @@ a:focus-visible {
   color: var(--text-3); font-size: 0.9rem; padding: 0 2px; flex-shrink: 0;
 }
 .pe-drag:active { cursor: grabbing; }
-.plan-edit-row.dragging { opacity: 0.55; }
-.plan-edit-row.dragging input { pointer-events: none; }
+/* 드래그 정렬로 들어 올린 행 (motion.setupDragReorder — 예산안 편집 행·결혼 예산 행 공용).
+   예전엔 반투명(.55)해지기만 해 무엇을 옮기는지 흐릿했다 — iOS처럼 떠오르고 그림자가 진다 */
+.drag-lift { position: relative; z-index: 2; background: var(--surface); box-shadow: var(--shadow-pop); }
+.drag-lift * { pointer-events: none; }
+.plan-edit-row.drag-lift { border-radius: 10px; }
 .pe-del {
   background: none; border: none; color: var(--text-3); font-size: 1.1rem;
   cursor: pointer; flex-shrink: 0;
@@ -973,8 +976,6 @@ a:focus-visible {
 .wd-pay-row.settled .wd-pay-settle-full { display: none; }
 .wd-pay-row.settled .wd-pay-settle-done { display: inline; }
 .wd-pay-row.settled .wd-pay-settle-amt { color: var(--income); }
-.fixed-item.dragging { opacity: 0.55; }
-.fixed-item.dragging * { pointer-events: none; }
 .wd-empty-note { font-size: 0.82rem; color: var(--text-3); padding: 8px 0; }
 
 /* 결제 내역 (항목 모달) */
