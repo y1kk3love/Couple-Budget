@@ -72,6 +72,14 @@ export function setupTouchFeedback() {
   document.addEventListener("touchstart", () => {}, { passive: true });
 }
 
+// ── 짧은 진동 (안드로이드) ────────────────────────────────────
+// 체크 완료·드래그 정렬처럼 손으로 무언가를 확정하는 순간에만 쓴다. 안드로이드 Chrome·삼성 인터넷만
+// 지원하고, 아이폰 웹·파이어폭스는 navigator.vibrate가 없어 아무 일도 하지 않는다(아이폰의 우회 요령은
+// iOS 26.5부터 막혀 쓰지 않는다). 진동은 움직임이 아니라 동작 줄이기와 무관하다.
+export function haptic(pattern = 10) {
+  try { navigator.vibrate?.(pattern); } catch { /* 지원하지 않는 환경 */ }
+}
+
 // ── 바텀시트 끌어서 닫기 (iOS) ────────────────────────────────
 // 모바일에서 시트 윗부분(손잡이·제목)을 아래로 끌면 따라 내려오고, 충분히 끌었거나
 // 빠르게 튕기면 닫힌다. 모달별 정리 로직을 그대로 타도록 닫기는 .modal-close 클릭으로 한다.

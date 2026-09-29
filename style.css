@@ -1012,9 +1012,33 @@ a:focus-visible {
 }
 .wd-task-row + .wd-task-row { border-top: 1px solid var(--border); }
 .wd-task-row:hover { background: var(--surface-hover); }
-.wd-task-chk { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+/* 체크박스 — 실제 입력은 그대로(키보드·화면 낭독기 동일) 두고 모양만 그린다.
+   체크 표시(.chk-mark)는 stroke-dashoffset으로 그려지고, 방금 체크한 행(.m-pop)은 모션 절에서 애니메이션 */
+.wd-task-chk {
+  appearance: none; -webkit-appearance: none; margin: 0;
+  width: 20px; height: 20px; border-radius: 6px;
+  border: 1.5px solid var(--border-strong); background: var(--surface);
+  cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.wd-task-chk:checked { background: var(--accent-fill); border-color: var(--accent-fill); }
+.wd-task-chk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chk-mark {
+  position: absolute; left: 50%; top: 50%; width: 20px; height: 20px;
+  transform: translate(-50%, -50%); pointer-events: none;
+}
+.chk-mark path {
+  fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+}
+.wd-task-chk:checked + .chk-mark path { stroke-dashoffset: 0; }
 .wd-task-title { font-size: 0.88rem; color: var(--text); }
-.wd-task-row.done .wd-task-title { text-decoration: line-through; color: var(--text-3); }
+.wd-task-row.done .wd-task-title { color: var(--text-3); }
+/* 완료 취소선 — text-decoration 대신 안쪽 인라인 요소의 선 그라데이션이라 왼쪽부터 그려질 수 있다(여러 줄도 줄마다) */
+.wd-task-row.done .strike {
+  background: linear-gradient(currentColor, currentColor) 0 55% / 100% 1.5px no-repeat;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
 .wd-task-memo { font-size: 0.75rem; color: var(--text-3); }
 .wd-empty-actions { display: flex; gap: 8px; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
 
@@ -1258,14 +1282,14 @@ a:focus-visible {
     display: inline-flex; align-items: center; justify-content: center;
   }
 
-  /* 체크리스트 체크박스 — 17px 상자를 44px 누름 영역(label)으로 감싼다 (weddingChecklist.js).
+  /* 체크리스트 체크박스 — 22px 상자를 44px 누름 영역(label)으로 감싼다 (weddingChecklist.js).
      음수 여백으로 행 높이는 늘리지 않고 누름 영역만 넓힌다 */
-  .wd-task-chk { width: 20px; height: 20px; }
+  .wd-task-chk, .chk-mark { width: 22px; height: 22px; }
   .wd-task-chk-hit { min-width: 44px; min-height: 44px; margin: -12px -8px -12px -12px; justify-content: center; }
 }
 
 /* 체크박스를 감싸는 누름 영역 — 행 클릭(수정 모달)과 분리 */
-.wd-task-chk-hit { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+.wd-task-chk-hit { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; position: relative; }
 
 /* ================================================================
    모션 (iOS·토스 참고) — js/motion.js와 짝
@@ -1422,10 +1446,13 @@ a:focus-visible {
 @keyframes m-remote { 0%, 30% { background-color: var(--accent-bg); } }
 .m-remote { animation: m-remote 1600ms ease-out; }
 
-/* ── 체크리스트 완료 체크: 톡 튀어 오른다 ── */
+/* ── 체크리스트 완료 체크: 상자가 톡 튀며 차고, 체크 표시와 취소선이 이어서 그려진다 ── */
 @keyframes m-check-pop { 0% { transform: scale(0.6); } }
-.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 480ms var(--ease-bounce); }
-.wd-task-row.m-pop .wd-task-title { animation: m-fade-in 300ms ease; }
+@keyframes m-check-draw { from { stroke-dashoffset: 1; } }
+@keyframes m-strike { from { background-size: 0 1.5px; } }
+.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 420ms var(--ease-bounce); }
+.wd-task-row.m-pop .chk-mark path { animation: m-check-draw 280ms var(--ease-out) 60ms backwards; }
+.wd-task-row.m-pop .strike { animation: m-strike 300ms var(--ease-out) 80ms backwards; }
 
 /* ── 불러오는 동안 스켈레톤 (토스) — 문구 대신 반짝이는 자리표시 ──
    반짝이는 띠(::after)를 transform으로 옮긴다. 예전엔 background-position을 움직여

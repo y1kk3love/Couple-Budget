@@ -9,8 +9,9 @@ import { WEDDING_PERIODS } from "../constants.js";
 import { toggleWeddingTask, seedWeddingChecklist, fetchWeddingTasks } from "../weddingDb.js";
 import { renderWeddingView } from "./wedding.js";
 import { openWeddingTaskModal } from "../modals/weddingModal.js";
+import { haptic } from "../motion.js";
 
-// 방금 완료로 체크한 할 일 — 다시 그린 뒤 그 행의 체크가 톡 튀어 오른다 (한 번만)
+// 방금 완료로 체크한 할 일 — 다시 그린 뒤 그 행의 상자가 톡 튀며 차고, 체크 표시와 취소선이 그려진다 (한 번만)
 let popTaskId = null;
 
 export function renderChecklistSegment(container) {
@@ -35,8 +36,8 @@ export function renderChecklistSegment(container) {
       if (!list.length) return "";
       const rows = list.map(t => `
         <div class="wd-task-row ${t.done ? "done" : ""}${t.done && t.id === popTaskId ? " m-pop" : ""}" data-task-id="${escapeHtml(t.id)}" data-flip-key="${escapeHtml(t.id)}" role="button" tabindex="0">
-          <label class="wd-task-chk-hit"><input type="checkbox" class="wd-task-chk" data-chk-id="${escapeHtml(t.id)}" ${t.done ? "checked" : ""} aria-label="완료 표시" /></label>
-          <span class="wd-task-title">${escapeHtml(t.title)}</span>
+          <label class="wd-task-chk-hit"><input type="checkbox" class="wd-task-chk" data-chk-id="${escapeHtml(t.id)}" ${t.done ? "checked" : ""} aria-label="완료 표시" /><svg class="chk-mark" viewBox="0 0 22 22" aria-hidden="true"><path pathLength="1" d="M6.2 11.4l3.2 3.2 6.6-7"/></svg></label>
+          <span class="wd-task-title"><span class="strike">${escapeHtml(t.title)}</span></span>
           ${t.memo ? `<span class="wd-task-memo">${escapeHtml(t.memo)}</span>` : ""}
         </div>`).join("");
       const gDone = list.filter(t => t.done).length;
@@ -87,7 +88,10 @@ export function renderChecklistSegment(container) {
         chk.checked = !chk.checked; // 실패 시 원상 복구
         return;
       }
-      if (chk.checked) popTaskId = chk.dataset.chkId;
+      if (chk.checked) {
+        popTaskId = chk.dataset.chkId;
+        haptic(10); // 완료할 때만 짧게 (안드로이드)
+      }
       await fetchWeddingTasks();
       renderWeddingView();
     });
