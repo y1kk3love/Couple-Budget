@@ -1282,16 +1282,20 @@ a:focus-visible {
 @keyframes m-sheet-up  { from { transform: translateY(100%); } }
 @keyframes m-sheet-down{ to   { transform: translateY(100%); } }
 
-/* ── 모달 배경막: 배경을 가상 요소로 분리해 따로 페이드 (시트를 끌면 --scrim으로 옅어진다) ── */
+/* ── 모달 배경막: 실제 요소 .modal-scrim(오버레이 첫 자식 — motion.openOverlay가 만든다)으로 분리해
+   따로 페이드. 시트를 끄는 동안 JS가 이 요소의 opacity만 바꾼다 — 예전엔 ::before라 오버레이의
+   --scrim 변수를 매 이동마다 바꿔 모달 전체의 스타일을 다시 계산했다.
+   클릭은 통과(pointer-events: none) — 배경을 눌러 닫는 처리(e.target === overlay)가 그대로 동작하도록 ── */
 .modal-overlay { background: transparent; }
-.modal-overlay::before {
-  content: ""; position: absolute; inset: 0;
-  background: var(--overlay); opacity: var(--scrim, 1);
+.modal-overlay > * { position: relative; } /* 배경막 위에 그려지도록 */
+.modal-overlay > .modal-scrim {
+  position: absolute; inset: 0;
+  background: var(--overlay);
+  pointer-events: none;
   animation: m-fade-in var(--dur-base) ease backwards;
 }
-.modal-overlay > * { position: relative; } /* 배경막(::before) 위에 그려지도록 */
 .modal-overlay.is-closing { pointer-events: none; }
-.modal-overlay.is-closing::before { animation: m-fade-out 200ms ease forwards; }
+.modal-overlay.is-closing > .modal-scrim { animation: m-fade-out 200ms ease forwards; }
 /* 퇴장은 입장보다 짧고 누르는 즉시 움직이기 시작한다 (천천히 출발하는 ease-in은 누른 직후 무반응처럼 보인다) */
 .modal-overlay.is-closing > .modal,
 .modal-overlay.is-closing > .confirm-box { animation: m-pop-out 160ms var(--ease-out) forwards; }

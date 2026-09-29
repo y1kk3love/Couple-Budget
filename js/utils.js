@@ -143,7 +143,9 @@ export function showConfirm(message, { confirmText = "확인", danger = true } =
   return new Promise(resolve => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay confirm-overlay";
+    // .modal-scrim: 배경막 — 클릭은 통과해 아래 오버레이가 받는다(배경 누르면 취소)
     overlay.innerHTML = `
+      <div class="modal-scrim"></div>
       <div class="confirm-box" role="alertdialog" aria-modal="true" aria-label="${escapeHtml(message)}">
         <p class="confirm-msg">${escapeHtml(message)}</p>
         <div class="confirm-actions">

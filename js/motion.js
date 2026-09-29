@@ -9,6 +9,9 @@
 const reduceMq = matchMedia("(prefers-reduced-motion: reduce)");
 export const reducedMotion = () => reduceMq.matches;
 
+// style.css의 --ease-out과 같은 곡선 (JS 전환·애니메이션은 CSS 변수를 곡선으로 쓸 수 없는 곳이 있다)
+const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
+
 // ── 오버레이(모달·바텀시트) 열기/닫기 ─────────────────────────
 // 닫을 때 바로 숨기지 않고 .is-closing으로 퇴장 애니메이션(시트는 아래로, 팝업은 작아지며
 // 사라짐)을 재생한 뒤 .hidden을 붙인다. 닫는 중에 다시 열면 퇴장을 취소한다.
@@ -16,10 +19,23 @@ export const reducedMotion = () => reduceMq.matches;
 const CLOSE_MS = 240; // 가장 긴 퇴장(시트 240ms) — 팝업 160ms, 배경막 200ms
 const closeTimers = new WeakMap();
 
+// 배경막은 오버레이의 첫 자식 요소(.modal-scrim). 예전엔 ::before라 JS가 투명도를 직접 바꿀 수 없어
+// 오버레이의 CSS 변수(--scrim)를 매 이동마다 바꿨고, 모달 전체의 스타일을 다시 계산했다.
+function ensureScrim(overlay) {
+  let scrim = overlay.querySelector(":scope > .modal-scrim");
+  if (!scrim) {
+    scrim = document.createElement("div");
+    scrim.className = "modal-scrim";
+    overlay.prepend(scrim);
+  }
+  return scrim;
+}
+
 function resetSheet(overlay) {
   const sheet = overlay.querySelector(":scope > .modal");
   if (sheet) { sheet.style.transform = ""; sheet.style.transition = ""; }
-  overlay.style.removeProperty("--scrim");
+  const scrim = overlay.querySelector(":scope > .modal-scrim");
+  if (scrim) { scrim.style.opacity = ""; scrim.style.transition = ""; }
   delete overlay.dataset.dismissed;
 }
 
@@ -27,6 +43,7 @@ export function openOverlay(overlay) {
   const t = closeTimers.get(overlay);
   if (t) { clearTimeout(t); closeTimers.delete(overlay); }
   overlay.classList.remove("is-closing");
+  ensureScrim(overlay);
   resetSheet(overlay);
   overlay.classList.remove("hidden");
 }
@@ -69,17 +86,20 @@ export function setupSheetDrag() {
     if (e.target.closest("button, input, select, textarea, a, label, [role='button']")) return;
     const sheet = header.parentElement;
     const overlay = sheet.parentElement;
+    const scrim = ensureScrim(overlay);
+    const height = sheet.offsetHeight; // 끄는 동안 레이아웃을 다시 읽지 않도록 시작할 때 한 번만
 
     const startY = e.clientY;
     let lastY = startY, lastT = performance.now(), velocity = 0, dy = 0;
     sheet.style.transition = "none";
+    scrim.style.transition = "none";
 
     const onMove = ev => {
       dy = ev.clientY - startY;
       // 위로 끌면 고무줄처럼 조금만 (iOS)
       const shown = dy >= 0 ? dy : -Math.sqrt(-dy) * 2;
       sheet.style.transform = `translateY(${shown}px)`;
-      overlay.style.setProperty("--scrim", String(Math.max(0, 1 - dy / sheet.offsetHeight)));
+      scrim.style.opacity = String(Math.max(0, 1 - dy / height));
       const now = performance.now();
       velocity = (ev.clientY - lastY) / Math.max(8, now - lastT);
       lastY = ev.clientY; lastT = now;
@@ -90,22 +110,28 @@ export function setupSheetDrag() {
       document.removeEventListener("pointercancel", onUp);
       // 손가락을 멈췄다가 떼면 튕긴 게 아니다 — 마지막 움직임 뒤 80ms가 지났으면 속도 0 (iOS)
       const flingVelocity = performance.now() - lastT > 80 ? 0 : velocity;
-      const dismiss = dy > Math.min(140, sheet.offsetHeight * 0.3) || (dy > 20 && flingVelocity > 0.6);
+      const dismiss = dy > Math.min(140, height * 0.3) || (dy > 20 && flingVelocity > 0.6);
       if (dismiss) {
-        sheet.style.transition = `transform ${CLOSE_MS}ms cubic-bezier(0.4, 0, 1, 1)`;
+        // 손가락 속도를 이어받아 끊김 없이 내려간다 (Apple WWDC 'Animate with springs').
+        // ease-out 곡선의 시작 기울기가 약 4.5라 4.5 × 남은 거리 ÷ 시간이 곧 시작 속도 —
+        // 예전의 천천히 출발하는 곡선(ease-in)은 휙 내린 직후 순간 멈칫했다
+        const d = Math.round(Math.min(280, Math.max(160, 4.5 * (height - dy) / Math.max(flingVelocity, 0.01))));
+        sheet.style.transition = `transform ${d}ms ${EASE_OUT}`;
         sheet.style.transform = "translateY(105%)";
-        overlay.style.setProperty("--scrim", "0");
+        scrim.style.transition = `opacity ${d}ms ${EASE_OUT}`;
+        scrim.style.opacity = "0";
         setTimeout(() => {
           overlay.dataset.dismissed = "1";
           overlay.querySelector(".modal-close")?.click();
           // 닫기 버튼이 없는 모달이라면 직접 숨긴다
           if (!overlay.classList.contains("hidden")) closeOverlay(overlay);
-        }, CLOSE_MS);
+        }, d);
       } else {
-        // 제자리로 스프링 복귀
-        sheet.style.transition = "transform 420ms var(--ease-spring)";
+        // 제자리로 스프링 복귀, 배경막도 원래 진하기로
+        sheet.style.transition = "transform 360ms var(--ease-spring)";
         sheet.style.transform = "";
-        overlay.style.removeProperty("--scrim");
+        scrim.style.transition = "opacity 360ms ease";
+        scrim.style.opacity = "";
       }
     };
     document.addEventListener("pointermove", onMove);
