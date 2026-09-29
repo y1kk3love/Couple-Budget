@@ -13,7 +13,7 @@ export const reducedMotion = () => reduceMq.matches;
 // 닫을 때 바로 숨기지 않고 .is-closing으로 퇴장 애니메이션(시트는 아래로, 팝업은 작아지며
 // 사라짐)을 재생한 뒤 .hidden을 붙인다. 닫는 중에 다시 열면 퇴장을 취소한다.
 
-const CLOSE_MS = 220;
+const CLOSE_MS = 240; // 가장 긴 퇴장(시트 240ms) — 팝업 160ms, 배경막 200ms
 const closeTimers = new WeakMap();
 
 function resetSheet(overlay) {

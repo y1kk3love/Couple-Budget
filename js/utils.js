@@ -48,7 +48,8 @@ export function todayStr() {
 }
 
 /** 토스트 알림 표시 — 아래에서 스프링으로 떠오르고(.toast:not(.hidden)), 가라앉으며 사라진다(.toast-out).
- *  이미 떠 있는 동안 새 메시지가 오면 톡 튕겨(.toast-bump) 바뀐 것을 알린다. */
+ *  이미 떠 있는 동안 새 메시지가 오면 톡 튕겨(.toast-bump) 바뀐 것을 알린다.
+ *  3초 동안 보인다 (토스 TDS 기준 — 2.2초는 긴 문장을 다 읽기 전에 사라졌다) */
 let toastTimer = null;
 let toastOutTimer = null;
 export function showToast(msg) {
@@ -66,8 +67,8 @@ export function showToast(msg) {
   }
   toastTimer = setTimeout(() => {
     toast.classList.add("toast-out");
-    toastOutTimer = setTimeout(() => toast.classList.add("hidden"), 200);
-  }, 2200);
+    toastOutTimer = setTimeout(() => toast.classList.add("hidden"), 180);
+  }, 3000);
 }
 
 /** 저장·삭제 버튼 공통 실행기.
