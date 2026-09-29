@@ -60,7 +60,8 @@ js/auth.js               ← Google sign-in; on success calls initApp()
 js/theme.js              ← dark/light toggle (setupThemeToggle); see Design system section
 js/app.js                ← initApp(), loadAllData(), renderAll(), renderRemoteChange(), month nav, view switch
 js/sync.js               ← 실시간 동기화 — startSync()/stopSync(): 로그인 동안 Firestore 리스너로 state 갱신
-js/motion.js             ← 모션 공통 (iOS·토스 참고) — 오버레이 열기/닫기, 시트 끌어서 닫기, 화면 등장, 숫자 굴리기, 세그먼트 엄지, 반짝임
+js/motion.js             ← 모션 공통 (iOS·토스 참고) — 오버레이·시트 끌기, 화면 등장, 자리별 숫자 굴리기, 목록 자리 이동(FLIP),
+                            상대 변경 반짝임, 테마 원형 전환, 드래그 정렬, 세그먼트 엄지, 반짝임, 눌림·진동
 js/views/{calendar,list,stats,fixed,plan}.js     ← each exports render<Name>View() that fills its #view-<name> div
 js/views/wedding.js      ← 결혼 탭 셸 (D-day 헤더 + 세그먼트 전환 + 예산 세그먼트)
 js/views/wedding{Events,Checklist,Vendors,Memo}.js  ← 세그먼트 렌더러 — render<Seg>Segment(container)
@@ -93,7 +94,7 @@ A view that needs async data after its synchronous render (e.g. `stats.js` filli
 
 `initApp()` calls `startSync()` before the first load, and `auth.js` calls `stopSync()` on sign-out. The sync module subscribes to the whole `transactions` collection (via `watchTransactions()` in `db.js`), plus `fixed_items`, `settings/budget`, `budget_plans`, `settings/wedding`, and the four `wedding_*` collections. Each snapshot is written into `state` through the same `apply*` helpers the `fetch*` functions use, such as `applyFixedItemDocs` or `applyWeddingItemDocs`, so sorting and shaping stay identical. Two kinds of snapshot do not trigger a render: the first one, which repeats data just fetched, and any with `metadata.hasPendingWrites`, which is the local echo of my own write. My own save flows already refetch and render. Everything else is a partner change and calls `renderRemoteChange()` after a 120ms debounce.
 
-`renderRemoteChange()` re-renders the active view unless `hasUnsavedInput(view)` is true. That check looks for a focused form control, or an `input`/`textarea`/`select` whose value differs from its rendered `defaultValue`/`defaultChecked`/`defaultSelected`, such as a typed but unapplied list filter, plan edit inputs, or the wedding memo. In that case only the summary and banner refresh, and the view catches up on the next render. If `loadError` is set, it retries `loadAllData()` instead. A partner's fixed-item change also runs `applyFixedItemsToMonth()` for the viewed month. A listener error (e.g. rules missing for `budget_plans`) only stops realtime for that data; the fetch paths keep working.
+`renderRemoteChange()` re-renders the active view unless `hasUnsavedInput(view)` is true. That check looks for a focused form control, or an `input`/`textarea`/`select` whose value differs from its rendered `defaultValue`/`defaultChecked`/`defaultSelected`, such as a typed but unapplied list filter, plan edit inputs, or the wedding memo. In that case only the summary and banner refresh, and the view catches up on the next render. When it does re-render, the partner's added or modified rows get a short highlight (see Motion). If `loadError` is set, it retries `loadAllData()` instead. A partner's fixed-item change also runs `applyFixedItemsToMonth()` for the viewed month. A listener error (e.g. rules missing for `budget_plans`) only stops realtime for that data; the fetch paths keep working.
 
 **Live transaction copy.** `db.js` keeps `liveTx`, every transaction doc including skip markers, filled by the listener. While it exists, three reads come from it with no network: `fetchTransactions()` derives the month (`deriveMonth()`, same date-desc/ID-desc order as the query), `fetchAllTransactions()`, and `fetchMonthlySummary()`. The first snapshot replaces the full-collection read the summary bar used to do on every login, and `fetchAllTransactions()` waits up to 4s for it before falling back to `getDocs`. If the listener fails, `liveTx` is `null` and everything uses the original queries.
 
@@ -184,16 +185,100 @@ When adding a color, check the pair with a real contrast calculation rather than
 
 ## Motion (`js/motion.js`, 모션 section at the end of `style.css`)
 
-The motion follows iOS and Toss. Only `transform`/`opacity` animate, except the one-off `m-flash` highlight. Timing comes from tokens in a separate `:root` block after the color tokens: `--dur-fast/base/slow` and `--ease-out/in/sheet/spring/bounce`. `--ease-spring` and `--ease-bounce` are sampled damped springs written as CSS `linear()`, with `cubic-bezier` fallbacks under `@supports`. `motion.js` imports no app modules, so any module can use it.
+The motion follows iOS and Toss. It was reviewed against web references in 2026-09 (design: `docs/superpowers/specs/2026-09-30-motion-polish-design.md`, which records the sources and the timing table). Timing comes from tokens in a separate `:root` block after the color tokens:
+- Durations: `--dur-press` 90, `--dur-fast` 150, `--dur-base` 250, `--dur-nav` 260, `--dur-slow` 400, `--dur-sheet` 480ms.
+- Easings: `--ease-out/in/sheet/spring/bounce`. `--ease-spring` and `--ease-bounce` are sampled damped springs written as CSS `linear()`, with `cubic-bezier` fallbacks under `@supports`. JS keeps the `--ease-out` curve as `EASE_OUT`, because WAAPI easings can't read CSS variables.
 
-- **Reduced motion.** The `prefers-reduced-motion` rule zeroes durations **and** delays, since stagger delays with `backwards` fill would otherwise keep content invisible. JS paths check `reducedMotion()` and jump straight to the end state.
-- **Never depend on `requestAnimationFrame` for something that must eventually happen.** Hidden tabs pause it; a background tab, or the Claude Browser pane when the app window isn't frontmost, never fires it. `animateCount()` skips animating when `document.hidden` and has a timeout fallback to the final value. Segment thumbs sync straight from the MutationObserver callback, and the post-save flash uses `setTimeout`.
-- **Overlays.** Always show and hide a `.modal-overlay` with `openOverlay()`/`closeOverlay()`; never toggle `.hidden` on it directly. Closing adds `.is-closing` for 220ms (the sheet slides down, the popup shrinks, the backdrop fades) before `.hidden`. Code looking for "the open modal" or "an open confirm" must therefore exclude `.is-closing`, as the Escape handler and `resetSessionUI()` do. Re-opening during the close cancels it. Reset a modal's contents when opening, not when closing (`csvModal`, the tx history panel), or the sheet visibly jumps mid-close. The backdrop is `.modal-overlay::before` so it can fade separately, with opacity from `--scrim`. The enter animations use `animation-fill-mode: backwards` only, because a `forwards`/`both` fill would pin `transform` and block the drag's inline transform. `showConfirm()` resolves immediately and removes its overlay after the close animation.
-- **Bottom-sheet drag (mobile).** Only the `.modal-header` starts a drag. It carries the grabber (`::before`) and `touch-action: none`, while the body keeps scrolling. The sheet dismisses past about 30% of its height (max 140px) or on a fling faster than 0.6px/ms; a finger that paused 80ms before release counts as no fling. Otherwise it springs back. Dismissal clicks the modal's `.modal-close` with `data-dismissed` set, so per-modal cleanup still runs without a second close animation.
-- **View entrance.** `pendingEntrance` in `app.js` is set only by navigation: `switchView` (0 = cards and rows rise with 28ms stagger), `changeMonth`/`setMonth` (±1 = the whole view slides in from that side, and the month label slides too), and `initApp`. `renderAll()` consumes it through `playEntrance()`, so realtime refreshes and post-save re-renders never animate. The stagger selector list in `motion.js` (`STAGGER`) must match the `:is(...)` list in CSS. Bars (`.pfill` scaleX), monthly stacks (`.mc-stack` scaleY, per-column `--c`), and donut arcs (`.plan-donut-seg`) grow only while `.view.entering` is set.
-- **Rolling numbers (Toss).** Elements with `data-count` / `data-count-key` are rolled by `animateCount()` from the last value seen for that key to the new one: the summary cards, the plan donut center, and the wedding total spent. Formats live with the caller (`COUNT_FORMATS` in `app.js`). `animateWidth()` does the same for bars that are re-rendered (budget card, wedding total), since a fresh element gets no CSS transition.
-- **Segment thumb (iOS).** Every `.scope-toggle`, `.type-toggle`, and `.kind-toggle` automatically gets a sliding `.seg-thumb` behind its `button.active`, and `.has-thumb` makes the active button's own background transparent. Controls re-created by `innerHTML` animate from their remembered position (FLIP, keyed by `data-seg-key`, id, or the nearest ancestor id).
-- **Feedback.** A saved transaction's row, or its calendar day, flashes (`flash()`). A newly checked checklist item pops (`.m-pop`, once, via `popTaskId`). Loading states are shimmering `.skeleton` blocks rather than "불러오는 중…" text. Press is a 90ms dip on `:active`, and release uses the spring. The mobile drawer has a tappable `.sidebar-scrim`.
+`motion.js` imports no app modules, so any module can use it. Motion code wraps its own work in try/catch and falls back to the end state, so an animation bug never blocks a save or a render.
+
+**Rules**
+- **Frequent actions get short motion.** Tab switch and month paging happen tens of times a day, so they finish within about 0.3s. Rare moments (first login, checking off a task) may take longer.
+- **Exits are shorter than entries and ease out.** A curve that starts slowly makes a press look unanswered.
+- **Gestures carry the finger's velocity.**
+- **Motion is interruptible.** Rapid repeats never restart from zero.
+- **Only compositor properties animate continuously.** That means `transform`, `opacity` and `clip-path`; one-off color highlights are the exception. `transition: all` and `background-position` animations are banned. The shimmer used to repaint every frame.
+
+**Reduced motion.**
+- The `prefers-reduced-motion` block is the **last rule in `style.css`**, because a same-name `@keyframes` defined later wins. Inside it, every moving keyframe is redefined as an opacity-only fade, and all animations run at `--dur-fast` with no delay and one iteration.
+- Color-only highlights keep their length: `.m-flash` 1400ms and `.m-remote` 1600ms. The skeleton shimmer stops.
+- A new moving keyframe needs its fade twin added there.
+- JS paths check `reducedMotion()`. `rollNumber`, `playLayout`, `revealTheme` and the drag scale are skipped; a dragged sheet or row still follows the finger.
+
+**Never depend on `requestAnimationFrame` for something that must eventually happen.** Hidden tabs pause it; a background tab, or the Claude Browser pane when it is not displayed, never fires it.
+- Start states are committed with a forced reflow (`offsetWidth`).
+- Ends use `finished`/`transitionend` plus a timer fallback.
+- Segment thumbs sync straight from the MutationObserver callback. Post-render work such as `flashSaved` and `highlightRows` runs in `setTimeout(…, 0)`.
+
+**Overlays.**
+- Always show and hide a `.modal-overlay` with `openOverlay()`/`closeOverlay()`; never toggle `.hidden` on it directly.
+- Closing adds `.is-closing`: the sheet leaves in 240ms, the popup and confirm in 160ms, the backdrop in 200ms, all ease-out. `.hidden` follows after `CLOSE_MS` (240ms).
+- Code looking for "the open modal" or "an open confirm" must therefore exclude `.is-closing`, as the Escape handler and `resetSessionUI()` do. Re-opening during the close cancels it.
+- Reset a modal's contents when opening, not when closing (`csvModal`, the tx history panel), or the sheet visibly jumps mid-close.
+- The backdrop is a real element, `.modal-scrim`, the overlay's first child. `openOverlay()` creates it, and `showConfirm()`'s template includes it. It replaced `::before` so that dragging can set its `opacity` directly. The old `::before` needed a `--scrim` variable, which restyled the whole modal on every pointer move.
+- The scrim is `pointer-events: none`, so backdrop-click-to-close (`e.target === overlay`) still hits the overlay.
+- Enter animations use `animation-fill-mode: backwards` only. A `forwards`/`both` fill would pin `transform` and block the drag's inline transform.
+- `showConfirm()` resolves immediately and removes its overlay after the close animation.
+
+**Bottom-sheet drag (mobile).**
+- Only the `.modal-header` starts a drag. It carries the grabber (`::before`) and `touch-action: none`, while the body keeps scrolling. The sheet height is measured once when the drag starts.
+- The sheet dismisses past about 30% of its height (max 140px), or on a fling faster than 0.6px/ms. A finger that paused 80ms before release counts as no fling.
+- A dismissal continues at the finger's speed: `clamp(4.5 × remaining ÷ release velocity, 160, 280)`ms with the ease-out curve, whose initial slope is about 4.5. The old 220ms ease-in stalled right after a flick.
+- Otherwise the sheet springs back in 360ms.
+- Dismissal clicks the modal's `.modal-close` with `data-dismissed` set, so per-modal cleanup still runs without a second close animation.
+
+**View entrance.**
+- `pendingEntrance` and `firstEntrance` in `app.js` are set only by navigation. `renderAll()` consumes them through `playEntrance(view, dir, { first })`, so realtime refreshes and post-save re-renders never play an entrance.
+- Tab switch (0): items rise 6px over 200ms (`m-rise-sm`) with a 20ms stagger capped at index 6, about 0.32s in total.
+- First login (`.first`): the fuller `m-rise`, 480ms with a 28ms stagger capped at 14.
+- Month paging (±1): the view and the month label slide 24px over `--dur-nav`. A repeat click while the slide is still running skips it instead of restarting.
+- Bars (`.pfill`, 450ms), monthly stacks (`.mc-stack`, 420ms) and donut arcs (500ms) grow only while `.view.entering` is set.
+- The classes come off only after the entrance animations have **finished**. Collection starts after a 200ms hold and re-checks for animations that appeared later, such as rows arriving after a placeholder. A 1200ms timer is the fallback. The old fixed 900ms cut long lists' bars mid-grow.
+- The stagger selector list in `motion.js` (`STAGGER`) must match both `:is(...)` lists in CSS.
+
+**Rolling numbers (Toss, NumberFlow).**
+- Elements with `data-count` / `data-count-key` are rolled by `rollNumber(el, key, to, format)` from the last value seen for that key: the summary cards, the plan donut center, and the wedding total spent.
+- Only changed digits roll. Each digit is a 0–9-twice strip that moves 520ms, in one direction by trend: up when the value grows, down when it shrinks. Digits pair from the right, and new leading digits fade in.
+- Cells are `1lh` tall (fallback `1.2em`), so the line height doesn't change. A `.sr-only` span holds the final value for screen readers.
+- About 580ms later the element reverts to plain text, so copying or reading `textContent` never sees the strips.
+- Formats live with the caller (`COUNT_FORMATS` in `app.js`).
+- `animateWidth()` does the same job for bars that get re-rendered (budget card, wedding total), since a fresh element gets no CSS transition.
+
+**List layout animation (FLIP).**
+- Rows carry `data-flip-key="${escapeHtml(id)}"`: transactions, fixed items, and wedding items, events, tasks and vendors.
+- `renderListView`, `renderFixedView` and `renderWeddingView` call `captureLayout(container)` before replacing `innerHTML`, and `playLayout(container, snap)` after. In 전체 기간 mode the play happens after the async rows arrive.
+- What plays: moved rows glide 280ms, new rows fade in from 0.98 scale over 240ms, and removed rows stay as `.flip-ghost` copies that fade over 200ms. Ghosts are excluded from later captures. Only rows within ±100px of the viewport animate, 60 at most.
+- It runs only when `animateNextRender()` was called **immediately before** the render call, after every `await`. The switch expires in a microtask, so a stray arm can't animate a later navigation.
+- Callers that arm it: the save/delete paths of the tx, fixed and wedding modals, and list sort/filter changes.
+- Never arm it for realtime renders, navigation, the scope toggle or CSV import.
+
+**Partner changes.**
+- The realtime listeners pass the IDs of docs the partner added or modified (`docChanges()`) through `scheduleRender(ids)` to `renderRemoteChange(ids)`.
+- After a re-render, `highlightRows(view, ids)` gives those rows `.m-remote`, a 1.6s `--accent-bg` tint with no outline. Your own saved rows use `m-flash`, which has an outline.
+- There is no position motion, so the page never moves by itself. No highlight when `hasUnsavedInput()` skipped the render.
+
+**Theme toggle.** `revealTheme(button, update)` (from `theme.js`):
+- Where supported (Chrome/Edge/Whale 111+, Safari 18+/iOS 18+, Firefox 144+, Samsung Internet 23+), it runs a View Transition. The new theme grows from the button as a `clip-path` circle over 480ms, and CSS turns off the default root crossfade.
+- `update` must be synchronous, because the page is frozen until it returns.
+- Unsupported, reduced motion or hidden: it swaps instantly under `html.theme-switching`, which disables every transition for that moment. Colors used to lag element by element.
+- An error after the transition started must not swap again (`started` flag).
+
+**Other feedback.**
+- *Save and loading.* A saved transaction's row, or its calendar day, flashes (`flash()`). Loading states are skeleton blocks. Toasts stay 3s.
+- *Checklist.* A checked task (once, via `popTaskId`) pops its box, draws its check (SVG `stroke-dashoffset`) and draws its strike-through. The strike is a gradient on an inner `.strike` span rather than `text-decoration`. On Android it vibrates `haptic(10)`.
+- *Press.* A 90ms dip on `:active`, with release on the spring. List rows and calendar cells get a `--surface2` background tint instead of scaling. Hover already uses `--surface-hover`, which is invisible as a press on white. Buttons and cards scale.
+- *iPhone.* `setupTouchFeedback()` adds an empty passive `touchstart` listener, because iOS Safari applies `:active` only when one exists. The default tap highlight is off.
+- *Drawer.* The mobile drawer has a tappable `.sidebar-scrim`.
+
+**Drag reorder.** `setupDragReorder(container, { rowSelector, handleSelector, onDrop })` serves the plan edit rows and the wedding budget rows.
+- The grabbed row lifts (`.drag-lift`, 1.02×, `--shadow-pop`) and follows the finger, compensated by its `offsetTop` change.
+- The drop slot is decided from layout positions (`offsetTop`), not moving rects. Neighbors slide aside with a 180ms FLIP.
+- On release or `pointercancel` the row settles with a 250ms spring, then `onDrop(rows)` gets the new order.
+- It uses `haptic(8)` on pick-up and drop. Listeners stay on `document`, because moving the row in the DOM releases pointer capture.
+- `haptic()` calls `navigator.vibrate` only, which means Android Chrome and Samsung Internet. iPhone web has no vibration; the `<input switch>` trick stopped working in iOS 26.5.
+
+**Segment thumb (iOS).**
+- Every `.scope-toggle`, `.type-toggle` and `.kind-toggle` automatically gets a `.seg-thumb` behind its `button.active` that slides in 300ms. `.has-thumb` makes the active button's own background transparent.
+- Controls re-created by `innerHTML` animate from their remembered position (FLIP, keyed by `data-seg-key`, id, or the nearest ancestor id).
 
 ## Conventions
 
