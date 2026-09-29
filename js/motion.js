@@ -376,6 +376,40 @@ export function playLayout(root, snap) {
   }
 }
 
+// ── 테마 원형 전환 (View Transitions) ─────────────────────────
+// 테마 버튼 자리에서 새 테마가 원형으로 번진다(480ms). 브라우저가 이전 화면을 찍어 두고 새 화면을
+// clip-path 원으로 넓혀 보인다 — Chrome·Edge·Whale 111+, Safari 18+(iOS 18+), Firefox 144+, 삼성 인터넷 23+.
+// 그 밖의 브라우저·동작 줄이기·숨은 탭은 즉시 바꾸되, 바꾸는 순간 색 전환을 꺼서(.theme-switching)
+// 요소마다 0.15초씩 늦게 따라와 화면이 얼룩지던 문제를 없앤다.
+// update는 동기여야 한다 — View Transition은 콜백이 끝날 때까지 화면을 멈춰 둔다.
+export function revealTheme(originEl, update) {
+  const html = document.documentElement;
+  const swap = () => {
+    html.classList.add("theme-switching");
+    try { update(); } finally {
+      void html.offsetWidth; // 새 색을 전환 없이 확정한 뒤 전환을 되살린다
+      html.classList.remove("theme-switching");
+    }
+  };
+  if (!document.startViewTransition || reducedMotion() || document.hidden || !originEl) { swap(); return; }
+  let started = false; // 전환을 시작한 뒤라면 교체는 브라우저가 부른다 — 여기서 또 바꾸면 두 번 바뀐다
+  try {
+    const b = originEl.getBoundingClientRect();
+    const x = b.left + b.width / 2, y = b.top + b.height / 2;
+    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    const vt = document.startViewTransition(swap);
+    started = true;
+    vt.ready.then(() => html.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+      { duration: 480, easing: "cubic-bezier(0.4, 0, 0.2, 1)", pseudoElement: "::view-transition-new(root)" },
+    )).catch(() => { /* 전환이 건너뛰어져도 테마는 이미 바뀌었다 */ });
+    vt.finished.catch(() => {});
+  } catch (err) {
+    console.warn("테마 원형 전환 실패 — 즉시 전환:", err);
+    if (!started) swap();
+  }
+}
+
 // ── 상대가 바꾼 행 반짝임 ─────────────────────────────────────
 // 상대가 다른 기기에서 추가·수정한 행을 1.6초 동안 은은한 파란 음영으로 표시한다(.m-remote).
 // 내가 저장한 행의 반짝임(m-flash, 파란 테두리)과 모양이 다르다. 색만 바뀌어 동작 줄이기에서도 유지.

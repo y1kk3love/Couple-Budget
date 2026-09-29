@@ -7,6 +7,8 @@
 // index.html <head>의 인라인 스크립트가 첫 페인트 전에 같은 키를 읽어
 // 새로고침 시 깜빡임을 막는다.
 
+import { revealTheme } from "./motion.js";
+
 const THEME_BG = { light: "#f2f4f6", dark: "#17171c" };
 
 const SUN_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -56,10 +58,13 @@ export function setupThemeToggle() {
   applyTheme();
   renderButton(btn);
 
+  // 버튼 자리에서 새 테마가 원형으로 번진다 (지원하지 않는 브라우저는 얼룩 없이 즉시) — motion.revealTheme
   btn.addEventListener("click", () => {
-    writeSaved(effectiveTheme() === "dark" ? "light" : "dark");
-    applyTheme();
-    renderButton(btn);
+    revealTheme(btn, () => {
+      writeSaved(effectiveTheme() === "dark" ? "light" : "dark");
+      applyTheme();
+      renderButton(btn);
+    });
   });
 
   // 저장값 없이 시스템을 따르는 동안 시스템 테마가 바뀌면 아이콘·주소창 색 동기화
