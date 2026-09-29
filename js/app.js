@@ -32,6 +32,8 @@ import {
 // 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
 // null: 없음. 실시간 갱신·저장 후 다시 그릴 때는 움직이지 않도록 탐색할 때만 설정한다.
 let pendingEntrance = null;
+// 로그인 직후 첫 화면만 예전처럼 풍성하게(드문 순간) — 탭 전환은 짧게
+let firstEntrance = false;
 
 // ── 앱 초기화 ─────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ let listenersBound = false;
 export async function initApp() {
   updateMonthLabel();
   pendingEntrance = 0; // 로그인 직후 첫 화면도 차례로 떠오르며 등장
+  firstEntrance = true;
   // 리스너를 데이터 로드보다 먼저 건다 — 예전에는 로드 뒤에 걸어서, 첫 로드가 실패하면
   // (오프라인·색인 누락 등) 월 이동·탭 전환 버튼이 그 세션 내내 먹통이었다
   if (!listenersBound) {
@@ -158,8 +161,9 @@ export function renderAll() {
     }
   }
   if (pendingEntrance !== null) {
-    playEntrance(document.getElementById(`view-${state.currentView}`), pendingEntrance);
+    playEntrance(document.getElementById(`view-${state.currentView}`), pendingEntrance, { first: firstEntrance });
     pendingEntrance = null;
+    firstEntrance = false;
   }
 }
 

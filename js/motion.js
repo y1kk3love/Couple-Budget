@@ -115,7 +115,8 @@ export function setupSheetDrag() {
 }
 
 // ── 화면 등장 (탭 전환·월 이동) ───────────────────────────────
-// dir 0: 카드·행이 차례로 떠오른다(stagger). dir ±1: 달력처럼 화면 전체가 옆에서 밀려 들어온다.
+// dir 0: 카드·행이 차례로 떠오른다 — 앞 6개만 20ms 간격, 끝까지 약 0.32초 (하루 수십 번 하는 동작이라 짧게).
+// dir ±1: 달력처럼 화면 전체가 옆에서 밀려 들어온다(0.26초). first: 로그인 직후 첫 화면만 예전처럼 풍성하게.
 // 실시간 갱신·저장 후 다시 그리기에는 쓰지 않는다 — 탐색할 때만 움직여야 산만하지 않다.
 
 const STAGGER = [
@@ -123,26 +124,58 @@ const STAGGER = [
   ".fixed-list > *", ".stats-card", ".plan-card", ".wd-header", ".wd-seg", ".wd-progress",
   ".wd-memo-card", ".wd-minical", ".empty-state",
 ].join(", ");
-const ENTER_MS = 900;
+const ENTER_ANIMS = new Set(["m-rise", "m-rise-sm", "m-slide-next", "m-slide-prev", "m-bar-grow", "m-col-grow", "m-donut"]);
+const ENTER_HOLD_MS = 200;      // 자리표시를 먼저 그리는 화면(결혼 탭 첫 진입)의 실제 내용이 올 때까지 기다린다
+const ENTER_FALLBACK_MS = 1200; // 숨은 탭처럼 애니메이션이 끝나지 않을 때의 안전장치
 
-export function playEntrance(view, dir = 0) {
-  if (!view || reducedMotion()) return;
+function clearEntrance(view) {
   clearTimeout(view._enterTimer);
-  view.classList.remove("entering", "dir-next", "dir-prev");
+  clearTimeout(view._enterHold);
+  view._enterToken = null;
+  view.classList.remove("entering", "first", "dir-next", "dir-prev");
+}
+
+export function playEntrance(view, dir = 0, { first = false } = {}) {
+  if (!view || reducedMotion()) return;
+  // 월을 빠르게 연달아 넘기면 진행 중인 슬라이드를 처음부터 다시 재생하지 않고 그냥 바꾼다
+  if (dir && view.classList.contains("entering") &&
+      (view.classList.contains("dir-next") || view.classList.contains("dir-prev"))) {
+    clearEntrance(view);
+    return;
+  }
+  clearEntrance(view);
   if (dir === 0) {
-    // 문서 순서대로 번호 — CSS가 --i로 지연을 계산한다 (14개 이후는 같은 지연)
-    view.querySelectorAll(STAGGER).forEach((el, i) => el.style.setProperty("--i", Math.min(i, 14)));
+    // 문서 순서대로 번호 — CSS가 --i로 지연을 계산한다 (상한 뒤로는 같은 지연)
+    const cap = first ? 14 : 6;
+    view.querySelectorAll(STAGGER).forEach((el, i) => el.style.setProperty("--i", Math.min(i, cap)));
   }
   void view.offsetWidth; // 같은 클래스를 다시 붙여도 애니메이션이 처음부터 재생되도록
   view.classList.add("entering");
+  if (first) view.classList.add("first");
   if (dir) view.classList.add(dir > 0 ? "dir-next" : "dir-prev");
-  view._enterTimer = setTimeout(() => view.classList.remove("entering", "dir-next", "dir-prev"), ENTER_MS);
+
+  // 등장 애니메이션이 모두 끝난 뒤 클래스를 걷는다. 예전엔 900ms 고정 타이머라 긴 목록의 막대가
+  // 끝나기 전에 툭 끊겼다. 도중에 다시 그려져 새로 생긴 애니메이션(늦게 온 내용)도 다시 모아 기다린다.
+  const token = {};
+  view._enterToken = token;
+  const done = () => { if (view._enterToken === token) clearEntrance(view); };
+  const waitAll = () => {
+    if (view._enterToken !== token) return;
+    const running = view.getAnimations({ subtree: true })
+      .filter(a => ENTER_ANIMS.has(a.animationName) && a.playState !== "finished");
+    if (!running.length) { done(); return; }
+    Promise.allSettled(running.map(a => a.finished)).then(waitAll);
+  };
+  view._enterHold = setTimeout(waitAll, ENTER_HOLD_MS);
+  view._enterTimer = setTimeout(done, ENTER_FALLBACK_MS);
 }
 
-// 월 라벨이 넘기는 방향으로 바뀐다 (iOS 달력 제목)
+// 월 라벨이 넘기는 방향으로 바뀐다 (iOS 달력 제목). 앞 슬라이드가 아직 재생 중이면(연타) 생략
 export function slideLabel(el, dir) {
   if (!el || !dir || reducedMotion()) return;
+  const busy = el.getAnimations().some(a => a.animationName?.startsWith("m-slide") && a.playState === "running");
   el.classList.remove("label-next", "label-prev");
+  if (busy) return;
   void el.offsetWidth;
   el.classList.add(dir > 0 ? "label-next" : "label-prev");
 }

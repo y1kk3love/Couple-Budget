@@ -1319,39 +1319,49 @@ a:focus-visible {
 .wd-banner:not(.hidden) { animation: m-rise var(--dur-slow) var(--ease-out) backwards; }
 
 /* ── 화면 등장 (motion.playEntrance) ──
-   탭 전환: 카드·행이 28ms 간격으로 떠오른다 / 월 이동: 화면 전체가 넘긴 방향에서 밀려온다 */
+   탭 전환: 카드·행이 6px 떠오르며 200ms, 앞 6개만 20ms 간격(끝까지 약 0.32초) — 하루 수십 번 하는 동작이라
+   짧게(Emil Kowalski·NN/g·Apple HIG). 예전 480ms×최대 14개는 0.87초가 걸렸다.
+   첫 로그인(.first)만 예전처럼 풍성하게. 월 이동: 화면 전체가 넘긴 방향에서 24px 밀려온다(0.26초).
+   ⚠ 아래 :is() 목록은 motion.js의 STAGGER와 같아야 한다 */
+@keyframes m-rise-sm { from { opacity: 0; transform: translateY(6px); } }
 .view.entering:not(.dir-next):not(.dir-prev) :is(
+  .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
+  .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state) {
+  animation: m-rise-sm 200ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 20ms);
+}
+.view.entering.first:not(.dir-next):not(.dir-prev) :is(
   .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
   .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state) {
   animation: m-rise 480ms var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 28ms);
 }
-@keyframes m-slide-next { from { opacity: 0; transform: translateX(32px); } }
-@keyframes m-slide-prev { from { opacity: 0; transform: translateX(-32px); } }
-.view.entering.dir-next { animation: m-slide-next 420ms var(--ease-out) backwards; }
-.view.entering.dir-prev { animation: m-slide-prev 420ms var(--ease-out) backwards; }
+@keyframes m-slide-next { from { opacity: 0; transform: translateX(24px); } }
+@keyframes m-slide-prev { from { opacity: 0; transform: translateX(-24px); } }
+.view.entering.dir-next { animation: m-slide-next var(--dur-nav) var(--ease-out) backwards; }
+.view.entering.dir-prev { animation: m-slide-prev var(--dur-nav) var(--ease-out) backwards; }
 
 /* 월 라벨도 같은 방향으로 */
-.month-label.label-next { animation: m-slide-next 360ms var(--ease-out); }
-.month-label.label-prev { animation: m-slide-prev 360ms var(--ease-out); }
+.month-label.label-next { animation: m-slide-next var(--dur-nav) var(--ease-out); }
+.month-label.label-prev { animation: m-slide-prev var(--dur-nav) var(--ease-out); }
 
-/* 막대는 왼쪽에서 자라난다 (토스) — 등장할 때만 */
+/* 막대는 왼쪽에서 자라난다 (토스) — 등장할 때만. 긴 목록도 7번째 이후는 같은 지연 */
 @keyframes m-bar-grow { from { transform: scaleX(0); } }
 .view.entering .pfill {
   transform-origin: left center;
-  animation: m-bar-grow 700ms var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 28ms + 120ms);
+  animation: m-bar-grow 450ms var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * 20ms + 60ms);
 }
 /* 월별 누적 막대는 아래에서 위로, 열마다 조금씩 늦게 (--c: stats.js가 매김) */
 @keyframes m-col-grow { from { transform: scaleY(0); } }
 .view.entering .mc-stack {
   transform-origin: bottom center;
-  animation: m-col-grow 650ms var(--ease-out) backwards;
-  animation-delay: calc(var(--c, 0) * 45ms + 80ms);
+  animation: m-col-grow 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--c, 0) * 30ms + 40ms);
 }
 /* 예산안 도넛: 각 조각이 제자리에서 시계 방향으로 그려진다 */
 @keyframes m-donut { from { stroke-dasharray: 0 339.292; } }
-.view.entering .plan-donut-seg { animation: m-donut 800ms var(--ease-out) backwards; animation-delay: 150ms; }
+.view.entering .plan-donut-seg { animation: m-donut 500ms var(--ease-out) backwards; animation-delay: 60ms; }
 
 /* ── 세그먼트 컨트롤 슬라이딩 배경 (motion.setupSegmentThumbs) ── */
 .scope-toggle, .type-toggle, .kind-toggle { position: relative; }
