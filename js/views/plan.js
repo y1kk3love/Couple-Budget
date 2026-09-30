@@ -186,16 +186,21 @@ function donutSVG(income, items, remain, owner = "") {
   const centerLabel = over ? "초과" : "남음";
   const centerVal   = `${over ? "-" : ""}${fmtMoney(remain)}`;
 
+  // 가운데 글자는 SVG 위에 겹친 HTML — 금액이 자리별로 굴러가려면(motion.rollNumber) HTML 요소여야 한다
   return `
-    <svg width="160" height="160" viewBox="0 0 140 140">
-      <g transform="rotate(-90 70 70)" fill="none" stroke-width="15">
-        <circle cx="70" cy="70" r="54" stroke="var(--surface2)"/>
-        ${segs}
-      </g>
-      <text x="70" y="63" text-anchor="middle" class="plan-donut-lbl">${centerLabel}</text>
-      <text x="70" y="82" text-anchor="middle" class="plan-donut-val" style="fill:${centerColor}"
-        data-count="${remain}" data-count-key="plan-remain:${escapeHtml(owner)}">${centerVal}</text>
-    </svg>`;
+    <div class="plan-donut">
+      <svg width="160" height="160" viewBox="0 0 140 140" aria-hidden="true">
+        <g transform="rotate(-90 70 70)" fill="none" stroke-width="15">
+          <circle cx="70" cy="70" r="54" stroke="var(--surface2)"/>
+          ${segs}
+        </g>
+      </svg>
+      <div class="plan-donut-center">
+        <span class="plan-donut-lbl">${centerLabel}</span>
+        <span class="plan-donut-val" style="color:${centerColor}"
+          data-count="${remain}" data-count-key="plan-remain:${escapeHtml(owner)}">${centerVal}</span>
+      </div>
+    </div>`;
 }
 
 // ── 수정 모드 ─────────────────────────────────────────────────

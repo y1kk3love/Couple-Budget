@@ -840,8 +840,14 @@ a:focus-visible {
 }
 .plan-sub { font-size: 0.78rem; color: var(--text-2); }
 .plan-donut-wrap { display: flex; justify-content: center; margin: 0.5rem 0; }
-.plan-donut-lbl { font-size: 0.7rem; fill: var(--text-3); }
-.plan-donut-val { font-size: 1rem; font-weight: 700; }
+/* 가운데 글자는 SVG 위에 겹친 HTML (금액 굴림은 HTML에서만 그려진다) — 크기는 예전 SVG 글자(160/140배)와 같게 */
+.plan-donut { position: relative; width: 160px; height: 160px; }
+.plan-donut-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; pointer-events: none;
+}
+.plan-donut-lbl { font-size: 0.8rem; line-height: 1.2; color: var(--text-3); }
+.plan-donut-val { font-size: 1.14rem; font-weight: 700; line-height: 1.25; white-space: nowrap; }
 .plan-rows { font-size: 0.85rem; }
 .plan-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .plan-row:last-child { border-bottom: none; }

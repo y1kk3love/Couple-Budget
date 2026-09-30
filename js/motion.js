@@ -234,8 +234,10 @@ export function rollNumber(el, key, to, format) {
   const final = format(to);
   const token = {};
   el._rollToken = token;
-  // 보이지 않는 탭에선 전환이 진행되지 않는다 — 이때와 동작 줄이기는 바로 최종값으로
-  if (from === to || reducedMotion() || document.hidden || !Number.isFinite(to) || !Number.isFinite(from)) {
+  // 보이지 않는 탭에선 전환이 진행되지 않는다 — 이때와 동작 줄이기는 바로 최종값으로.
+  // SVG <text> 같은 HTML이 아닌 요소는 안에 넣은 span을 그리지 않아 굴리는 동안 비어 보이므로 역시 바로 최종값.
+  if (from === to || reducedMotion() || document.hidden || !(el instanceof HTMLElement) ||
+      !Number.isFinite(to) || !Number.isFinite(from)) {
     el.textContent = final;
     return;
   }

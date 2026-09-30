@@ -237,6 +237,7 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 
 **Rolling numbers (Toss, NumberFlow).**
 - Elements with `data-count` / `data-count-key` are rolled by `rollNumber(el, key, to, format)` from the last value seen for that key: the summary cards, the plan donut center, and the wedding total spent.
+- The target must be an HTML element. SVG `<text>` doesn't render the HTML strips, so the donut center used to go blank for ~0.6s; it is now an HTML overlay (`.plan-donut-center`) on the SVG ring, and `rollNumber` shows any non-HTML target's final value at once.
 - Only changed digits roll. Each digit is a 0–9-twice strip that moves 520ms, in one direction by trend: up when the value grows, down when it shrinks. Digits pair from the right, and new leading digits fade in.
 - Cells are `1lh` tall (fallback `1.2em`), so the line height doesn't change. A `.sr-only` span holds the final value for screen readers.
 - About 580ms later the element reverts to plain text, so copying or reading `textContent` never sees the strips.
