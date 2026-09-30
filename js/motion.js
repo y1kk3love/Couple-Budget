@@ -428,6 +428,10 @@ export function revealTheme(originEl, update) {
 
 const DRAG_SHIFT_MS = 180;
 const DRAG_SETTLE_MS = 250;
+// 한 번에 하나만 — 끌거나 제자리에 앉는 중(onDrop 전)에는 새 드래그를 받지 않는다.
+// 앉기가 끝나며 목록이 다시 그려지면 그사이 잡은 행은 떨어져 나가고, 그 행이 새 목록에 다시
+// 끼어들어 예산안 항목이 복제·저장되던 문제가 있었다.
+let activeDrag = null;
 
 export function setupDragReorder(container, { rowSelector, handleSelector, onDrop }) {
   const rows = () => [...container.querySelectorAll(rowSelector)];
@@ -439,6 +443,12 @@ export function setupDragReorder(container, { rowSelector, handleSelector, onDro
       const row = handle.closest(rowSelector);
       if (!row) return;
       e.preventDefault(); // 텍스트 선택 방지 (터치 스크롤은 CSS touch-action:none이 막는다)
+      if (activeDrag) {
+        // 앞 드래그의 행이 다시 그리기로 사라졌다면 뗌 이벤트를 못 받았을 수 있다 — 정리하고 새로 시작
+        if (activeDrag.row.isConnected) return;
+        activeDrag.abort();
+      }
+      const pointerId = e.pointerId;
       const calm = reducedMotion();
       const lift = calm ? "" : " scale(1.02)";
       const startY = e.clientY;
@@ -468,7 +478,22 @@ export function setupDragReorder(container, { rowSelector, handleSelector, onDro
         }
       };
 
+      function detach() {
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onEnd);
+        document.removeEventListener("pointercancel", onEnd);
+      }
+      const drag = {
+        row,
+        abort() { detach(); if (activeDrag === drag) activeDrag = null; },
+      };
+      activeDrag = drag;
+
       const onMove = ev => {
+        if (ev.pointerId !== pointerId) return; // 다른 손가락은 잡은 행을 움직이지 않는다
+        // 끄는 중 목록이 다시 그려졌다 — 손가락 아래 행은 이미 떨어져 나갔으니 옮기지 않고 끝낸다
+        // (떨어진 행을 새 목록에 다시 끼우면 항목이 복제된다)
+        if (!row.isConnected) { drag.abort(); return; }
         try {
           // 포인터가 중간점보다 위인 첫 행 앞에, 없으면 맨 뒤로 — 판단은 변형을 뺀 레이아웃 위치로
           // (비켜나는 중인 행의 움직이는 위치로 판단하면 자리가 앞뒤로 흔들린다)
@@ -486,10 +511,9 @@ export function setupDragReorder(container, { rowSelector, handleSelector, onDro
           console.warn("드래그 정렬 이동 실패:", err);
         }
       };
-      const onEnd = () => {
-        document.removeEventListener("pointermove", onMove);
-        document.removeEventListener("pointerup", onEnd);
-        document.removeEventListener("pointercancel", onEnd);
+      const onEnd = ev => {
+        if (ev.pointerId !== pointerId) return;
+        detach();
         let done = false;
         const settle = () => {
           if (done) return;
@@ -497,10 +521,13 @@ export function setupDragReorder(container, { rowSelector, handleSelector, onDro
           row.classList.remove("drag-lift");
           row.style.transition = "";
           row.style.transform = "";
+          if (activeDrag === drag) activeDrag = null;
+          // 앉는 사이 목록이 다시 그려졌으면(놓자마자 저장 등) 이 순서는 이미 반영됐거나 버려졌다
+          if (!row.isConnected) return;
           haptic(8);
           onDrop(rows());
         };
-        if (calm) { settle(); return; }
+        if (calm || !row.isConnected) { settle(); return; }
         // 제자리로 스프링 — 끝나면(숨은 탭 대비 타이머도) 정리하고 새 순서를 넘긴다
         row.style.transition = `transform ${DRAG_SETTLE_MS}ms var(--ease-spring)`;
         row.style.transform = "";

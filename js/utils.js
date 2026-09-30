@@ -95,8 +95,10 @@ export async function runWrite(button, write, action = "저장") {
 
 /** root 안에 사용자가 입력 중이거나 아직 반영하지 않은 값이 있는지.
  *  innerHTML로 그린 폼은 그릴 때의 값이 defaultValue/defaultChecked/defaultSelected로 남으므로,
- *  그것과 다르면 "입력 중"이다. 실시간 동기화가 화면을 다시 그려 입력을 날리지 않게 확인할 때 쓴다. */
+ *  그것과 다르면 "입력 중"이다. 실시간 동기화가 화면을 다시 그려 입력을 날리지 않게 확인할 때 쓴다.
+ *  끌어서 순서를 바꾸는 중인 행(.drag-lift)도 입력 중으로 본다 — 다시 그리면 손가락 아래 행이 사라진다. */
 export function hasUnsavedInput(root) {
+  if (root.querySelector(".drag-lift")) return true;
   return [...root.querySelectorAll("input, textarea, select")].some(el => {
     if (el === document.activeElement) return true;
     if (el.type === "checkbox" || el.type === "radio") return el.checked !== el.defaultChecked;

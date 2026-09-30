@@ -275,6 +275,8 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 - The drop slot is decided from layout positions (`offsetTop`), not moving rects. Neighbors slide aside with a 180ms FLIP.
 - On release or `pointercancel` the row settles with a 250ms spring, then `onDrop(rows)` gets the new order.
 - It uses `haptic(8)` on pick-up and drop. Listeners stay on `document`, because moving the row in the DOM releases pointer capture.
+- **One drag at a time (`activeDrag`).** A grab during another drag or during its settle is ignored. The settle ends in `onDrop`, and the plan's `onDrop` re-renders; a row grabbed in that window was detached and then re-inserted into the new list by its next move, duplicating a plan item that 저장 then saved. Moves and ends are filtered by `pointerId`, so a second finger neither moves nor drops the row.
+- If the list re-renders mid-drag or mid-settle, the drag ends without `onDrop` (`row.isConnected` checks). `hasUnsavedInput()` counts a `.drag-lift` row as unsaved input, so a partner's realtime change waits until the drop's own re-render.
 - `haptic()` calls `navigator.vibrate` only, which means Android Chrome and Samsung Internet. iPhone web has no vibration; the `<input switch>` trick stopped working in iOS 26.5.
 
 **Segment thumb (iOS).**
