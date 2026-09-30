@@ -265,7 +265,9 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 
 **Other feedback.**
 - *Save and loading.* A saved transaction's row, or its calendar day, flashes (`flash()`). Loading states are skeleton blocks. Toasts stay 3s.
-- *Checklist.* A checked task (once, via `popTaskId`) pops its box, draws its check (SVG `stroke-dashoffset`) and draws its strike-through. The strike is a gradient on an inner `.strike` span rather than `text-decoration`. On Android it vibrates `haptic(10)`.
+- *Checklist.* A checked task pops its box, draws its check (SVG `stroke-dashoffset`) and draws its strike-through. The strike is a gradient on an inner `.strike` span rather than `text-decoration`. On Android it vibrates `haptic(10)`.
+  - The effect starts on the tap itself: the `change` handler adds `.done`/`.m-pop` to the live row before the save and reverts them if the save fails. It used to wait for the save and refetch, so on a real network the check showed, blinked out, and was drawn again.
+  - If the post-save re-render lands mid-effect, the new row continues from the same point. `popping` remembers tap times for 480ms, and the row gets a negative `--pop-at` animation delay. Under reduced motion the effect is not carried over, so the fade doesn't replay.
 - *Press.* A 90ms dip on `:active`, with release on the spring. List rows and calendar cells get a `--surface2` background tint instead of scaling. Hover already uses `--surface-hover`, which is invisible as a press on white. Buttons and cards scale.
 - *iPhone.* `setupTouchFeedback()` adds an empty passive `touchstart` listener, because iOS Safari applies `:active` only when one exists. The default tap highlight is off.
 - *Drawer.* The mobile drawer has a tappable `.sidebar-scrim`.

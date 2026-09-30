@@ -1449,9 +1449,10 @@ a:focus-visible {
 @keyframes m-check-pop { 0% { transform: scale(0.6); } }
 @keyframes m-check-draw { from { stroke-dashoffset: 1; } }
 @keyframes m-strike { from { background-size: 0 1.5px; } }
-.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 420ms var(--ease-bounce); }
-.wd-task-row.m-pop .chk-mark path { animation: m-check-draw 280ms var(--ease-out) 60ms backwards; }
-.wd-task-row.m-pop .strike { animation: m-strike 300ms var(--ease-out) 80ms backwards; }
+/* --pop-at: 효과 도중 다시 그린 행은 누른 시각만큼 음수 지연으로 같은 지점부터 이어 그린다 (weddingChecklist.js) */
+.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 420ms var(--ease-bounce) var(--pop-at, 0ms); }
+.wd-task-row.m-pop .chk-mark path { animation: m-check-draw 280ms var(--ease-out) calc(60ms + var(--pop-at, 0ms)) backwards; }
+.wd-task-row.m-pop .strike { animation: m-strike 300ms var(--ease-out) calc(80ms + var(--pop-at, 0ms)) backwards; }
 
 /* ── 불러오는 동안 스켈레톤 (토스) — 문구 대신 반짝이는 자리표시 ──
    반짝이는 띠(::after)를 transform으로 옮긴다. 예전엔 background-position을 움직여
