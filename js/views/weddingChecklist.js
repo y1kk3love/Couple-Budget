@@ -56,8 +56,9 @@ export function renderChecklistSegment(container) {
         </div>`;
       }).join("");
       const gDone = list.filter(t => t.done).length;
+      // 묶음 키 — 기간 카드가 안의 할 일과 한 덩어리로 움직인다 (motion.playLayout 중첩 FLIP)
       return `
-        <div class="list-group">
+        <div class="list-group" data-flip-key="period/${p.id}">
           <div class="list-date-header"><span>${p.label}</span><span>${gDone}/${list.length}</span></div>
           ${rows}
         </div>`;

@@ -282,8 +282,9 @@ function renderGrouped(sorted) {
     const dayTotal  = items.reduce((s, t) => t.type === "income" ? s + t.amount : s - t.amount, 0);
     const color     = dayTotal >= 0 ? "var(--income)" : "var(--expense)";
     const sign      = dayTotal > 0 ? "+" : dayTotal < 0 ? "-" : "";
+    // 묶음 키 — 날짜 카드가 안의 행과 한 덩어리로 움직인다 (motion.playLayout 중첩 FLIP)
     return `
-      <div class="list-group">
+      <div class="list-group" data-flip-key="date/${escapeHtml(date)}">
         <div class="list-date-header">
           <span>${escapeHtml(label)}</span>
           <span class="date-total" style="color:${color}">${sign}${fmtMoney(dayTotal)}</span>
@@ -294,7 +295,7 @@ function renderGrouped(sorted) {
 }
 
 function renderFlat(sorted) {
-  return `<div class="list-group">${sorted.map(renderTxRow).join("")}</div>`;
+  return `<div class="list-group" data-flip-key="list/flat">${sorted.map(renderTxRow).join("")}</div>`;
 }
 
 function renderTxRow(t) {

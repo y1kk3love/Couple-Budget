@@ -247,7 +247,12 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 **List layout animation (FLIP).**
 - Rows carry `data-flip-key="${escapeHtml(id)}"`: transactions, fixed items, and wedding items, events, tasks and vendors.
 - `renderListView`, `renderFixedView` and `renderWeddingView` call `captureLayout(container)` before replacing `innerHTML`, and `playLayout(container, snap)` after. In 전체 기간 mode the play happens after the async rows arrive.
-- What plays: moved rows glide 280ms, new rows fade in from 0.98 scale over 240ms, and removed rows stay as `.flip-ghost` copies that fade over 200ms. Ghosts are excluded from later captures. Only rows within ±100px of the viewport animate, 60 at most.
+- What plays: moved rows glide 280ms, new rows fade in from 0.98 scale over 240ms, and removed rows stay as `.flip-ghost` copies that fade over 200ms. Ghosts, and the rows inside a ghost, are excluded from later captures. Only rows within ±100px of the viewport animate, 60 at most.
+- **Groups are keyed too, and FLIP is nested.** The list's date cards (`date/<YYYY-MM-DD>`, or `list/flat` for the single card of the other sorts) and the checklist's period cards (`period/<id>`) carry keys. Doc IDs never contain `/`, so these can't collide with row keys. A card glides as one unit, and a row inside it moves only by its change relative to the card.
+  - Before this, only rows were keyed. On a delete, every header below teleported while its rows were held at their old spot, outside their card's box, and the card's `overflow: hidden` clipped them out of sight.
+- A row whose card changed crossfades instead of gliding: its old node fades as a ghost and the new one fades in. This covers sorting between 날짜 and the flat sorts, and a date edit that moves a transaction to another day. A new card's rows appear with the card, and a removed card's ghost carries its rows.
+  - The spec's rule 1 allows a fade for sorting. A glide across cards would be clipped mid-flight by the destination card.
+- A ghost whose own background is transparent, such as a row inside a card, is painted with the card's background, recorded at capture time. Rows sliding up under it are then hidden rather than overlapping its text.
 - It runs only when `animateNextRender()` was called **immediately before** the render call, after every `await`. The switch expires in a microtask, so a stray arm can't animate a later navigation.
 - Callers that arm it: the save/delete paths of the tx, fixed and wedding modals, and list sort/filter changes.
 - Never arm it for realtime renders, navigation, the scope toggle or CSV import.

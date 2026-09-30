@@ -310,13 +310,38 @@ export function animateWidth(el, key, pct) {
 // 스위치(animateNextRender)는 같은 동기 호출 안에서만 켜져 있다 — 다시 그리기 바로 앞에서 부르고,
 // 쓰이지 않으면 마이크로태스크에서 저절로 꺼진다. 실시간 반영·탭 이동에는 움직이지 않는다
 // (읽던 화면이 스스로 움직이면 산만하다). 화면(위아래 100px 여유) 밖 행은 건너뛰고 최대 60개만.
+//
+// 묶음 안의 행(날짜 카드의 내역, 기간 카드의 할 일)은 묶음에도 키를 달아(예: "date/2026-09-30") 함께 다룬다.
+// 묶음이 한 덩어리로 움직이고, 안의 행은 묶음에 대한 자리 변화만큼만 따로 움직인다(중첩 FLIP).
+// 예전엔 행만 키가 있어 머리글·카드는 순간이동하고 행만 이전 자리에 남아, 카드(overflow:hidden) 밖으로
+// 잘려 안 보이다 미끄러져 들어왔다. 다른 묶음으로 옮겨 간 행은 미끄러지는 대신 이전 자리에서 흐려지고
+// 새 자리에 나타난다 — 새 카드 밖에서는 잘려 보이지 않기 때문. 문서 ID에는 "/"가 없어 키가 겹치지 않는다.
 
 const LAYOUT_MOVE_MS = 280;
 const LAYOUT_ADD_MS = 240;
 const LAYOUT_REMOVE_MS = 200;
 const LAYOUT_MAX = 60;
 const LAYOUT_MARGIN = 100;
+const NO_SHIFT = { dx: 0, dy: 0 };
 let layoutArmed = false;
+
+const onScreen = r => r.bottom > -LAYOUT_MARGIN && r.top < innerHeight + LAYOUT_MARGIN;
+// 흐려지는 중인 유령(과 그 안의 행)은 살아 있는 항목이 아니다
+const flipItems = root => [...root.querySelectorAll("[data-flip-key]")].filter(el => !el.closest(".flip-ghost"));
+const flipParentKey = (el, root) => {
+  const p = el.parentElement?.closest("[data-flip-key]");
+  return p && root.contains(p) ? p.dataset.flipKey : null;
+};
+// 유령 배경 — 카드 안의 행처럼 자기 배경이 투명하면 카드 배경을 칠해, 아래로 지나가는 행과 글자가 겹치지 않게
+function ghostBackground(el, root) {
+  const alpha = c => { const m = c.match(/[\d.]+/g); return !m ? 0 : m.length > 3 ? Number(m[3]) : 1; };
+  if (alpha(getComputedStyle(el).backgroundColor) >= 0.99) return "";
+  for (let e = el.parentElement; e && root.contains(e); e = e.parentElement) {
+    const c = getComputedStyle(e).backgroundColor;
+    if (alpha(c) >= 0.99) return c;
+  }
+  return "";
+}
 
 export function animateNextRender() {
   layoutArmed = true;
@@ -328,46 +353,61 @@ export function captureLayout(root) {
   layoutArmed = false;
   if (!armed || !root || reducedMotion()) return null;
   const snap = new Map();
-  root.querySelectorAll("[data-flip-key]:not(.flip-ghost)").forEach(el =>
-    snap.set(el.dataset.flipKey, { rect: el.getBoundingClientRect(), node: el }));
+  for (const el of flipItems(root)) {
+    const rect = el.getBoundingClientRect();
+    snap.set(el.dataset.flipKey, {
+      rect, node: el, parent: flipParentKey(el, root),
+      bg: onScreen(rect) ? ghostBackground(el, root) : "", // 다시 그린 뒤엔 떨어진 노드라 스타일을 못 읽는다
+    });
+  }
   return snap;
 }
 
 export function playLayout(root, snap) {
   if (!snap || !root?.isConnected) return;
   try {
-    const onScreen = r => r.bottom > -LAYOUT_MARGIN && r.top < innerHeight + LAYOUT_MARGIN;
     // 읽기를 모두 끝낸 뒤 쓴다 (읽기·쓰기가 섞이면 행마다 레이아웃을 다시 계산한다)
     const rootRect = root.getBoundingClientRect();
-    const moves = [], adds = [], seen = new Set();
-    root.querySelectorAll("[data-flip-key]:not(.flip-ghost)").forEach(el => {
-      const key = el.dataset.flipKey;
-      seen.add(key);
-      const now = el.getBoundingClientRect();
-      const prev = snap.get(key);
-      if (prev) {
-        const dx = prev.rect.left - now.left, dy = prev.rect.top - now.top;
-        if ((Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) && (onScreen(prev.rect) || onScreen(now))) moves.push({ el, dx, dy });
-      } else if (onScreen(now)) {
-        adds.push(el);
-      }
-    });
-    const removes = [];
-    snap.forEach((prev, key) => { if (!seen.has(key) && onScreen(prev.rect)) removes.push(prev); });
+    const items = flipItems(root).map(el => ({
+      el, key: el.dataset.flipKey, now: el.getBoundingClientRect(), parent: flipParentKey(el, root),
+    }));
+    const seen = new Set(items.map(i => i.key));
 
+    // 문서 순서라 묶음이 안의 행보다 먼저 온다 — shift: 그 항목이 첫 장면에 실제로 옮겨져 보이는 양
     let budget = LAYOUT_MAX;
-    for (const { el, dx, dy } of moves) {
-      if (budget-- <= 0) break;
-      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
-        { duration: LAYOUT_MOVE_MS, easing: EASE_OUT });
+    const shift = new Map(), entered = new Set(), crossed = [];
+    for (const { el, key, now, parent } of items) {
+      const prev = snap.get(key);
+      const base = (parent && shift.get(parent)) || NO_SHIFT;
+      if (prev && prev.parent === parent) {
+        // 같은 묶음 안(또는 묶음 없는 목록) — 묶음이 옮겨 주는 몫을 뺀 만큼만 움직인다
+        const dx = prev.rect.left - now.left - base.dx, dy = prev.rect.top - now.top - base.dy;
+        if ((Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) && (onScreen(prev.rect) || onScreen(now)) && budget-- > 0) {
+          el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
+            { duration: LAYOUT_MOVE_MS, easing: EASE_OUT });
+          shift.set(key, { dx: base.dx + dx, dy: base.dy + dy });
+        } else if (base !== NO_SHIFT) {
+          shift.set(key, base);
+        }
+        continue;
+      }
+      if (prev) crossed.push(prev); // 다른 묶음으로 옮겨 감 — 이전 자리는 유령으로
+      // 새로 나타난 묶음 안의 행은 묶음과 함께 나타난다 (따로 흐리게 하면 투명도가 겹친다)
+      if (parent && entered.has(parent)) { entered.add(key); continue; }
+      if (onScreen(now) && budget-- > 0) {
+        entered.add(key);
+        el.animate([{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "none" }],
+          { duration: LAYOUT_ADD_MS, easing: EASE_OUT });
+      }
     }
-    for (const el of adds) {
-      if (budget-- <= 0) break;
-      el.animate([{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "none" }],
-        { duration: LAYOUT_ADD_MS, easing: EASE_OUT });
-    }
+    // 사라진 항목과 묶음을 옮긴 항목의 이전 모습 — 묶음째 사라졌다면 묶음 유령에 들어 있으니 따로 만들지 않는다
+    const ghosts = [];
+    snap.forEach((prev, key) => { if (!seen.has(key)) ghosts.push(prev); });
+    ghosts.push(...crossed);
+    const removes = ghosts.filter(p => onScreen(p.rect) && !(p.parent && !seen.has(p.parent)));
+
     // 지운 행: 이전 노드를 원래 자리에 유령으로 다시 붙여 흐려지게 한 뒤 뗀다 (눌리지 않고, 읽히지 않게)
-    for (const { rect, node } of removes) {
+    for (const { rect, node, bg } of removes) {
       if (budget-- <= 0) break;
       node.classList.add("flip-ghost");
       node.setAttribute("aria-hidden", "true");
@@ -375,6 +415,7 @@ export function playLayout(root, snap) {
         position: "absolute", margin: "0", pointerEvents: "none",
         top: `${rect.top - rootRect.top}px`, left: `${rect.left - rootRect.left}px`, width: `${rect.width}px`,
       });
+      if (bg) node.style.backgroundColor = bg;
       root.appendChild(node);
       const drop = () => node.remove();
       node.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(0.98)" }],
