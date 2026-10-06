@@ -6,30 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 There is **no build step**. The app is plain ES modules served as static files; Firebase SDKs are loaded directly from `https://www.gstatic.com/firebasejs/10.12.0/`. ES modules won't load over `file://`, so `index.html` must be served over HTTP.
 
-**The owner's machine has neither Node nor Python** (verified 2026-09: `node`/`npx` absent from PATH and every usual install location; `python`/`python3`/`py` are the Windows Store stubs). So `npx http-server` and `python -m http.server` (README lists them only as alternatives after the PowerShell server) do not work here. Use the dependency-free PowerShell server in the repo:
+**Probe the environment before relying on a runtime.** On the machine this repo lives on, Node 24 (`node`, `npx`) and Python 3.12 are on PATH in both the Bash and PowerShell tools (verified 2026-10-06; a 2026-09-11 session used `node --check` and `npx http-server` here too). A 2026-09-12 session recorded that *neither* existed, so the owner evidently works from more than one environment — run `node --version` first instead of assuming either way. The dependency-free PowerShell static server in the repo works everywhere (verified 2026-10-06: correct MIME types, 404 for missing files):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/serve.ps1 -Port 8000
 ```
 
-For the Claude desktop Browser pane, `.claude/launch.json` (gitignored — recreate it if missing) points at the same script:
+`npx http-server -p 8000` and `python -m http.server 8000` work too where those runtimes exist (README lists them as alternatives).
+
+For the Claude desktop Browser pane, `.claude/launch.json` (gitignored — recreate it if missing) points at the same script (this exact config started the pane on 2026-10-06):
 
 ```json
 { "version": "0.0.1", "configurations": [ { "name": "couple-budget", "runtimeExecutable": "powershell",
   "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools/serve.ps1", "-Port", "8000"], "port": 8000 } ] }
 ```
 
-There are no tests, linters, or package scripts and no `package.json`. **Verification on this machine is the browser smoke test**: load the app through the local server and confirm zero console errors and that the login screen renders — `js/app.js` imports every module eagerly, so a syntax error anywhere fails the whole load and shows in the console. Signing in needs one of the two allowlisted Google accounts, so anything past the login screen is checked by the owner. Where Node *is* available, add a per-file `node --check` (it parses plain `.js` as CommonJS, hence the `.mjs` copy; Git Bash, from the repo root):
+There are no tests, linters, or package scripts and no `package.json`. Verification is three layers:
+
+1. **Syntax** — a per-file `node --check` whenever Node is available (it parses plain `.js` as CommonJS, hence the `.mjs` copy; Git Bash, from the repo root):
 
 ```bash
 S=$(mktemp -d); ok=1; for f in js/*.js js/views/*.js js/modals/*.js; do cp "$f" "$S/$(echo $f|tr / _).mjs"; node --check "$S/$(echo $f|tr / _).mjs" || ok=0; done; [ $ok = 1 ] && echo ALL-PASS
 ```
 
+2. **Browser smoke test** — load the app through the local server and confirm zero console errors and that the login screen renders. `js/app.js` imports every module eagerly, so a syntax error anywhere fails the whole load and shows in the console.
+3. **Past the login screen without an account** — signing in needs one of the two allowlisted Google accounts, so Firestore-backed behaviour is finally checked by the owner. Two workarounds have been used to see rendering before that:
+   - *Inject state from the Browser pane console* (2026-09-11, wedding tab): `const state = (await import('/js/state.js')).default; const w = await import('/js/views/wedding.js');`, then hide `#loginScreen`, un-hide `#app`, give `#view-<name>` the `.active` class, set `state.currentView`, put fixture objects into `state`, and call the view's `render<Name>View()`. Modals work the same way (`openWeddingItemModal(fixture)` from `js/modals/weddingModal.js`). The wedding shell's `ensureLoaded()` fails with permission-denied and sets `state.wedding.loadError` — clear it and render again. Nothing is saved, so read the save path in the code instead.
+   - *A mock copy outside the repo* (2026-09-30 motion work): a scratchpad copy of the app with `firebase.js` replaced by a fake Firestore module (snapshots with `docChanges()`, a `window.__remote()` hook that simulates partner writes), served by a second `launch.json` entry on port 8010 and driven by per-feature browser check scripts. Nothing of it is in the repo; the recipe is in `docs/superpowers/plans/2026-09-30-motion-polish.md`.
+
 ⚠ **PowerShell scripts in `tools/` must be saved as UTF-8 *with BOM*.** Windows PowerShell 5.1 reads a BOM-less file as CP949, and a Korean comment can then swallow the line after it — `serve.ps1` without a BOM silently skipped its body write and every GET hung. Both scripts carry the BOM; keep it when editing (the Write tool emits no BOM — re-save with `[IO.File]::WriteAllText(path, text, (New-Object Text.UTF8Encoding $true))`).
 
 `.claude/` (session settings, `launch.json`) and `excel/` (personal card statements) are gitignored — don't commit either.
 
-Design specs and implementation plans for larger features live in `docs/superpowers/specs/` and `docs/superpowers/plans/` (currently only the 2026-08 wedding tab). They record the *original* design and are not updated afterwards — the wedding spec still describes a stored `totalBudget` and a 하객 segment, both since replaced (see the wedding section below). When a spec and this file disagree, this file wins.
+Design specs and implementation plans for larger features live in `docs/superpowers/specs/` and `docs/superpowers/plans/` (2026-08 wedding tab, 2026-09-30 motion polish). They record the *original* design and are not updated afterwards — the wedding spec still describes a stored `totalBudget` and a 하객 segment, both since replaced (see the wedding section below), and the motion plan's mock and check scripts existed only in that session's scratchpad. When a spec and this file disagree, this file wins.
 
 ## Deployment
 
@@ -68,7 +77,7 @@ js/views/wedding{Events,Checklist,Vendors,Memo}.js  ← 세그먼트 렌더러 �
 js/modals/{txModal,fixedModal,csvModal,budgetModal,weddingModal}.js  ← setup<Name>Modal(s)() wires DOM events; open<Name>Modal() opens it
 ```
 
-Bootstrapping happens at the bottom of `js/app.js`: `setupAuth()`, `setupThemeToggle()`, the 내보내기 button binding, the five modal `setup*` calls (tx/fixed/csv/budget/wedding), and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file) run on module load. `auth.js` then calls `initApp()` once a permitted user signs in. The login screen ships as `.auth-pending` with the Google button `disabled` (shown as a skeleton) until the **first** `onAuthStateChanged` call, since that is when Firebase has finished restoring a saved session. The button used to be live during the restore, so a click opened the sign-in popup, and then the restored session brought up the app behind a popup nobody closed. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click. The guard runs **before** the first data load. Registering after it used to leave month nav and view switching dead for the session whenever the first load failed (offline, missing index).
+Bootstrapping happens at the bottom of `js/app.js`, on module load: `setupAuth()`, `setupThemeToggle()`, the three motion setups (`setupSegmentThumbs()`, `setupSheetDrag()`, `setupTouchFeedback()`), the 내보내기 bindings (`#csvExportBtn` and the mobile drawer's `#sideExportBtn`), the add buttons (`#addTxBtn`, `#mobAddBtn` → `onAddClick`), the five modal `setup*` calls (tx/fixed/csv/budget/wedding), and `setupCategoryDetailModal()` (exported from `js/views/stats.js`, not a `js/modals/` file). `auth.js` then calls `initApp()` once a permitted user signs in. The login screen ships as `.auth-pending` with the Google button `disabled` (shown as a skeleton) until the **first** `onAuthStateChanged` call, since that is when Firebase has finished restoring a saved session. The button used to be live during the restore, so a click opened the sign-in popup, and then the restored session brought up the app behind a popup nobody closed. Because `onAuthStateChanged` re-fires on every re-login, `initApp()` guards its one-time listener registration behind a `listenersBound` flag — new global listeners belong inside that guard (or must follow the rebind-per-render pattern), or they will fire once per past login on each click. The guard runs **before** the first data load. Registering after it used to leave month nav and view switching dead for the session whenever the first load failed (offline, missing index).
 
 `loadAllData()` catches its own failures. It sets `loadError`, and while that is set `renderAll()` replaces month-scoped views with a "데이터를 불러오지 못했어요" card and a 다시 시도 button. The card shows a composite-index hint for `failed-precondition`. Month navigation or the button retries, and a successful load clears it. `renderSummary()` also survives a failed accumulated-balance read by showing "—" in that card instead of rejecting.
 
@@ -224,7 +233,7 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 - The sheet dismisses past about 30% of its height (max 140px), or on a fling faster than 0.6px/ms. A finger that paused 80ms before release counts as no fling.
 - A dismissal continues at the finger's speed: `clamp(4.5 × remaining ÷ release velocity, 160, 280)`ms with the ease-out curve, whose initial slope is about 4.5. The old 220ms ease-in stalled right after a flick.
 - Otherwise the sheet springs back in 360ms.
-- Dismissal clicks the modal's `.modal-close` with `data-dismissed` set, so per-modal cleanup still runs without a second close animation.
+- Dismissal sets `overlay.dataset.dismissed` (the `data-dismissed` attribute) and clicks the modal's `.modal-close`, so per-modal cleanup still runs while `closeOverlay()` skips the second close animation; `openOverlay()` clears the flag.
 
 **View entrance.**
 - `pendingEntrance` and `firstEntrance` in `app.js` are set only by navigation. `renderAll()` consumes them through `playEntrance(view, dir, { first })`, so realtime refreshes and post-save re-renders never play an entrance.
@@ -288,7 +297,7 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 
 **Segment thumb (iOS).**
 - Every `.scope-toggle`, `.type-toggle` and `.kind-toggle` automatically gets a `.seg-thumb` behind its `button.active` that slides in 300ms. `.has-thumb` makes the active button's own background transparent.
-- Controls re-created by `innerHTML` animate from their remembered position (FLIP, keyed by `data-seg-key`, id, or the nearest ancestor id).
+- Controls re-created by `innerHTML` animate from their remembered position (FLIP, keyed by `dataset.segKey` / `data-seg-key`, else the control's id, else the nearest ancestor id plus the control's class).
 
 ## Conventions
 
@@ -308,3 +317,4 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
   - The lightest dots (cream yellow, sky) blur on white, so category and person dots get a faint `--dot-ring` inset outline in the light theme (transparent in dark).
 - Per-person colors in stats are fixed per person (`ownerColor()` in `stats.js`): `ALLOWED_EMAILS[0]` → `OWNER_COLORS[0]`, `[1]` → `[1]`, and no owner (함께) → gray. They used to follow spending rank and swapped between months.
 - Never use native `confirm()`/`alert()` — use `showConfirm()` from `js/utils.js` (returns a Promise<boolean>) and `showToast()`.
+- Commit messages are Korean, `<type>: <summary>` with the types already in history (`feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `a11y`, `style`), one logical change per commit, and the body explains the *why* and the bug it replaces when there is one. Finished, verified work is committed and pushed on `main` directly (see Deployment).
