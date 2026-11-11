@@ -28,8 +28,11 @@ export default async function ({ variant }) {
   t.ok(end <= 320, `탭 등장 끝 ${end}ms (기대 ≤ 320)`);
   const bars = enterAnims(stats).filter(a => a.animationName === "m-bar-grow");
   t.ok(bars.length > 0 && bars.every(a => timing(a).duration === 450), `막대 ${bars.map(a => timing(a).duration)}`);
-  await __wait(940); // 클릭 뒤 약 1초
-  if (__realHidden()) {
+  const slow = await __throttled(); // 창이 가려져 화면이 거의 안 그려지면 끝나는 시각을 단언할 수 없다
+  await __wait(slow ? 540 : 940); // 클릭 뒤 약 1초
+  if (slow) {
+    // 건너뜀 — 아래 __settle 뒤의 단언(결국 정리된다)만 본다
+  } else if (__realHidden()) {
     // 숨은 창: 애니메이션이 끝나지 않으므로 1200ms 안전 타이머 전까지 남아 있어야 한다 (예전 900ms 고정 정리라면 이미 없음)
     t.ok(stats.classList.contains("entering"), "약 1초에 등장 클래스가 이미 없음 (고정 타이머로 정리)");
   } else {
@@ -71,7 +74,9 @@ export default async function ({ variant }) {
   await __go("wedding");
   await __wait(700);
   const wd = document.getElementById("view-wedding");
-  if (__realHidden()) {
+  if (slow) {
+    // 건너뜀 (위와 같은 이유)
+  } else if (__realHidden()) {
     t.ok(wd.classList.contains("entering"), "결혼 탭: 약 1초에 등장 클래스가 이미 없음");
   } else {
     t.ok(!wd.classList.contains("entering") && enterAnims(wd).length === 0, "결혼 탭: 애니메이션이 끝났는데 등장 클래스가 남음 (보이는 창)");
@@ -93,5 +98,5 @@ export default async function ({ variant }) {
     `첫 로그인 등장: ${firstRises.map(a => `${a.animationName}/${timing(a).duration}`).join(",")}`);
   await __settle();
 
-  return t.done();
+  return t.done(slow ? { skipped: "창이 가려져 화면이 느리게 그려짐 — 끝나는 시각 단언 2개를 건너뜀" } : undefined);
 }

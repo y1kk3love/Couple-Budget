@@ -48,6 +48,10 @@
    ease-out: 대부분의 등장 / ease-in: 퇴장 / ease-sheet: iOS 바텀시트 곡선
    ease-spring: 약 4% 튀는 스프링(누름 복귀·세그먼트) / ease-bounce: 약 13% (체크 강조) */
 :root {
+  /* 속도 배수 — 모든 전환·애니메이션 길이에 곱한다 (JS는 motion.js의 motionScale()로 같은 값을 읽는다).
+     주인이 목업의 조절판(?tune=1)으로 직접 고른 값: 처음 설계(1)보다 2.5배 길게 (2026-11-11).
+     아래 --dur-* 는 배수를 곱하기 전의 기준값이다. 전체 속도를 바꿀 때는 이 값 하나만 고친다. */
+  --motion-scale: 2.5;
   --dur-press: 90ms;   /* 누를 때 들어가는 시간 */
   --dur-fast: 150ms;
   --dur-base: 250ms;
@@ -150,9 +154,9 @@ body {
 }
 
 /* 토스 특유의 '눌리는' 촉감 — 모든 버튼 공통 */
-button { transition: transform var(--dur-base) var(--ease-spring); }
+button { transition: transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring); }
 /* 누를 땐 빠르게 들어가고(90ms), 뗄 땐 스프링으로 살짝 튀며 돌아온다 (iOS) */
-button:active, [role="button"]:active { transition-duration: var(--dur-press); transition-timing-function: ease-out; }
+button:active, [role="button"]:active { transition-duration: calc(var(--dur-press) * var(--motion-scale)); transition-timing-function: ease-out; }
 button:active { transform: scale(0.96); }
 /* 저장 중 잠긴 버튼 (runWrite) — 눌림 효과 없이 흐리게 */
 button:disabled { opacity: 0.55; cursor: default; }
@@ -196,7 +200,7 @@ a:focus-visible {
   background: var(--surface); border: 1px solid var(--border-strong);
   border-radius: var(--radius); font-size: 0.9rem; font-family: var(--font);
   color: var(--text); cursor: pointer; font-weight: 600;
-  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .google-btn:hover { background: var(--surface-hover); }
 .login-note { font-size: 0.8rem; color: var(--text-3); margin-top: 1rem; }
@@ -223,7 +227,7 @@ a:focus-visible {
   padding: 0.65rem 0.85rem; border-radius: var(--radius);
   font-size: 0.9rem; font-family: var(--font);
   color: var(--text-2); background: none; border: none; cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
   text-align: left; width: 100%;
 }
 .nav-btn:hover { background: var(--surface2); color: var(--text); }
@@ -266,7 +270,7 @@ a:focus-visible {
   background: none; border: none; cursor: pointer; color: var(--text-2);
   display: flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: 8px; /* 터치 타깃 확보 */
-  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .arrow-btn:hover { background: var(--surface2); color: var(--text); }
 /* 버튼 요소 — 클릭하면 이번 달로 복귀 */
@@ -274,7 +278,7 @@ a:focus-visible {
   font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text);
   min-width: 110px; text-align: center;
   background: none; border: none; cursor: pointer; font-family: var(--font);
-  padding: 4px 8px; border-radius: 8px; transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  padding: 4px 8px; border-radius: 8px; transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .month-label:hover { background: var(--surface2); }
 /* 월과 무관한 화면(예산안·결혼) 제목 — app.js applyViewChrome이 .monthless와 함께 채운다 */
@@ -294,7 +298,7 @@ a:focus-visible {
   font-size: 0.85rem; font-family: var(--font); font-weight: 500;
   color: var(--text-2); background: var(--surface2);
   border: none; cursor: pointer;
-  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .icon-btn:hover { background: var(--surface3); }
 .theme-btn { padding: 0.5rem 0.6rem; } /* 아이콘 전용 */
@@ -304,7 +308,7 @@ a:focus-visible {
   padding: 0.5rem 1rem; border-radius: 10px;
   font-size: 0.9rem; font-family: var(--font); font-weight: 600;
   background: var(--accent-fill); color: #fff; border: none; cursor: pointer;
-  transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: filter calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .add-btn:hover { filter: brightness(1.08); }
 
@@ -344,7 +348,7 @@ a:focus-visible {
 .duo-val.expense { color: var(--expense); }
 
 /* 예산 카드 */
-.budget-card { cursor: pointer; transition: background 0.15s; }
+.budget-card { cursor: pointer; transition: background calc(0.15s * var(--motion-scale)); }
 .budget-card:hover { background: var(--surface-hover); }
 .budget-card .budget-pbar { margin-top: 7px; background: var(--surface3); }
 .budget-card .budget-unset-val { font-family: var(--font); font-size: 0.95rem; font-weight: 600; color: var(--accent); }
@@ -367,7 +371,7 @@ a:focus-visible {
 .cal-cell {
   border-top: 1px solid var(--border);
   padding: 6px 6px 8px; min-height: 80px; cursor: pointer;
-  transition: background 0.12s;
+  transition: background calc(0.12s * var(--motion-scale));
 }
 .cal-cell:hover { background: var(--surface-hover); }
 .cal-grid .cal-cell:nth-child(-n+7) { border-top: none; }
@@ -466,7 +470,7 @@ a:focus-visible {
   flex: 1; padding: 6px 10px; border: 1.5px solid transparent;
   border-radius: 8px; font-size: 0.85rem; background: var(--surface2);
   color: var(--text); font-family: var(--font); outline: none;
-  transition: border-color 0.15s;
+  transition: border-color calc(0.15s * var(--motion-scale));
 }
 .filter-row input:focus, .filter-row select:focus { border-color: var(--accent); }
 .filter-range { display: flex; align-items: center; gap: 6px; flex: 1; }
@@ -490,7 +494,7 @@ a:focus-visible {
   background: var(--surface); border: none; border-radius: var(--radius-lg);
   color: var(--accent); font-size: 0.85rem; font-weight: 600; font-family: var(--font);
   cursor: pointer; box-shadow: var(--shadow-card); margin-bottom: 12px;
-  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .list-more-btn:hover { background: var(--surface-hover); }
 
@@ -518,7 +522,7 @@ a:focus-visible {
 .tx-item {
   display: flex; align-items: center; gap: 12px;
   padding: 0.75rem 1rem; cursor: pointer;
-  transition: background 0.15s;
+  transition: background calc(0.15s * var(--motion-scale));
 }
 .tx-item + .tx-item { border-top: 1px solid var(--border); }
 .tx-item:hover { background: var(--surface-hover); }
@@ -552,7 +556,7 @@ a:focus-visible {
 .stats-card.full { grid-column: 1 / -1; }
 .stats-grid > .stats-card:not(.full):last-child:nth-child(odd) { grid-column: 1 / -1; }
 .cat-bar-item { margin-bottom: 10px; }
-.cat-bar-item.clickable { cursor: pointer; padding: 4px 6px; margin-left: -6px; margin-right: -6px; border-radius: var(--radius); transition: background 0.15s; }
+.cat-bar-item.clickable { cursor: pointer; padding: 4px 6px; margin-left: -6px; margin-right: -6px; border-radius: var(--radius); transition: background calc(0.15s * var(--motion-scale)); }
 .cat-bar-item.clickable:hover { background: var(--surface-hover); }
 .cat-bar-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
 .cat-bar-label { font-size: 0.85rem; color: var(--text); }
@@ -561,7 +565,7 @@ a:focus-visible {
 .cat-bar-pct { color: var(--text-3); font-size: 0.75rem; margin-left: 4px; }
 .cat-bar-go { color: var(--text-3); margin-left: 6px; font-family: var(--font); }
 .pbar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-.pfill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.pfill { height: 100%; border-radius: 3px; transition: width calc(0.4s * var(--motion-scale)) ease; }
 
 /* 월별 비교 차트 */
 .monthly-loading { font-size: 0.85rem; color: var(--text-3); }
@@ -574,7 +578,7 @@ a:focus-visible {
   display: flex; flex-direction: column; align-items: center;
   height: 100%; min-width: 0; padding: 2px;
   border-radius: var(--radius); cursor: pointer;
-  transition: background 0.15s;
+  transition: background calc(0.15s * var(--motion-scale));
 }
 .mc-col:hover { background: var(--surface-hover); }
 .mc-col.current { background: var(--accent-bg); }
@@ -586,7 +590,7 @@ a:focus-visible {
   width: 70%; margin: 0 auto;
   display: flex; flex-direction: column-reverse;
   border-radius: 4px 4px 0 0; overflow: hidden;
-  transition: opacity 0.15s;
+  transition: opacity calc(0.15s * var(--motion-scale));
 }
 .mc-segment { width: 100%; min-height: 1px; }
 /* 누적 막대의 칸 사이 얇은 구분선 — 이웃한 비슷한 색도 경계가 보이게 */
@@ -626,7 +630,7 @@ a:focus-visible {
   background: var(--surface);
   border-radius: var(--radius); padding: 0.9rem 1rem;
   cursor: pointer; box-shadow: var(--shadow-card);
-  transition: background 0.15s;
+  transition: background calc(0.15s * var(--motion-scale));
 }
 .fixed-item:hover { background: var(--surface-hover); }
 .fixed-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -642,7 +646,7 @@ a:focus-visible {
   border: 1.5px dashed var(--border-strong); border-radius: var(--radius);
   color: var(--text-2); font-size: 0.9rem; font-family: var(--font); font-weight: 500;
   cursor: pointer; width: 100%; margin-top: 4px;
-  transition: border-color 0.15s, color 0.15s, background 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: border-color calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .add-fixed-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -664,7 +668,7 @@ a:focus-visible {
   overflow-y: auto; box-shadow: var(--shadow-pop);
   /* 데스크톱 팝업: 살짝 작은 상태에서 스프링으로 커지며 등장. fill은 backwards만 —
      끝난 뒤 transform을 붙잡고 있으면 바텀시트 끌기(인라인 transform)가 먹지 않는다 */
-  animation: m-pop-in 280ms var(--ease-spring) backwards;
+  animation: m-pop-in calc(280ms * var(--motion-scale)) var(--ease-spring) backwards;
 }
 .modal:focus { outline: none; }
 .modal-header {
@@ -696,7 +700,7 @@ a:focus-visible {
   border: 1.5px solid transparent; border-radius: 10px;
   background: var(--surface2); color: var(--text-2);
   font-family: var(--font); font-size: 0.8rem; cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), border-color calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .cat-chip i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .cat-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -719,7 +723,7 @@ a:focus-visible {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.8rem; padding: 4px 6px; margin: 0 -6px;
   border-bottom: 1px solid var(--border);
-  cursor: pointer; border-radius: 8px; transition: background 0.12s;
+  cursor: pointer; border-radius: 8px; transition: background calc(0.12s * var(--motion-scale));
 }
 .ctx-row:hover { background: var(--surface-hover); }
 .ctx-row:last-child { border-bottom: none; }
@@ -733,7 +737,7 @@ a:focus-visible {
   padding: 0.65rem 0.875rem; border: 1.5px solid transparent;
   border-radius: var(--radius); font-size: 0.9rem; font-family: var(--font);
   color: var(--text); background: var(--surface2); outline: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color calc(0.15s * var(--motion-scale)), background calc(0.15s * var(--motion-scale));
 }
 .form-row input:focus, .form-row select:focus { border-color: var(--accent); background: var(--surface); }
 .check-row {
@@ -745,7 +749,7 @@ a:focus-visible {
   display: flex; align-items: center;
   border: 1.5px solid transparent; border-radius: var(--radius);
   background: var(--surface2); overflow: hidden;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color calc(0.15s * var(--motion-scale)), background calc(0.15s * var(--motion-scale));
 }
 .amount-input-wrap:focus-within { border-color: var(--accent); background: var(--surface); }
 .amount-input-wrap input {
@@ -773,7 +777,7 @@ a:focus-visible {
   padding: 0.4rem 0.7rem; border: none; border-radius: 100px;
   background: var(--surface2); color: var(--text-2);
   font-family: var(--font); font-size: 0.8rem; cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .name-chip i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1px var(--dot-ring); }
 .name-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -782,7 +786,7 @@ a:focus-visible {
   padding: 0.5rem 0; border: none; border-radius: 8px;
   background: var(--surface2); color: var(--text-2); font-family: var(--font);
   font-size: 0.85rem; font-weight: 500; cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .preset-btn:hover { background: var(--accent-bg); color: var(--accent); }
 .preset-btn.preset-clear { color: var(--text-3); }
@@ -795,7 +799,7 @@ a:focus-visible {
   flex: 1; padding: 0.5rem; border: none; background: none; cursor: pointer;
   font-size: 0.9rem; font-family: var(--font); color: var(--text-2);
   border-radius: 9px;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), box-shadow calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .type-btn.active, .kind-btn.active {
   background: var(--surface); color: var(--text); font-weight: 600;
@@ -808,14 +812,14 @@ a:focus-visible {
   padding: 0.65rem 1.5rem; background: var(--accent-fill); color: #fff;
   border: none; border-radius: var(--radius);
   font-size: 0.9rem; font-family: var(--font); font-weight: 600; cursor: pointer;
-  transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: filter calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .save-btn:hover { filter: brightness(1.08); }
 .delete-btn {
   padding: 0.65rem 1rem; background: var(--expense-bg); color: var(--expense);
   border: none; border-radius: var(--radius);
   font-size: 0.9rem; font-family: var(--font); font-weight: 500;
-  cursor: pointer; margin-right: auto; transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
+  cursor: pointer; margin-right: auto; transition: filter calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .delete-btn:hover { filter: brightness(0.96); }
 
@@ -824,7 +828,7 @@ a:focus-visible {
   background: var(--surface); border-radius: 20px;
   padding: 1.5rem 1.25rem 1.25rem; width: 100%; max-width: 300px;
   box-shadow: var(--shadow-pop);
-  animation: m-alert-in 260ms var(--ease-out) backwards; /* iOS 알림창: 살짝 크게 떠서 제자리로 */
+  animation: m-alert-in calc(260ms * var(--motion-scale)) var(--ease-out) backwards; /* iOS 알림창: 살짝 크게 떠서 제자리로 */
 }
 .confirm-msg {
   font-size: 0.95rem; font-weight: 600; color: var(--text);
@@ -835,7 +839,7 @@ a:focus-visible {
 .confirm-actions button {
   flex: 1; padding: 0.7rem; border-radius: var(--radius); border: none;
   font-size: 0.9rem; font-family: var(--font); cursor: pointer;
-  transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: filter calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .confirm-cancel { background: var(--surface2); color: var(--text-2); font-weight: 500; }
 .confirm-ok { background: var(--accent-fill); color: #fff; font-weight: 600; }
@@ -854,7 +858,7 @@ a:focus-visible {
 .csv-drop-zone {
   border: 2px dashed var(--border-strong); border-radius: var(--radius-lg);
   padding: 2.5rem; text-align: center; cursor: pointer; color: var(--text-2);
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color calc(0.15s * var(--motion-scale)), background calc(0.15s * var(--motion-scale));
   display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
 .csv-drop-zone:hover, .csv-drop-zone.drag-over { border-color: var(--accent); background: var(--accent-bg); }
@@ -905,7 +909,7 @@ a:focus-visible {
 .cd-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 1.5rem; border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background 0.15s;
+  cursor: pointer; transition: background calc(0.15s * var(--motion-scale));
 }
 .cd-row:hover { background: var(--surface-hover); }
 .cd-row:last-child { border-bottom: none; }
@@ -949,7 +953,7 @@ a:focus-visible {
   width: 100%; margin-top: 0.75rem; padding: 0.6rem;
   background: var(--surface2); border: none; border-radius: var(--radius);
   color: var(--text-2); font-size: 0.85rem; font-weight: 500; font-family: var(--font); cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .plan-edit-btn:hover { background: var(--accent-bg); color: var(--accent); }
 .plan-edit { display: flex; flex-direction: column; gap: 8px; }
@@ -957,7 +961,7 @@ a:focus-visible {
 .plan-edit input {
   padding: 0.55rem 0.75rem; border: 1.5px solid transparent; border-radius: 10px;
   font-size: 0.9rem; font-family: var(--font); color: var(--text); background: var(--surface2);
-  outline: none; width: 100%; transition: border-color 0.15s, background 0.15s;
+  outline: none; width: 100%; transition: border-color calc(0.15s * var(--motion-scale)), background calc(0.15s * var(--motion-scale));
 }
 .plan-edit input:focus { border-color: var(--accent); background: var(--surface); }
 .plan-edit-row { display: flex; gap: 6px; align-items: center; }
@@ -984,7 +988,7 @@ a:focus-visible {
   padding: 0.55rem; background: none; border: 1.5px dashed var(--border-strong);
   border-radius: 10px; color: var(--text-2); font-size: 0.85rem;
   font-family: var(--font); cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: border-color calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .pe-add:hover { border-color: var(--accent); color: var(--accent); }
 .plan-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
@@ -993,7 +997,7 @@ a:focus-visible {
 .wd-header {
   background: var(--surface); border-radius: var(--radius-lg);
   padding: 1.25rem; box-shadow: var(--shadow-card); margin-bottom: 1rem;
-  cursor: pointer; transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  cursor: pointer; transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
   position: relative; /* 시트 바로가기 칩의 기준 */
 }
 /* 검증 시트 바로가기 칩 — 헤더 오른쪽 위 */
@@ -1003,7 +1007,7 @@ a:focus-visible {
   padding: 5px 12px; border-radius: 20px;
   background: var(--accent-bg); color: var(--accent);
   font-size: 0.8rem; font-weight: 600; text-decoration: none;
-  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .wd-sheet-link:hover { background: var(--accent-fill); color: #fff; }
 .wd-sheet-link:active { transform: scale(0.96); }
@@ -1101,7 +1105,7 @@ a:focus-visible {
 }
 .wd-task-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 0.7rem 1rem; cursor: pointer; transition: background 0.15s;
+  padding: 0.7rem 1rem; cursor: pointer; transition: background calc(0.15s * var(--motion-scale));
 }
 .wd-task-row + .wd-task-row { border-top: 1px solid var(--border); }
 .wd-task-row:hover { background: var(--surface-hover); }
@@ -1112,7 +1116,7 @@ a:focus-visible {
   width: 20px; height: 20px; border-radius: 6px;
   border: 1.5px solid var(--border-strong); background: var(--surface);
   cursor: pointer; flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background calc(0.15s * var(--motion-scale)), border-color calc(0.15s * var(--motion-scale));
 }
 .wd-task-chk:checked { background: var(--accent-fill); border-color: var(--accent-fill); }
 .wd-task-chk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1144,7 +1148,7 @@ a:focus-visible {
   margin: 10px 1.5rem 0; padding: 0.65rem 1rem;
   background: var(--accent-bg); color: var(--accent);
   border-radius: var(--radius); font-size: 0.85rem; font-weight: 600;
-  cursor: pointer; transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
+  cursor: pointer; transition: filter calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wd-banner .ico { margin-right: 6px; }
@@ -1185,7 +1189,7 @@ a:focus-visible {
   position: relative; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
   font-size: 0.8rem; color: var(--text-2); border-radius: 8px; cursor: pointer;
-  transition: background 0.12s;
+  transition: background calc(0.12s * var(--motion-scale));
 }
 .wd-mc-cell:hover { background: var(--surface-hover); }
 .wd-mc-cell.today { background: var(--accent-fill); color: #fff; font-weight: 600; }
@@ -1218,7 +1222,7 @@ a:focus-visible {
   border: 1.5px solid transparent; border-radius: var(--radius);
   background: var(--surface2); color: var(--text); font-family: var(--font);
   font-size: 0.9rem; line-height: 1.6; padding: 0.875rem; outline: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color calc(0.15s * var(--motion-scale)), background calc(0.15s * var(--motion-scale));
 }
 .wd-memo-text:focus { border-color: var(--accent); background: var(--surface); }
 .wd-memo-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -1246,7 +1250,7 @@ a:focus-visible {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 3px; padding: 0.6rem 0; border: none; background: none; cursor: pointer;
   font-size: 0.75rem; color: var(--text-3); font-family: var(--font);
-  transition: color 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: color calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .mob-tab.active { color: var(--accent); font-weight: 600; }
 .mob-tab.add-center {
@@ -1278,7 +1282,7 @@ a:focus-visible {
    호버 색은 흰 배경과 거의 같아(1.03:1) 폰에서는 보이지 않는다. 카드는 버튼처럼 살짝 작아진다 */
 .tx-item, .fixed-item, .budget-card, .cal-cell, .cd-row,
 .cat-bar-item.clickable, .mc-col {
-  transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
+  transition: background calc(0.15s * var(--motion-scale)), transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring);
 }
 .tx-item:active, .fixed-item:active, .cd-row:active,
 .cat-bar-item.clickable:active, .cal-cell:not(.empty):active {
@@ -1292,7 +1296,7 @@ a:focus-visible {
   /* 서랍은 하단 탭(z-index 100)보다 위 — 예전에는 같은 값이라 뒤에 오는 하단 탭이 서랍 맨 아래의
      로그아웃 버튼을 덮어 휴대폰에서 로그아웃할 수 없었다. 높이는 주소창을 뺀 실제 화면(dvh) */
   .sidebar {
-    transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease-sheet);
+    transform: translateX(-100%); transition: transform calc(var(--dur-slow) * var(--motion-scale)) var(--ease-sheet);
     z-index: 120; height: 100dvh;
   }
   .sidebar-footer { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
@@ -1300,7 +1304,7 @@ a:focus-visible {
   .sidebar-scrim {
     display: block; position: fixed; inset: 0; z-index: 110;
     background: var(--overlay); opacity: 0; pointer-events: none;
-    transition: opacity var(--dur-slow) var(--ease-sheet);
+    transition: opacity calc(var(--dur-slow) * var(--motion-scale)) var(--ease-sheet);
   }
   .sidebar.open + .sidebar-scrim { opacity: 1; pointer-events: auto; }
   .sidebar.open { transform: translateX(0); }
@@ -1334,7 +1338,7 @@ a:focus-visible {
     max-width: 100%; max-height: 92vh;
     border-radius: 24px 24px 0 0;
     padding-bottom: env(safe-area-inset-bottom);
-    animation: m-sheet-up var(--dur-sheet) var(--ease-sheet) backwards; /* iOS 시트: 화면 아래에서 끝까지 올라온다 */
+    animation: m-sheet-up calc(var(--dur-sheet) * var(--motion-scale)) var(--ease-sheet) backwards; /* iOS 시트: 화면 아래에서 끝까지 올라온다 */
   }
   /* 확인 다이얼로그는 바텀시트가 아니라 가운데 유지 */
   .modal-overlay.confirm-overlay { align-items: center; padding: 1.5rem; }
@@ -1445,13 +1449,13 @@ a:focus-visible {
   position: absolute; inset: 0;
   background: var(--overlay);
   pointer-events: none;
-  animation: m-fade-in var(--dur-base) ease backwards;
+  animation: m-fade-in calc(var(--dur-base) * var(--motion-scale)) ease backwards;
 }
 .modal-overlay.is-closing { pointer-events: none; }
-.modal-overlay.is-closing > .modal-scrim { animation: m-fade-out 200ms ease forwards; }
+.modal-overlay.is-closing > .modal-scrim { animation: m-fade-out calc(200ms * var(--motion-scale)) ease forwards; }
 /* 퇴장은 입장보다 짧고 누르는 즉시 움직이기 시작한다 (천천히 출발하는 ease-in은 누른 직후 무반응처럼 보인다) */
 .modal-overlay.is-closing > .modal,
-.modal-overlay.is-closing > .confirm-box { animation: m-pop-out 160ms var(--ease-out) forwards; }
+.modal-overlay.is-closing > .confirm-box { animation: m-pop-out calc(160ms * var(--motion-scale)) var(--ease-out) forwards; }
 
 /* ── 모바일 바텀시트: 손잡이 + 끌어서 닫기 영역(제목줄) ── */
 @media (max-width: 768px) {
@@ -1464,14 +1468,14 @@ a:focus-visible {
     width: 36px; height: 5px; margin-left: -18px; border-radius: 3px;
     background: var(--border-strong);
   }
-  .modal-overlay.is-closing:not(.confirm-overlay) > .modal { animation: m-sheet-down 240ms var(--ease-out) forwards; }
+  .modal-overlay.is-closing:not(.confirm-overlay) > .modal { animation: m-sheet-down calc(240ms * var(--motion-scale)) var(--ease-out) forwards; }
 }
 
 
 /* ── 앱·로그인 등장 ── */
-.login-box { animation: m-rise 600ms var(--ease-out) backwards; }
-.app { animation: m-fade-in var(--dur-slow) ease backwards; }
-.wd-banner:not(.hidden) { animation: m-rise var(--dur-slow) var(--ease-out) backwards; }
+.login-box { animation: m-rise calc(600ms * var(--motion-scale)) var(--ease-out) backwards; }
+.app { animation: m-fade-in calc(var(--dur-slow) * var(--motion-scale)) ease backwards; }
+.wd-banner:not(.hidden) { animation: m-rise calc(var(--dur-slow) * var(--motion-scale)) var(--ease-out) backwards; }
 
 /* ── 화면 등장 (motion.playEntrance) ──
    탭 전환: 카드·행이 6px 떠오르며 200ms, 앞 6개만 20ms 간격(끝까지 약 0.32초) — 하루 수십 번 하는 동작이라
@@ -1482,41 +1486,41 @@ a:focus-visible {
 .view.entering:not(.dir-next):not(.dir-prev) :is(
   .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
   .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state, .cal-day-panel, .list-result) {
-  animation: m-rise-sm 200ms var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 20ms);
+  animation: m-rise-sm calc(200ms * var(--motion-scale)) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * calc(20ms * var(--motion-scale)));
 }
 .view.entering.first:not(.dir-next):not(.dir-prev) :is(
   .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
   .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state, .cal-day-panel, .list-result) {
-  animation: m-rise 480ms var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 28ms);
+  animation: m-rise calc(480ms * var(--motion-scale)) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * calc(28ms * var(--motion-scale)));
 }
 @keyframes m-slide-next { from { opacity: 0; transform: translateX(24px); } }
 @keyframes m-slide-prev { from { opacity: 0; transform: translateX(-24px); } }
-.view.entering.dir-next { animation: m-slide-next var(--dur-nav) var(--ease-out) backwards; }
-.view.entering.dir-prev { animation: m-slide-prev var(--dur-nav) var(--ease-out) backwards; }
+.view.entering.dir-next { animation: m-slide-next calc(var(--dur-nav) * var(--motion-scale)) var(--ease-out) backwards; }
+.view.entering.dir-prev { animation: m-slide-prev calc(var(--dur-nav) * var(--motion-scale)) var(--ease-out) backwards; }
 
 /* 월 라벨도 같은 방향으로 */
-.month-label.label-next { animation: m-slide-next var(--dur-nav) var(--ease-out); }
-.month-label.label-prev { animation: m-slide-prev var(--dur-nav) var(--ease-out); }
+.month-label.label-next { animation: m-slide-next calc(var(--dur-nav) * var(--motion-scale)) var(--ease-out); }
+.month-label.label-prev { animation: m-slide-prev calc(var(--dur-nav) * var(--motion-scale)) var(--ease-out); }
 
 /* 막대는 왼쪽에서 자라난다 (토스) — 등장할 때만. 긴 목록도 7번째 이후는 같은 지연 */
 @keyframes m-bar-grow { from { transform: scaleX(0); } }
 .view.entering .pfill {
   transform-origin: left center;
-  animation: m-bar-grow 450ms var(--ease-out) backwards;
-  animation-delay: calc(min(var(--i, 0), 6) * 20ms + 60ms);
+  animation: m-bar-grow calc(450ms * var(--motion-scale)) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * calc(20ms * var(--motion-scale)) + calc(60ms * var(--motion-scale)));
 }
 /* 월별 누적 막대는 아래에서 위로, 열마다 조금씩 늦게 (--c: stats.js가 매김) */
 @keyframes m-col-grow { from { transform: scaleY(0); } }
 .view.entering .mc-stack {
   transform-origin: bottom center;
-  animation: m-col-grow 420ms var(--ease-out) backwards;
-  animation-delay: calc(var(--c, 0) * 30ms + 40ms);
+  animation: m-col-grow calc(420ms * var(--motion-scale)) var(--ease-out) backwards;
+  animation-delay: calc(var(--c, 0) * calc(30ms * var(--motion-scale)) + calc(40ms * var(--motion-scale)));
 }
 /* 예산안 도넛: 각 조각이 제자리에서 시계 방향으로 그려진다 */
 @keyframes m-donut { from { stroke-dasharray: 0 339.292; } }
-.view.entering .plan-donut-seg { animation: m-donut 500ms var(--ease-out) backwards; animation-delay: 60ms; }
+.view.entering .plan-donut-seg { animation: m-donut calc(500ms * var(--motion-scale)) var(--ease-out) backwards; animation-delay: calc(60ms * var(--motion-scale)); }
 
 /* ── 자리마다 굴러가는 금액 (motion.rollNumber, 토스·NumberFlow) ──
    숫자 칸(.roll-d) 안의 띠(.roll-s, 0~9 두 번)를 translateY로 옮긴다. 칸 높이 1lh — 끝난 뒤 되돌아가는
@@ -1542,26 +1546,26 @@ a:focus-visible {
   position: absolute; left: 0; top: 0; z-index: 0;
   border-radius: 8px; background: var(--surface);
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  transition: transform 300ms var(--ease-spring), width 300ms var(--ease-spring), height 300ms var(--ease-spring);
+  transition: transform calc(300ms * var(--motion-scale)) var(--ease-spring), width calc(300ms * var(--motion-scale)) var(--ease-spring), height calc(300ms * var(--motion-scale)) var(--ease-spring);
   pointer-events: none;
 }
 .type-toggle .seg-thumb, .kind-toggle .seg-thumb { border-radius: 9px; }
-.has-thumb > button { position: relative; z-index: 1; transition: color var(--dur-base) ease, transform var(--dur-base) var(--ease-spring); }
+.has-thumb > button { position: relative; z-index: 1; transition: color calc(var(--dur-base) * var(--motion-scale)) ease, transform calc(var(--dur-base) * var(--motion-scale)) var(--ease-spring); }
 .has-thumb > button.active { background: transparent; box-shadow: none; }
 
 /* ── 토스트: 아래에서 스프링으로 떠오르고, 가라앉으며 사라진다 ── */
 @keyframes m-toast-in  { from { opacity: 0; transform: translate(-50%, 16px) scale(0.96); } }
 @keyframes m-toast-out { to   { opacity: 0; transform: translate(-50%, 8px) scale(0.98); } }
 @keyframes m-toast-bump { 50% { transform: translate(-50%, 0) scale(1.04); } }
-.toast:not(.hidden) { animation: m-toast-in 420ms var(--ease-spring) backwards; }
-.toast.toast-bump { animation: m-toast-bump 260ms var(--ease-out); }
-.toast.toast-out { animation: m-toast-out 180ms var(--ease-out) forwards; }
+.toast:not(.hidden) { animation: m-toast-in calc(420ms * var(--motion-scale)) var(--ease-spring) backwards; }
+.toast.toast-bump { animation: m-toast-bump calc(260ms * var(--motion-scale)) var(--ease-out); }
+.toast.toast-out { animation: m-toast-out calc(180ms * var(--motion-scale)) var(--ease-out) forwards; }
 
 /* ── 방금 저장한 항목 반짝임 (motion.flash) ── */
 @keyframes m-flash {
   0%, 30% { box-shadow: inset 0 0 0 2px var(--accent); background-color: var(--accent-bg); }
 }
-.m-flash { animation: m-flash 1400ms ease-out; }
+.m-flash { animation: m-flash calc(1400ms * var(--motion-scale)) ease-out; }
 
 /* ── 테마 전환 (motion.revealTheme) ──
    View Transition: 이전 화면 위로 새 화면이 버튼 자리에서 원형(clip-path)으로 번진다 — 기본 크로스페이드는 끈다.
@@ -1571,16 +1575,16 @@ a:focus-visible {
 
 /* ── 상대가 방금 추가·수정한 행 (motion.highlightRows) — 테두리 없이 은은한 음영만 1.6초 ── */
 @keyframes m-remote { 0%, 30% { background-color: var(--accent-bg); } }
-.m-remote { animation: m-remote 1600ms ease-out; }
+.m-remote { animation: m-remote calc(1600ms * var(--motion-scale)) ease-out; }
 
 /* ── 체크리스트 완료 체크: 상자가 톡 튀며 차고, 체크 표시와 취소선이 이어서 그려진다 ── */
 @keyframes m-check-pop { 0% { transform: scale(0.6); } }
 @keyframes m-check-draw { from { stroke-dashoffset: 1; } }
 @keyframes m-strike { from { background-size: 0 1.5px; } }
 /* --pop-at: 효과 도중 다시 그린 행은 누른 시각만큼 음수 지연으로 같은 지점부터 이어 그린다 (weddingChecklist.js) */
-.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop 420ms var(--ease-bounce) var(--pop-at, 0ms); }
-.wd-task-row.m-pop .chk-mark path { animation: m-check-draw 280ms var(--ease-out) calc(60ms + var(--pop-at, 0ms)) backwards; }
-.wd-task-row.m-pop .strike { animation: m-strike 300ms var(--ease-out) calc(80ms + var(--pop-at, 0ms)) backwards; }
+.wd-task-row.m-pop .wd-task-chk { animation: m-check-pop calc(420ms * var(--motion-scale)) var(--ease-bounce) var(--pop-at, 0ms); }
+.wd-task-row.m-pop .chk-mark path { animation: m-check-draw calc(280ms * var(--motion-scale)) var(--ease-out) calc(calc(60ms * var(--motion-scale)) + var(--pop-at, 0ms)) backwards; }
+.wd-task-row.m-pop .strike { animation: m-strike calc(300ms * var(--motion-scale)) var(--ease-out) calc(calc(80ms * var(--motion-scale)) + var(--pop-at, 0ms)) backwards; }
 
 /* ── 불러오는 동안 스켈레톤 (토스) — 문구 대신 반짝이는 자리표시 ──
    반짝이는 띠(::after)를 transform으로 옮긴다. 예전엔 background-position을 움직여
@@ -1595,7 +1599,7 @@ a:focus-visible {
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(90deg, transparent 0%, var(--surface3) 50%, transparent 100%);
   transform: translateX(-100%);
-  animation: m-shimmer 1.4s linear infinite;
+  animation: m-shimmer calc(1.4s * var(--motion-scale)) linear infinite;
 }
 .skeleton + .skeleton { margin-top: 10px; }
 .skeleton-card {

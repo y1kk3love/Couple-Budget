@@ -39,6 +39,17 @@ window.__wait = ms => new Promise(r => setTimeout(r, ms));
 // Browser 창은 숨겨질 때도, 보일 때도 있다 — 검사가 창 상태에 기대지 않도록 강제한다.
 // __visible(): 보이는 척 / __visible("hidden"): 숨은 척 / __visible(false): 실제 상태로
 window.__realHidden = () => Object.getOwnPropertyDescriptor(Document.prototype, "hidden").get.call(document);
+// 보이기는 하지만 화면이 거의 그려지지 않는 상태 (앱 창이 다른 창에 가려지거나 뒤에 있을 때 브라우저가 초당 몇 장만 그린다).
+// 이때는 CSS 애니메이션이 제시간에 끝나지 않아, "몇 ms 뒤에는 끝나 있다"는 단언이 코드와 무관하게 실패한다.
+window.__throttled = async () => {
+  if (window.__realHidden()) return false;
+  let frames = 0, on = true;
+  const tick = () => { frames++; if (on) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+  await new Promise(r => setTimeout(r, 400));
+  on = false;
+  return frames < 12; // 400ms에 12장 미만 = 초당 30장 미만
+};
 window.__visible = (on = true) => {
   if (on === false) {
     delete document.hidden;
@@ -73,6 +84,9 @@ window.__expect = () => {
 window.__checkCount = 0; // 이 페이지에서 돌린 검사 수 (t20은 첫 검사일 때만 "페이지를 연 뒤 전체 쓰기"를 본다)
 window.__check = async (name, variant = "") => {
   const order = ++window.__checkCount;
+  // 검사는 기준 속도(배수 1)에서 돈다 — 검사 안의 기다림(__wait)과 시간 단언이 기준값으로 쓰여 있다.
+  // 실제 배수(style.css의 --motion-scale)는 t27-speed가 따로 본다. 한번 검사를 돌린 페이지는 계속 기준 속도다.
+  document.documentElement.style.setProperty("--motion-scale", "1");
   let result;
   try {
     const mod = await import(new URL(`checks/${name}.js?${Date.now()}`, import.meta.url).href);
@@ -108,3 +122,6 @@ window.__suiteWait = async (maxMs = 38000) => {
   while (!window.__suite.done && Date.now() - t0 < maxMs) await __wait(500);
   return { done: window.__suite.done, results: window.__suite.results };
 };
+
+// 애니메이션 속도 조절판 — 주소에 ?tune=1 (tools/mock/tune.js)
+if (new URLSearchParams(location.search).has("tune")) import("./tune.js");

@@ -9,6 +9,16 @@
 const reduceMq = matchMedia("(prefers-reduced-motion: reduce)");
 export const reducedMotion = () => reduceMq.matches;
 
+// 속도 배수 — style.css :root의 --motion-scale을 그대로 읽는다 (CSS와 JS가 한 값으로 같이 움직인다).
+// 부를 때마다 읽으므로, 목업 검사가 기준 속도(1)로 바꿔 놓아도 바로 따라간다.
+export function motionScale() {
+  try { return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--motion-scale")) || 1; }
+  catch { return 1; }
+}
+// 기준 시간(ms)에 배수를 곱한 실제 시간. 이 파일의 *_MS 상수와 숫자는 모두 기준값이다 —
+// 타이머·Element.animate·인라인 transition에 넣을 때는 반드시 ms()를 거친다.
+const ms = base => Math.round(base * motionScale());
+
 // style.css의 --ease-out과 같은 곡선 (JS 전환·애니메이션은 CSS 변수를 곡선으로 쓸 수 없는 곳이 있다)
 const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
 
@@ -200,7 +210,7 @@ export function closeOverlay(overlay) {
     overlay.classList.remove("is-closing");
     overlay.classList.add("hidden");
     resetSheet(overlay);
-  }, CLOSE_MS));
+  }, ms(CLOSE_MS)));
 }
 
 // ── 눌림 효과가 아이폰에서도 보이도록 ─────────────────────────
@@ -264,7 +274,7 @@ export function setupSheetDrag() {
         // 손가락 속도를 이어받아 끊김 없이 내려간다 (Apple WWDC 'Animate with springs').
         // ease-out 곡선의 시작 기울기가 약 4.5라 4.5 × 남은 거리 ÷ 시간이 곧 시작 속도 —
         // 예전의 천천히 출발하는 곡선(ease-in)은 휙 내린 직후 순간 멈칫했다
-        const d = Math.round(Math.min(280, Math.max(160, 4.5 * (height - dy) / Math.max(flingVelocity, 0.01))));
+        const d = ms(Math.min(280, Math.max(160, 4.5 * (height - dy) / Math.max(flingVelocity, 0.01))));
         sheet.style.transition = `transform ${d}ms ${EASE_OUT}`;
         sheet.style.transform = "translateY(105%)";
         scrim.style.transition = `opacity ${d}ms ${EASE_OUT}`;
@@ -277,9 +287,9 @@ export function setupSheetDrag() {
         }, d);
       } else {
         // 제자리로 스프링 복귀, 배경막도 원래 진하기로
-        sheet.style.transition = "transform 360ms var(--ease-spring)";
+        sheet.style.transition = `transform ${ms(360)}ms var(--ease-spring)`;
         sheet.style.transform = "";
-        scrim.style.transition = "opacity 360ms ease";
+        scrim.style.transition = `opacity ${ms(360)}ms ease`;
         scrim.style.opacity = "";
       }
     };
@@ -342,8 +352,8 @@ export function playEntrance(view, dir = 0, { first = false } = {}) {
     if (!running.length) { done(); return; }
     Promise.allSettled(running.map(a => a.finished)).then(waitAll);
   };
-  view._enterHold = setTimeout(waitAll, ENTER_HOLD_MS);
-  view._enterTimer = setTimeout(done, ENTER_FALLBACK_MS);
+  view._enterHold = setTimeout(waitAll, ms(ENTER_HOLD_MS));
+  view._enterTimer = setTimeout(done, ms(ENTER_FALLBACK_MS));
 }
 
 // 월 라벨이 넘기는 방향으로 바뀐다 (iOS 달력 제목). 앞 슬라이드가 아직 재생 중이면(연타) 생략
@@ -419,14 +429,14 @@ export function rollNumber(el, key, to, format) {
     el.replaceChildren(sr, roll);
     void roll.offsetWidth; // 시작 위치를 확정한 뒤 전환 (requestAnimationFrame 없이)
     for (const { cell, strip, end, fresh } of moves) {
-      strip.style.transition = `transform ${ROLL_MS}ms ${EASE_OUT}`;
+      strip.style.transition = `transform ${ms(ROLL_MS)}ms ${EASE_OUT}`;
       strip.style.transform = `translateY(${-end * 5}%)`;
       if (fresh) {
-        cell.style.transition = `opacity ${ROLL_FADE_MS}ms ease`;
+        cell.style.transition = `opacity ${ms(ROLL_FADE_MS)}ms ease`;
         cell.style.opacity = "1";
       }
     }
-    setTimeout(() => { if (el._rollToken === token) el.textContent = final; }, ROLL_MS + 60);
+    setTimeout(() => { if (el._rollToken === token) el.textContent = final; }, ms(ROLL_MS + 60));
   } catch (err) {
     console.warn("금액 굴리기 실패 — 최종값으로 표시:", err);
     el.textContent = final;
@@ -525,7 +535,7 @@ export function playLayout(root, snap) {
         const dx = prev.rect.left - now.left - base.dx, dy = prev.rect.top - now.top - base.dy;
         if ((Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) && (onScreen(prev.rect) || onScreen(now)) && budget-- > 0) {
           el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
-            { duration: LAYOUT_MOVE_MS, easing: EASE_OUT });
+            { duration: ms(LAYOUT_MOVE_MS), easing: EASE_OUT });
           shift.set(key, { dx: base.dx + dx, dy: base.dy + dy });
         } else if (base !== NO_SHIFT) {
           shift.set(key, base);
@@ -538,7 +548,7 @@ export function playLayout(root, snap) {
       if (onScreen(now) && budget-- > 0) {
         entered.add(key);
         el.animate([{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "none" }],
-          { duration: LAYOUT_ADD_MS, easing: EASE_OUT });
+          { duration: ms(LAYOUT_ADD_MS), easing: EASE_OUT });
       }
     }
     // 사라진 항목과 묶음을 옮긴 항목의 이전 모습 — 묶음째 사라졌다면 묶음 유령에 들어 있으니 따로 만들지 않는다
@@ -560,8 +570,8 @@ export function playLayout(root, snap) {
       root.appendChild(node);
       const drop = () => node.remove();
       node.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(0.98)" }],
-        { duration: LAYOUT_REMOVE_MS, easing: "ease-out", fill: "forwards" }).finished.then(drop, drop);
-      setTimeout(drop, LAYOUT_REMOVE_MS + 100); // 숨은 탭처럼 애니메이션이 끝나지 않을 때
+        { duration: ms(LAYOUT_REMOVE_MS), easing: "ease-out", fill: "forwards" }).finished.then(drop, drop);
+      setTimeout(drop, ms(LAYOUT_REMOVE_MS + 100)); // 숨은 탭처럼 애니메이션이 끝나지 않을 때
     }
   } catch (err) {
     console.warn("목록 자리 이동 애니메이션 실패:", err);
@@ -593,7 +603,7 @@ export function revealTheme(originEl, update) {
     started = true;
     vt.ready.then(() => html.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-      { duration: 480, easing: "cubic-bezier(0.4, 0, 0.2, 1)", pseudoElement: "::view-transition-new(root)" },
+      { duration: ms(480), easing: "cubic-bezier(0.4, 0, 0.2, 1)", pseudoElement: "::view-transition-new(root)" },
     )).catch(() => { /* 전환이 건너뛰어져도 테마는 이미 바뀌었다 */ });
     vt.finished.catch(() => {});
   } catch (err) {
@@ -655,7 +665,7 @@ export function setupDragReorder(container, { rowSelector, handleSelector, onDro
           const dy = first.get(s) - s.getBoundingClientRect().top;
           if (Math.abs(dy) > 0.5) {
             s._dragShift = s.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }],
-              { duration: DRAG_SHIFT_MS, easing: EASE_OUT });
+              { duration: ms(DRAG_SHIFT_MS), easing: EASE_OUT });
           }
         }
       };
@@ -711,10 +721,10 @@ export function setupDragReorder(container, { rowSelector, handleSelector, onDro
         };
         if (calm || !row.isConnected) { settle(); return; }
         // 제자리로 스프링 — 끝나면(숨은 탭 대비 타이머도) 정리하고 새 순서를 넘긴다
-        row.style.transition = `transform ${DRAG_SETTLE_MS}ms var(--ease-spring)`;
+        row.style.transition = `transform ${ms(DRAG_SETTLE_MS)}ms var(--ease-spring)`;
         row.style.transform = "";
         row.addEventListener("transitionend", settle, { once: true });
-        setTimeout(settle, DRAG_SETTLE_MS + 50);
+        setTimeout(settle, ms(DRAG_SETTLE_MS + 50));
       };
       document.addEventListener("pointermove", onMove);
       document.addEventListener("pointerup", onEnd);

@@ -50,6 +50,13 @@ export function todayStr() {
 /** 토스트 알림 표시 — 아래에서 스프링으로 떠오르고(.toast:not(.hidden)), 가라앉으며 사라진다(.toast-out).
  *  이미 떠 있는 동안 새 메시지가 오면 톡 튕겨(.toast-bump) 바뀐 것을 알린다.
  *  3초 동안 보인다 (토스 TDS 기준 — 2.2초는 긴 문장을 다 읽기 전에 사라졌다) */
+// 애니메이션이 끝나기를 기다리는 타이머에 속도 배수(style.css의 --motion-scale)를 곱한다.
+// motion.js의 motionScale()과 같은 값이다 — 이 파일은 Node 테스트에서도 불러오므로 motion.js를 import하지 않고 직접 읽는다.
+const motionMs = base => {
+  try { return Math.round(base * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--motion-scale")) || 1)); }
+  catch { return base; }
+};
+
 let toastTimer = null;
 let toastOutTimer = null;
 export function showToast(msg) {
@@ -67,7 +74,7 @@ export function showToast(msg) {
   }
   toastTimer = setTimeout(() => {
     toast.classList.add("toast-out");
-    toastOutTimer = setTimeout(() => toast.classList.add("hidden"), 180);
+    toastOutTimer = setTimeout(() => toast.classList.add("hidden"), motionMs(180));
   }, 3000);
 }
 
@@ -250,7 +257,7 @@ export function showConfirm(message, { confirmText = "확인", cancelText = "취
       document.removeEventListener("keydown", onKey, true);
       // 결과는 바로 돌려주고, 창은 작아지며 사라진 뒤 제거한다 (.is-closing — style.css 모션)
       overlay.classList.add("is-closing");
-      setTimeout(() => overlay.remove(), 200);
+      setTimeout(() => overlay.remove(), motionMs(200));
       if (prevFocus instanceof HTMLElement) prevFocus.focus(); // 원래 위치로 포커스 복원
       resolve(ok);
     };

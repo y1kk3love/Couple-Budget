@@ -222,10 +222,17 @@ The motion follows iOS and Toss. It was reviewed against web references in 2026-
 - Durations: `--dur-press` 90, `--dur-fast` 150, `--dur-base` 250, `--dur-nav` 260, `--dur-slow` 400, `--dur-sheet` 480ms.
 - Easings: `--ease-out/in/sheet/spring/bounce`. `--ease-spring` and `--ease-bounce` are sampled damped springs written as CSS `linear()`, with `cubic-bezier` fallbacks under `@supports`. JS keeps the `--ease-out` curve as `EASE_OUT`, because WAAPI easings can't read CSS variables.
 
+**Speed multiplier: `--motion-scale` (currently 2.5).** One value in the motion `:root` block stretches every transition and animation. The owner chose 2.5 on 2026-11-11 by trying speeds on the mock's tuner (below): the original timings felt too fast. Every duration quoted in this section, the `--dur-*` tokens and the `*_MS` constants in `motion.js` are **base values**; what runs is base × scale (sheet open 480 → 1200ms, tab switch 200 → 500ms, close 240 → 600ms). To change the overall speed, change only `--motion-scale`.
+- CSS: every use site is `calc(<time> * var(--motion-scale))`, both `var(--dur-x)` and literals. A new transition or animation must be written the same way, or it runs 2.5× faster than everything around it. The `prefers-reduced-motion` block is deliberately not scaled.
+- JS: `motionScale()` in `motion.js` reads the CSS value on each call, and the local `ms(base)` helper applies it. Anything timed against an animation goes through it: timers, `Element.animate` durations, inline `transition` strings. `utils.js` has its own `motionMs()` because Node tests import that file.
+- Checks run at scale 1: `__check` sets `--motion-scale: 1` inline on `<html>`, since their waits and timing assertions are written in base values. `t27-speed` is the one check that looks at the real value. A page that has run a check stays at scale 1 until reloaded.
+- Tuner: `tools/mock/index.html?tune=1` shows a slider that multiplies the speed of everything on top of the current scale, without touching app code (it sets `playbackRate` on every animation and stretches timers of 100–1500ms). Multiply the chosen value into `--motion-scale`.
+- A covered or background window draws only a few frames per second while `document.hidden` stays false, so animations finish late and wall-clock assertions fail for no code reason. `__throttled()` detects this; `t05-entrance` skips its two "finished by now" assertions and says so in its result.
+
 `motion.js` imports no app modules, so any module can use it. Motion code wraps its own work in try/catch and falls back to the end state, so an animation bug never blocks a save or a render.
 
 **Rules**
-- **Frequent actions get short motion.** Tab switch and month paging happen tens of times a day, so they finish within about 0.3s. Rare moments (first login, checking off a task) may take longer.
+- **Frequent actions get short motion.** Tab switch and month paging happen tens of times a day, so in base values they finish within about 0.3s. Rare moments (first login, checking off a task) may take longer. The multiplier keeps these ratios; the absolute lengths are the owner's choice.
 - **Exits are shorter than entries and ease out.** A curve that starts slowly makes a press look unanswered.
 - **Gestures carry the finger's velocity.**
 - **Motion is interruptible.** Rapid repeats never restart from zero.

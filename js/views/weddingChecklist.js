@@ -9,7 +9,7 @@ import { WEDDING_PERIODS } from "../constants.js";
 import { toggleWeddingTask, seedWeddingChecklist, fetchWeddingTasks } from "../weddingDb.js";
 import { renderWeddingView } from "./wedding.js";
 import { openWeddingTaskModal } from "../modals/weddingModal.js";
-import { haptic, reducedMotion } from "../motion.js";
+import { haptic, reducedMotion, motionScale } from "../motion.js";
 
 // 체크한 순간 그 행의 상자가 톡 튀며 차고, 체크 표시와 취소선이 그려진다(.m-pop). 저장을 기다리지 않는다 —
 // 예전엔 저장·재조회 두 번의 왕복 뒤 다시 그리며 효과를 붙여서, 먼저 보이던 체크가 꺼졌다 다시 그려졌다.
@@ -22,7 +22,7 @@ function popStyle(id) {
   if (at == null) return null;
   const elapsed = Math.round(performance.now() - at);
   // 동작 줄이기에선 페이드가 다시 재생되지 않게 이어 그리지 않는다
-  if (elapsed >= POP_MS || reducedMotion()) { popping.delete(id); return null; }
+  if (elapsed >= POP_MS * motionScale() || reducedMotion()) { popping.delete(id); return null; }
   return `--pop-at:-${elapsed}ms`;
 }
 
