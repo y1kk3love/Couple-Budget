@@ -108,9 +108,11 @@ export function setupFixedModal() {
     };
 
     // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
+    // 수정 전 값 — 실제로 바뀐 항목만 이번 달 이후 기록에 반영하려고 넘긴다 (db.syncFixedItemTransactions)
+    const prev = id ? state.fixedItems.find(f => f.id === id) ?? null : null;
     const ok = await runWrite(e.currentTarget, async () => {
       await saveFixedItem(data, id);
-      if (id) await syncFixedItemTransactions(id, data);
+      if (id) await syncFixedItemTransactions(id, data, prev);
     });
     if (!ok) return;
 

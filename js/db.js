@@ -252,7 +252,18 @@ export async function deleteFixedItem(id) {
 // 과거 달은 실제 지출 기록이므로 고정비 금액·카테고리 변경 시에도 보존한다.
 // ⚠ 화면에서 보고 있는 달(state.currentYear/Month)을 기준으로 삼으면, 과거 달을 보면서
 //   고정비를 고쳤을 때 그 달부터 이번 달까지의 기록이 전부 새 금액으로 바뀐다.
-export async function syncFixedItemTransactions(id, data) {
+//
+// prev(수정 전 고정비)를 받아 실제로 바뀐 항목만 전파한다. 예전에는 날짜만 고쳐도 이름·금액까지
+// 다시 써서, 이번 달 기록을 실제 청구액으로 손봐 둔 금액이 고정비 금액으로 되돌아갔다.
+// (prev가 없으면 예전처럼 전부 반영)
+export async function syncFixedItemTransactions(id, data, prev = null) {
+  const changed = key => !prev || prev[key] !== data[key];
+  const patch = {};
+  if (changed("name")) { patch.name = data.name; patch.memo = data.name; }
+  for (const key of ["amount", "type", "category"]) if (changed(key)) patch[key] = data[key];
+  const dayChanged = !prev || (prev.day ?? 1) !== (data.day ?? 1);
+  if (!Object.keys(patch).length && !dayChanged) return; // 시작 월만 바뀐 경우 등 — 기록은 그대로
+
   const q    = query(collection(db, "transactions"), where("fixedId", "==", id), where("fromFixed", "==", true));
   const snap = await getDocs(q);
 
@@ -263,18 +274,13 @@ export async function syncFixedItemTransactions(id, data) {
     if (t.skipped) return null; // 삭제(건너뛰기)된 달은 갱신하지 않음
     if ((t.year * 100 + t.month) < currentYM) return null;
 
-    const lastDay    = new Date(t.year, t.month, 0).getDate();
-    const clampedDay = Math.min(data.day ?? 1, lastDay);
-    const dateStr    = `${t.year}-${String(t.month).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
-
-    return updateDoc(d.ref, {
-      name:     data.name,
-      amount:   data.amount,
-      type:     data.type,
-      category: data.category,
-      memo:     data.name,
-      date:     dateStr,
-    });
+    const update = { ...patch };
+    if (dayChanged) {
+      const lastDay    = new Date(t.year, t.month, 0).getDate();
+      const clampedDay = Math.min(data.day ?? 1, lastDay);
+      update.date = `${t.year}-${String(t.month).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+    }
+    return updateDoc(d.ref, update);
   }));
   invalidateBalanceCache();
 }
@@ -503,7 +509,10 @@ export async function fetchAllTransactions() {
 // ── 누적 잔액 계산 ─────────────────────────────────────────────
 
 export async function calcAccumulatedBalance() {
-  const cacheKey = `${state.currentYear}-${state.currentMonth}`;
+  // 기준 달은 시작할 때 고정한다 — 조회를 기다리는 사이 달을 옮기면, 예전에는 옮긴 달 기준으로
+  // 합산한 값을 처음 달의 캐시 키에 넣어, 돌아왔을 때 누적 잔액이 틀린 값으로 굳었다
+  const year = state.currentYear, month = state.currentMonth;
+  const cacheKey = `${year}-${month}`;
   if (balanceCache.has(cacheKey)) return balanceCache.get(cacheKey);
 
   // 전체 거래 캐시(allTxCache)를 재사용해 별도의 전체 스캔을 피한다.
@@ -513,8 +522,8 @@ export async function calcAccumulatedBalance() {
 
   for (const t of txs) {
     // 현재 달 이전 데이터만 합산
-    if (t.year > state.currentYear) continue;
-    if (t.year === state.currentYear && t.month >= state.currentMonth) continue;
+    if (t.year > year) continue;
+    if (t.year === year && t.month >= month) continue;
     total += t.type === "income" ? t.amount : -t.amount;
   }
 
