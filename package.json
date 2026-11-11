@@ -1,0 +1,10 @@
+{
+  "name": "couple-budget",
+  "private": true,
+  "type": "module",
+  "description": "빌드 없이 정적 파일로 배포되는 앱 — 이 파일은 Node로 문법 검사와 테스트를 돌리기 위한 것 (의존성 없음)",
+  "scripts": {
+    "test": "node --import ./tests/setup.js --test \"tests/*.test.js\"",
+    "check": "node tools/check-syntax.js"
+  }
+}

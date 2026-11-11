@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>우리 가계부 (목업)</title>
+</head>
+<body>
+  <!--
+    가짜 데이터로 앱을 띄우는 개발용 페이지 — 로그인 없이 모든 화면을 볼 수 있다.
+    저장소의 index.html을 그대로 읽어 와, import map으로 Firebase SDK 3개와 firebase.js를
+    tools/mock/의 가짜 모듈로 바꿔 끼운 뒤 문서를 다시 쓴다. 실제 Firebase에는 요청이 가지 않는다.
+    사용법·주소 옵션은 CLAUDE.md "Running the app" 참고.
+  -->
+  <script>
+    (async () => {
+      const root = new URL("../../", location.href); // 저장소 루트 (GitHub Pages 하위 경로에서도 동작)
+      const SDK = "https://www.gstatic.com/firebasejs/10.12.0/firebase-";
+      const map = { imports: {
+        [SDK + "app.js"]:       new URL("tools/mock/sdk-app.js", root).href,
+        [SDK + "auth.js"]:      new URL("tools/mock/sdk-auth.js", root).href,
+        [SDK + "firestore.js"]: new URL("tools/mock/sdk-firestore.js", root).href,
+        [new URL("firebase.js", root).href]: new URL("tools/mock/firebase.js", root).href,
+      } };
+      let html = await (await fetch(new URL("index.html", root), { cache: "no-store" })).text();
+      // 앱 코드가 SDK 주소를 바꾸면 import map이 빗나가 실제 Firebase를 불러오게 된다 — 그 전에 멈춘다
+      const appSrc = await (await fetch(new URL("js/db.js", root), { cache: "no-store" })).text();
+      if (!appSrc.includes(SDK + "firestore.js")) {
+        document.body.textContent = "목업을 띄울 수 없어요: 앱이 쓰는 Firebase SDK 주소가 tools/mock/index.html의 SDK 값과 달라요.";
+        return;
+      }
+      html = html.replace("<head>", `<head>
+  <base href="${root.href}">
+  <script type="importmap">${JSON.stringify(map)}<\/script>
+  <script type="module" src="tools/mock/harness.js"><\/script>`);
+      document.open();
+      document.write(html);
+      document.close();
+    })();
+  </script>
+</body>
+</html>
