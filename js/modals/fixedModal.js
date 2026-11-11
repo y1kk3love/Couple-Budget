@@ -42,6 +42,7 @@ export function openFixedEditModal(id) {
 // ── 내부 헬퍼 ─────────────────────────────────────────────────
 
 function setFixedType(type) {
+  if (type === getFixedTypeOrNull()) return; // 같은 종류를 다시 눌러도 고른 카테고리를 지우지 않는다
   document.querySelectorAll("#fixedTypeToggle .kind-btn").forEach(b => {
     const on = b.dataset.kind === type;
     b.classList.toggle("active", on);
@@ -49,6 +50,8 @@ function setFixedType(type) {
   });
   populateFixedCategorySelect(type);
 }
+
+const getFixedTypeOrNull = () => document.querySelector("#fixedTypeToggle .kind-btn.active")?.dataset.kind ?? null;
 
 function getFixedType() {
   return document.querySelector("#fixedTypeToggle .kind-btn.active").dataset.kind;

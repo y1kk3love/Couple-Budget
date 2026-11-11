@@ -369,6 +369,9 @@ a:focus-visible {
 .cal-grid .cal-cell:nth-child(-n+7) { border-top: none; }
 .cal-cell.empty { cursor: default; background: none; }
 .cal-cell.empty:hover { background: none; }
+/* 고른 날짜 — 아래에 그날 내역이 보인다 */
+.cal-cell.selected { background: var(--accent-bg); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cal-cell.selected:hover { background: var(--accent-bg); }
 .cal-cell.today .day-num-wrap .day-num {
   background: var(--accent-fill); color: #fff; border-radius: 50%; font-weight: 600;
   width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
@@ -380,8 +383,21 @@ a:focus-visible {
 .cal-cell.today:nth-child(7n+1) .day-num,
 .cal-cell.today:nth-child(7n) .day-num { color: #fff; }
 .cal-amounts { display: flex; flex-direction: column; gap: 2px; }
-.cal-inc { font-size: 0.7rem; color: var(--income); font-family: var(--mono); font-weight: 600; }
-.cal-exp { font-size: 0.7rem; color: var(--expense); font-family: var(--mono); font-weight: 600; }
+.cal-inc { font-size: 0.8rem; color: var(--income); font-family: var(--mono); font-weight: 600; }
+.cal-exp { font-size: 0.8rem; color: var(--expense); font-family: var(--mono); font-weight: 600; }
+
+/* 고른 날짜의 내역 (달력 아래) */
+.cal-day-panel { margin-top: 14px; }
+.cal-day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 4px 10px; }
+.cal-day-head h4 { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
+.cal-day-head h4 span { font-size: 0.8rem; font-weight: 500; color: var(--text-3); margin-left: 2px; }
+.cal-day-total { display: flex; gap: 10px; font-family: var(--mono); font-size: 0.85rem; font-weight: 700; }
+.cal-day-total .minus { color: var(--expense); }
+.cal-day-total .plus { color: var(--income); }
+.cal-day-event { font-size: 0.82rem; font-weight: 600; color: var(--accent); padding: 0 4px 8px; }
+.cal-day-event span { font-weight: 500; color: var(--text-3); }
+.cal-day-list { margin-bottom: 8px; }
+.cal-day-empty { text-align: center; color: var(--text-3); font-size: 0.85rem; padding: 1.1rem 0; }
 
 /* ── 목록 상단 툴바 (기간 전환 + 필터) ── */
 .list-toolbar {
@@ -485,6 +501,15 @@ a:focus-visible {
   display: flex; justify-content: space-between;
 }
 .list-date-header .date-total { font-family: var(--mono); font-size: 0.78rem; }
+/* 걸러 본 결과의 건수·합계 (list.renderResultSummary) */
+.list-result {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 2px 4px 10px; font-size: 0.85rem; color: var(--text-2);
+}
+.list-result strong { color: var(--text); }
+.list-result-sum { display: flex; gap: 10px; font-family: var(--mono); font-weight: 700; }
+.list-result-sum .minus { color: var(--expense); }
+.list-result-sum .plus { color: var(--income); }
 .tx-item {
   display: flex; align-items: center; gap: 12px;
   padding: 0.75rem 1rem; cursor: pointer;
@@ -511,7 +536,8 @@ a:focus-visible {
 .tag.fixed { background: var(--fixed-bg); color: var(--fixed-text); }
 .tag.variable { background: var(--var-bg); color: var(--var-text); }
 .tag.applied { background: var(--income-bg); color: var(--income); }
-.tag.skipped { background: var(--surface3); color: var(--text-3); }
+/* --text-3는 --surface3 위에서 4.0:1이라 기준(4.5:1)에 못 미쳤다 — 한 단계 진한 --text-2 */
+.tag.skipped { background: var(--surface3); color: var(--text-2); }
 .tag.future { background: var(--var-bg); color: var(--var-text); }
 
 /* ── 통계 뷰 ── */
@@ -711,7 +737,30 @@ a:focus-visible {
   outline: none; background: transparent; color: var(--text);
 }
 .currency { padding: 0 0.875rem; color: var(--text-3); font-size: 0.85rem; height: 100%; display: flex; align-items: center; }
-.amount-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+/* 빠른 금액 버튼 — 개수가 창마다 달라(지출 5개, 수입 4개) 같은 폭으로 나눈다 */
+.amount-presets { display: flex; gap: 6px; margin-top: 8px; }
+.amount-presets .preset-btn { flex: 1 1 0; min-width: 0; }
+/* 금액 읽기 표시 (utils.setupAmountHints) — 3,500만원 */
+.amount-hint { font-size: 0.78rem; color: var(--accent); font-weight: 600; min-height: 1.1em; margin-top: 2px; padding-left: 2px; }
+.amount-hint:empty { display: none; }
+/* 입력칸 아래 안내 글 */
+.field-hint { font-size: 0.78rem; color: var(--text-2); line-height: 1.5; }
+.field-note {
+  font-size: 0.8rem; color: var(--text-2); line-height: 1.5;
+  background: var(--fixed-bg); border-radius: var(--radius); padding: 0.65rem 0.8rem;
+}
+/* 내용 추천 칩 (txModal) — 최근에 쓴 이름 */
+.name-suggest { display: flex; flex-wrap: wrap; gap: 6px; }
+.name-chip {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  padding: 0.4rem 0.7rem; border: none; border-radius: 100px;
+  background: var(--surface2); color: var(--text-2);
+  font-family: var(--font); font-size: 0.8rem; cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
+}
+.name-chip i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1px var(--dot-ring); }
+.name-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name-chip:hover { color: var(--text); }
 .preset-btn {
   padding: 0.5rem 0; border: none; border-radius: 8px;
   background: var(--surface2); color: var(--text-2); font-family: var(--font);
@@ -1155,8 +1204,10 @@ a:focus-visible {
 .toast {
   position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);
   background: var(--text); color: var(--bg); padding: 0.75rem 1.4rem;
-  border-radius: 100px; font-size: 0.85rem; font-weight: 500; z-index: 300;
-  white-space: nowrap; pointer-events: none;
+  border-radius: 22px; font-size: 0.85rem; font-weight: 500; z-index: 300;
+  /* 긴 안내는 줄을 바꾼다 — 예전에는 한 줄 고정이라 30자가 넘는 안내(가장 중요한 것들)가 폰 화면 밖으로 잘렸다 */
+  width: max-content; max-width: calc(100vw - 2rem); white-space: normal; text-align: center; line-height: 1.45;
+  pointer-events: none;
   box-shadow: 0 8px 24px rgba(0,0,0,0.16);
 }
 
@@ -1265,6 +1316,9 @@ a:focus-visible {
   /* 좁은 화면에서는 지출만 표시 — 수입은 우상단 파란 점으로 축약 */
   .cal-inc { display: none; }
   .cal-exp { font-size: 0.7rem; white-space: nowrap; letter-spacing: -0.02em; }
+  /* 좁은 칸에서는 일정 이름이 한 글자에서 잘린다 — 반지 표시만 남긴다 (이름은 아래 그날 내역에) */
+  .cal-event-text { display: none; }
+  .cal-event { text-align: center; }
   /* 좁은 칸에선 부호를 눈으로는 숨긴다 — 빨강이 곧 지출이고 수입은 점으로 따로 표시된다.
      화면 낭독기는 계속 읽도록 display:none 대신 시각적으로만 숨김 */
   .cal-sign {
@@ -1302,11 +1356,11 @@ a:focus-visible {
 
   /* 줄지어 있는 작은 칩·세그먼트 — 겉모습은 36px, 보이지 않는 영역으로 위아래 4px씩 넓혀 44px */
   .scope-btn, .sort-key-btn, .sort-dir-btn, .filter-toggle-btn,
-  .cat-chip, .preset-btn, .wd-pay-settle-full {
+  .cat-chip, .preset-btn, .wd-pay-settle-full, .name-chip {
     position: relative; min-height: 36px; min-width: 44px;
   }
   .scope-btn::after, .sort-key-btn::after, .sort-dir-btn::after, .filter-toggle-btn::after,
-  .cat-chip::after, .preset-btn::after, .wd-pay-settle-full::after, .wd-sheet-link::after {
+  .cat-chip::after, .preset-btn::after, .wd-pay-settle-full::after, .wd-sheet-link::after, .name-chip::after {
     content: ""; position: absolute; inset: -4px 0;
   }
   .wd-sheet-link { min-height: 36px; }
@@ -1389,13 +1443,13 @@ a:focus-visible {
 @keyframes m-rise-sm { from { opacity: 0; transform: translateY(6px); } }
 .view.entering:not(.dir-next):not(.dir-prev) :is(
   .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
-  .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state) {
+  .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state, .cal-day-panel, .list-result) {
   animation: m-rise-sm 200ms var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 20ms);
 }
 .view.entering.first:not(.dir-next):not(.dir-prev) :is(
   .calendar-wrap, .list-toolbar, .sort-bar, .list-group, .section-header, .fixed-list > *,
-  .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state) {
+  .stats-card, .plan-card, .wd-header, .wd-seg, .wd-progress, .wd-memo-card, .wd-minical, .empty-state, .cal-day-panel, .list-result) {
   animation: m-rise 480ms var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 28ms);
 }

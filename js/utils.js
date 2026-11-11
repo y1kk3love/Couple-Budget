@@ -156,25 +156,63 @@ export function hasUnsavedInput(root) {
 
 /** 금액 입력 빠른 버튼 그룹(.amount-presets) 바인딩.
  *  컨테이너의 data-target 속성으로 input id를 지정.
- *  data-add: 현재값에 누적, data-clear: 빈 값으로 초기화. */
+ *  data-add: 현재값에 누적, data-clear: 빈 값으로 초기화.
+ *  컨테이너에 한 번만 건다(위임) — 내역 창처럼 버튼을 나중에 다시 그려도 동작한다. */
 export function setupAmountPresets(container) {
-  const targetId = container.dataset.target;
-  const input    = document.getElementById(targetId);
+  const input = document.getElementById(container.dataset.target);
   if (!input) return;
 
-  container.querySelectorAll(".preset-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (btn.dataset.add) {
-        const cur = parseInt(input.value) || 0;
-        input.value = cur + parseInt(btn.dataset.add);
-      } else if (btn.dataset.clear) {
-        input.value = "";
-      }
-      // 직접 입력한 것과 똑같이 알린다 — 금액 읽기 표시(setupAmountHints)와 "입력 중" 판단이 이 이벤트를 본다
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.focus();
-    });
+  container.addEventListener("click", e => {
+    const btn = e.target.closest(".preset-btn");
+    if (!btn || !container.contains(btn)) return;
+    if (btn.dataset.add) {
+      const cur = parseInt(input.value) || 0;
+      input.value = cur + parseInt(btn.dataset.add);
+    } else if (btn.dataset.clear) {
+      input.value = "";
+    }
+    // 직접 입력한 것과 똑같이 알린다 — 금액 읽기 표시(setupAmountHints)와 "입력 중" 판단이 이 이벤트를 본다
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
   });
+}
+
+/** 금액을 읽기 쉽게 — 35000000 → "3,500만원", 1234500 → "123만 4,500원", 150000000 → "1억 5,000만원" */
+export function fmtMoneyReading(n) {
+  const v = Math.abs(Math.round(Number(n) || 0));
+  const eok = Math.floor(v / 100_000_000), man = Math.floor((v % 100_000_000) / 10_000), rest = v % 10_000;
+  const parts = [];
+  if (eok)  parts.push(`${eok.toLocaleString("ko-KR")}억`);
+  if (man)  parts.push(`${man.toLocaleString("ko-KR")}만`);
+  if (rest || !parts.length) parts.push(rest.toLocaleString("ko-KR"));
+  return parts.join(" ") + "원";
+}
+
+/** 금액 입력칸(input[data-money]) 아래에 읽기 표시를 단다.
+ *  숫자 입력칸은 쉼표를 보여 주지 않아 35000000의 0을 눈으로 세야 했다.
+ *  입력할 때마다, 그리고 창이 열릴 때(값을 코드로 채운 경우) 갱신한다. */
+export function setupAmountHints() {
+  const update = input => {
+    const wrap = input.closest(".amount-input-wrap");
+    if (!wrap) return;
+    let hint = wrap.nextElementSibling?.classList.contains("amount-hint") ? wrap.nextElementSibling : null;
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.className = "amount-hint";
+      hint.setAttribute("aria-live", "polite");
+      wrap.after(hint);
+    }
+    const v = parseInt(input.value) || 0;
+    hint.textContent = v >= 1000 ? fmtMoneyReading(v) : "";
+  };
+  document.addEventListener("input", e => { if (e.target.matches?.("input[data-money]")) update(e.target); });
+  // 창이 열릴 때 — .hidden이 빠지는 것을 보고, 값 채우기가 끝난 뒤(다음 작업) 갱신
+  new MutationObserver(records => {
+    for (const r of records) {
+      if (!r.target.classList.contains("modal-overlay") || r.target.classList.contains("hidden")) continue;
+      setTimeout(() => r.target.querySelectorAll("input[data-money]").forEach(update), 0);
+    }
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
 }
 
 /** 이메일 → 표시 이름. 예산안에 설정한 표시 이름이 있으면 그것을,

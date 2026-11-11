@@ -40,6 +40,8 @@ function resetSheet(overlay) {
 }
 
 export function openOverlay(overlay) {
+  // 이미 열려 있는 창을 다시 채우는 경우(이력 패널에서 다른 내역 열기)는 뒤로가기 항목을 또 쌓지 않는다
+  const wasOpen = !overlay.classList.contains("hidden") && !overlay.classList.contains("is-closing");
   const t = closeTimers.get(overlay);
   if (t) { clearTimeout(t); closeTimers.delete(overlay); }
   overlay.classList.remove("is-closing");
@@ -47,6 +49,54 @@ export function openOverlay(overlay) {
   resetSheet(overlay);
   delete overlay.dataset.dirty; // 새로 열면 "입력한 내용 있음" 표시를 지운다 (아래 닫힘 확인)
   overlay.classList.remove("hidden");
+  if (!wasOpen) layerOpened();
+}
+
+// ── 뒤로가기로 창 닫기 ────────────────────────────────────────
+// 안드로이드의 뒤로 버튼(아이폰은 화면 가장자리 쓸기)을 누르면 예전에는 열린 입력 창이 닫히는 대신
+// 앱 자체가 이전 페이지로 넘어갔다. 창·서랍을 열 때 방문 기록에 항목을 하나 쌓아 두고,
+// 뒤로가기(popstate)가 오면 맨 위 창을 닫는다. 화면에서 직접 닫으면 쌓아 둔 항목을 되돌린다(history.back).
+// 쌓은 항목이 없을 때의 뒤로가기는 건드리지 않는다 — 평소처럼 앱을 벗어난다.
+let layersPushed = 0;       // 내가 쌓아 둔 항목 수
+let ownBacks = 0;           // 내가 부른 history.back()이 일으킬 popstate 수 (무시한다)
+let closingFromBack = false; // 뒤로가기로 닫는 중 — 항목은 브라우저가 이미 뺐으니 또 되돌리지 않는다
+
+/** 창·서랍이 열렸다 (서랍은 app.js가 부른다) */
+export function layerOpened() {
+  try { history.pushState({ couplebudgetLayer: true }, ""); layersPushed++; } catch { /* 기록을 쓸 수 없는 환경 */ }
+}
+/** 창·서랍을 화면에서 닫았다 */
+export function layerClosed() {
+  if (closingFromBack || layersPushed <= 0) return;
+  layersPushed--;
+  ownBacks++;
+  try { history.back(); } catch { ownBacks--; }
+}
+
+/** 뒤로가기 처리 등록 — closeDrawer(): 서랍이 열려 있으면 닫고 true를 돌려준다 (app.js) */
+export function setupBackToClose(closeDrawer = () => false) {
+  addEventListener("popstate", () => {
+    if (ownBacks > 0) { ownBacks--; return; } // 내가 되돌린 것
+    if (layersPushed <= 0) return;            // 내가 쌓은 것이 아니다 — 브라우저에 맡긴다
+    const keep = () => { try { history.pushState({ couplebudgetLayer: true }, ""); } catch { layersPushed--; } };
+    // 확인 창이 떠 있으면 그것만 취소하고, 아래 창은 그대로 둔다 (빠진 항목을 다시 쌓는다)
+    const confirm = document.querySelector(".confirm-overlay:not(.is-closing)");
+    if (confirm) { confirm.querySelector(".confirm-cancel")?.click(); keep(); return; }
+    const open = [...document.querySelectorAll(".modal-overlay:not(.hidden):not(.is-closing):not(.confirm-overlay)")].pop();
+    if (open && isOverlayDirty(open) && discardGuard) { keep(); discardGuard(open); return; } // 입력한 창은 먼저 묻는다
+    layersPushed--;
+    closingFromBack = true;
+    try {
+      if (open) {
+        open.querySelector(".modal-close")?.click(); // 모달별 정리 로직을 그대로 태운다
+        if (!open.classList.contains("hidden") && !open.classList.contains("is-closing")) closeOverlay(open);
+      } else {
+        closeDrawer();
+      }
+    } finally {
+      closingFromBack = false;
+    }
+  });
 }
 
 // ── 입력한 내용이 있는 창을 실수로 닫지 않게 ───────────────────
@@ -84,6 +134,7 @@ export function setupOverlayGuard(guard) {
 
 export function closeOverlay(overlay) {
   if (overlay.classList.contains("hidden") || closeTimers.has(overlay)) return;
+  layerClosed(); // 열 때 쌓은 뒤로가기 항목을 되돌린다
   // 끌어서 닫은 시트는 이미 화면 밖으로 내려가 있다 — 퇴장 애니메이션 없이 숨긴다
   if (reducedMotion() || overlay.dataset.dismissed) {
     overlay.classList.add("hidden");
@@ -193,7 +244,7 @@ export function setupSheetDrag() {
 const STAGGER = [
   ".calendar-wrap", ".list-toolbar", ".sort-bar", ".list-group", ".section-header",
   ".fixed-list > *", ".stats-card", ".plan-card", ".wd-header", ".wd-seg", ".wd-progress",
-  ".wd-memo-card", ".wd-minical", ".empty-state",
+  ".wd-memo-card", ".wd-minical", ".empty-state", ".cal-day-panel", ".list-result",
 ].join(", ");
 const ENTER_ANIMS = new Set(["m-rise", "m-rise-sm", "m-slide-next", "m-slide-prev", "m-bar-grow", "m-col-grow", "m-donut"]);
 const ENTER_HOLD_MS = 200;      // 자리표시를 먼저 그리는 화면(결혼 탭 첫 진입)의 실제 내용이 올 때까지 기다린다

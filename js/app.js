@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast, showConfirm, todayStr, downloadCSV, escapeHtml, hasUnsavedInput } from "./utils.js";
+import { fmtMoney, showToast, showConfirm, todayStr, downloadCSV, escapeHtml, hasUnsavedInput, setupAmountHints } from "./utils.js";
 import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
@@ -16,7 +16,7 @@ import { setupTxModal, openAddModal } from "./modals/txModal.js";
 import { setupFixedModal } from "./modals/fixedModal.js";
 import { setupCsvModal }  from "./modals/csvModal.js";
 import { setupBudgetModal, openBudgetModal } from "./modals/budgetModal.js";
-import { renderCalendarView } from "./views/calendar.js";
+import { renderCalendarView, calendarSelectedDate } from "./views/calendar.js";
 import { renderListView }     from "./views/list.js";
 import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
@@ -29,7 +29,7 @@ import { startSync } from "./sync.js";
 import { setupBackup } from "./backup.js";
 import {
   playEntrance, slideLabel, rollNumber, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback,
-  highlightRows, setupOverlayGuard, isOverlayDirty
+  highlightRows, setupOverlayGuard, isOverlayDirty, setupBackToClose, layerOpened, layerClosed
 } from "./motion.js";
 
 // 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
@@ -203,7 +203,8 @@ export function refreshAddButton() {
 function onAddClick() {
   const action = currentAddAction();
   if (action) action.run();
-  else openAddModal();
+  // 달력에서는 고른 날짜로 연다 (날짜를 누르고 +를 누르면 그 날짜에 추가)
+  else openAddModal(state.currentView === "calendar" ? calendarSelectedDate() : null);
 }
 
 // ── 요약 카드 ─────────────────────────────────────────────────
@@ -452,17 +453,28 @@ function setupGlobalKeys() {
 
 function setupMobileMenu() {
   const sidebar = document.querySelector(".sidebar");
+  // 서랍도 뒤로가기로 닫힌다 (motion.layerOpened/layerClosed)
+  const setDrawer = open => {
+    if (sidebar.classList.contains("open") === open) return;
+    sidebar.classList.toggle("open", open);
+    if (open) layerOpened(); else layerClosed();
+  };
 
-  document.getElementById("mobileMenuBtn").addEventListener("click", () => {
-    sidebar.classList.toggle("open");
-  });
+  document.getElementById("mobileMenuBtn").addEventListener("click", () => setDrawer(!sidebar.classList.contains("open")));
 
   // 서랍 안의 항목을 누르면 닫기
   sidebar.addEventListener("click", () => {
-    if (window.innerWidth <= 768) sidebar.classList.remove("open");
+    if (window.innerWidth <= 768) setDrawer(false);
   });
   // 서랍 밖(어두운 막)을 누르면 닫기
-  document.getElementById("sidebarScrim").addEventListener("click", () => sidebar.classList.remove("open"));
+  document.getElementById("sidebarScrim").addEventListener("click", () => setDrawer(false));
+
+  // 뒤로가기 → 열린 창을 닫는다. 열린 창이 없으면 서랍을 닫는다
+  setupBackToClose(() => {
+    const wasOpen = sidebar.classList.contains("open");
+    sidebar.classList.remove("open");
+    return wasOpen;
+  });
 }
 
 // ── CSV 내보내기 ──────────────────────────────────────────────
@@ -515,6 +527,7 @@ setupBudgetModal();
 setupWeddingModals();
 setupCategoryDetailModal();
 setupBackup();
+setupAmountHints(); // 금액 입력칸 아래 읽기 표시 (3,500만원)
 // 여기까지 왔으면 모든 모듈이 정상 로드됐다 — index.html의 "불러오지 못했어요" 안내를 끈다
 window.__appBooted = true;
 document.getElementById("bootError")?.classList.add("hidden");

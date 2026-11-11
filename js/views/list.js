@@ -122,13 +122,14 @@ function bindScopeEvents(container) {
 
 // ── 필터 로직 ─────────────────────────────────────────────────
 
-// 검색어를 공백 단위로 쪼개 이름·메모에 하나라도 포함되면 통과 (대소문자 무시).
-// 예: "스타벅스 커피" → "스타벅스"만 있어도, "커피"만 있어도 표시.
+// 검색어를 공백 단위로 쪼개 이름·메모에 모두 들어 있으면 통과 (대소문자 무시).
+// 예: "스타벅스 강남" → 둘 다 들어간 내역만. 예전에는 하나만 맞아도 통과해서, 단어를 더할수록
+// 결과가 줄지 않고 늘었다.
 function matchesName(t, query) {
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
   const hay = `${t.name} ${t.memo ?? ""}`.toLowerCase();
-  return tokens.some(tok => hay.includes(tok));
+  return tokens.every(tok => hay.includes(tok));
 }
 
 function applyFilters(txs) {
@@ -161,7 +162,7 @@ function renderFilterPanel() {
     <div class="filter-panel">
       <div class="filter-row">
         <label>이름</label>
-        <input type="text" id="f-name" value="${escapeHtml(filters.name)}" placeholder="전체" />
+        <input type="search" id="f-name" value="${escapeHtml(filters.name)}" placeholder="이름·내용 (여러 단어는 모두 포함)" enterkeyhint="search" />
       </div>
       <div class="filter-row">
         <label>카테고리</label>
@@ -173,9 +174,9 @@ function renderFilterPanel() {
       <div class="filter-row">
         <label>금액</label>
         <div class="filter-range">
-          <input type="number" id="f-min" value="${escapeHtml(filters.minAmount)}" placeholder="최소" />
+          <input type="number" inputmode="numeric" id="f-min" value="${escapeHtml(filters.minAmount)}" placeholder="최소" />
           <span>~</span>
-          <input type="number" id="f-max" value="${escapeHtml(filters.maxAmount)}" placeholder="최대" />
+          <input type="number" inputmode="numeric" id="f-max" value="${escapeHtml(filters.maxAmount)}" placeholder="최대" />
         </div>
       </div>
       <div class="filter-row">
@@ -198,7 +199,7 @@ function bindFilterEvents(container) {
     filterOpen = !filterOpen;
     renderListView();
   });
-  container.querySelector("#filterApplyBtn")?.addEventListener("click", () => {
+  const applyFilterInputs = () => {
     filters.name       = container.querySelector("#f-name").value.trim();
     filters.category   = container.querySelector("#f-category").value;
     filters.minAmount  = container.querySelector("#f-min").value;
@@ -208,7 +209,14 @@ function bindFilterEvents(container) {
     visibleCount = LIST_CHUNK;
     animateNextRender(); // 걸러진 행은 흐려지며 빠지고, 남은 행은 제자리로 모인다
     renderListView();
-  });
+  };
+  container.querySelector("#filterApplyBtn")?.addEventListener("click", applyFilterInputs);
+  // 입력칸에서 Enter(키보드의 "검색")로도 적용 — 예전에는 "적용" 버튼을 눌러야만 했다
+  container.querySelectorAll(".filter-panel input").forEach(inp => inp.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    applyFilterInputs();
+  }));
   container.querySelector("#filterResetBtn")?.addEventListener("click", resetFilters);
 }
 
@@ -272,6 +280,22 @@ function resetFilters() {
   renderListView();
 }
 
+// 걸러 본 결과의 건수와 합계 — "카페에 총 얼마 썼지?"의 답. 필터가 걸렸거나 전체 기간일 때만 보인다
+// (이번 달 전체는 위 요약 카드가 이미 보여 준다)
+function renderResultSummary(filtered) {
+  if (!hasFilters() && scope !== "all") return "";
+  const exp = filtered.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const inc = filtered.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  return `
+    <div class="list-result" role="status">
+      <span><strong>${filtered.length.toLocaleString("ko-KR")}건</strong>${hasFilters() ? " 찾음" : ""}</span>
+      <span class="list-result-sum">
+        ${exp > 0 ? `<span class="minus">-${fmtMoney(exp)}원</span>` : ""}
+        ${inc > 0 ? `<span class="plus">+${fmtMoney(inc)}원</span>` : ""}
+      </span>
+    </div>`;
+}
+
 function renderContent(filtered) {
   if (!filtered.length) return renderEmpty();
   const sorted  = sortTransactions([...filtered]);
@@ -280,7 +304,13 @@ function renderContent(filtered) {
   const moreBtn = rest > 0
     ? `<button id="listMoreBtn" class="list-more-btn">더 보기 (${rest.toLocaleString("ko-KR")}건 남음)</button>`
     : "";
-  return (sortKey === "date" ? renderGrouped(limited) : renderFlat(limited)) + moreBtn;
+  return renderResultSummary(filtered) + (sortKey === "date" ? renderGrouped(limited) : renderFlat(limited)) + moreBtn;
+}
+
+// 카테고리 정렬 순서 — 입력 창의 칩과 같은 정의 순서(지출 → 수입). 예전에는 영문 ID 순이라 한글 이름으로는 뒤죽박죽이었다
+function categoryOrder(t) {
+  const i = CATEGORIES[t.type]?.findIndex(c => c.id === t.category) ?? -1;
+  return (t.type === "income" ? 100 : 0) + (i === -1 ? 99 : i);
 }
 
 function sortTransactions(txs) {
@@ -289,7 +319,7 @@ function sortTransactions(txs) {
     if (sortKey === "date")     cmp = a.date.localeCompare(b.date);
     if (sortKey === "amount")   cmp = a.amount - b.amount; // 수입/지출 구분 없이 절대 금액 기준
 
-    if (sortKey === "category") cmp = a.category.localeCompare(b.category);
+    if (sortKey === "category") cmp = categoryOrder(a) - categoryOrder(b);
     if (sortKey === "name")     cmp = a.name.localeCompare(b.name);
     return sortDir === "asc" ? cmp : -cmp;
   });
@@ -316,29 +346,29 @@ function renderGrouped(sorted) {
       <div class="list-group" data-flip-key="date/${escapeHtml(date)}">
         <div class="list-date-header">
           <span>${escapeHtml(label)}</span>
-          <span class="date-total" style="color:${color}">${sign}${fmtMoney(dayTotal)}</span>
+          ${items.length > 1 ? `<span class="date-total" style="color:${color}">${sign}${fmtMoney(dayTotal)}</span>` : ""}
         </div>
-        ${items.map(renderTxRow).join("")}
+        ${items.map(t => renderTxRow(t)).join("")}
       </div>`;
   }).join("");
 }
 
 function renderFlat(sorted) {
-  return `<div class="list-group" data-flip-key="list/flat">${sorted.map(renderTxRow).join("")}</div>`;
+  return `<div class="list-group" data-flip-key="list/flat">${sorted.map(t => renderTxRow(t)).join("")}</div>`;
 }
 
-function renderTxRow(t) {
+// 내역 한 줄. 달력의 "그날 내역"도 같은 모양을 쓴다 (calendar.js).
+// showDate: 날짜를 행에 적을지 — 기본은 전체 기간 + 날짜 외 정렬일 때(묶음 머리글이 없어서)
+export function renderTxRow(t, { showDate = scope === "all" && sortKey !== "date" } = {}) {
   const cat     = getCategoryInfo(t.category, t.type);
   const sign    = t.type === "income" ? "+" : "-";
   const amtCls  = t.type === "income" ? "plus" : "minus";
-  const kindTag = t.kind === "fixed"
-    ? `<span class="tag fixed">고정</span>`
-    : `<span class="tag variable">변동</span>`;
+  // 고정비만 꼬리표 — 예전에는 나머지 모든 행에 "변동"이 붙어 정보 없이 자리만 차지했다
+  const kindTag = t.kind === "fixed" ? `<span class="tag fixed">고정</span>` : "";
   // 이름이 메모에서 파생되므로(txModal) 동일하면 중복 표시하지 않음
   const memoTag  = t.memo && t.memo !== t.name ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "";
   const ownerTag = t.owner ? `<span class="tx-owner">${escapeHtml(ownerName(t.owner))}</span>` : "";
-  // 전체 기간 + 날짜 외 정렬이면 그룹 헤더가 없어 날짜를 행에 표기
-  const dateTag  = scope === "all" && sortKey !== "date" ? `<span>${escapeHtml(t.date)}</span>` : "";
+  const dateTag  = showDate ? `<span>${escapeHtml(t.date)}</span>` : "";
 
   return `
     <div class="tx-item" data-id="${escapeHtml(t.id)}" data-flip-key="${escapeHtml(t.id)}" role="button" tabindex="0">

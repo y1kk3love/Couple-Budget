@@ -192,6 +192,8 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="txId" />
+        <!-- 고정비에서 자동으로 기록된 내역을 열었을 때만 보인다 (txModal.openEditModal) -->
+        <p id="txFixedNote" class="field-note hidden">고정비에서 자동으로 기록된 내역이에요. 여기서 고치거나 지우면 이 달 기록만 바뀌고, 고정비 자체는 그대로예요.</p>
         <div class="type-toggle">
           <button class="type-btn active" data-type="expense" aria-pressed="true">지출</button>
           <button class="type-btn" data-type="income" aria-pressed="false">수입</button>
@@ -199,15 +201,11 @@
         <div class="form-row">
           <label>금액</label>
           <div class="amount-input-wrap">
-            <input type="number" id="txAmount" placeholder="0" min="0" inputmode="numeric" />
+            <input type="number" id="txAmount" placeholder="0" min="0" inputmode="numeric" data-money />
             <span class="currency">원</span>
           </div>
-          <div class="amount-presets" data-target="txAmount">
-            <button type="button" class="preset-btn" data-add="500000">+50만</button>
-            <button type="button" class="preset-btn" data-add="100000">+10만</button>
-            <button type="button" class="preset-btn" data-add="10000">+1만</button>
-            <button type="button" class="preset-btn preset-clear" data-clear="1">지우기</button>
-          </div>
+          <!-- 빠른 금액 버튼 — 지출(천 원 단위)과 수입(만 원 단위)이 달라 txModal.setType이 채운다 -->
+          <div class="amount-presets" id="txAmountPresets" data-target="txAmount"></div>
         </div>
         <div class="form-row">
           <label id="txCategoryLabel">카테고리</label>
@@ -220,16 +218,20 @@
           <input type="date" id="txDate" />
         </div>
         <div class="form-row">
-          <label>구분</label>
-          <div class="kind-toggle">
+          <label id="txKindLabel">구분</label>
+          <div class="kind-toggle" role="group" aria-labelledby="txKindLabel">
             <button class="kind-btn active" data-kind="variable" aria-pressed="true">변동비</button>
             <button class="kind-btn" data-kind="fixed" aria-pressed="false">고정비</button>
           </div>
+          <!-- "고정비"는 표시일 뿐 매달 반복되지 않는다 — 그렇게 기대하기 쉬워 골랐을 때 알려 준다 -->
+          <p id="txKindHint" class="field-hint hidden">이 내역에 '고정' 표시만 붙어요. 매달 자동으로 기록하려면 고정비 탭에서 등록하세요.</p>
         </div>
         <div class="form-row">
           <!-- 이 값이 목록·달력에 보이는 이름이 된다 (비우면 카테고리 이름) — placeholder는 txModal.setType이 타입별로 바꾼다 -->
           <label for="txMemo">내용</label>
-          <input type="text" id="txMemo" placeholder="예: 스타벅스 (비우면 카테고리 이름)" maxlength="100" />
+          <input type="text" id="txMemo" placeholder="예: 스타벅스 (비우면 카테고리 이름)" maxlength="100" autocomplete="off" enterkeyhint="done" />
+          <!-- 최근에 쓴 이름 — 누르면 이름과 카테고리가 채워진다 (추가할 때만, txModal.renderNameSuggest) -->
+          <div id="txNameSuggest" class="name-suggest hidden"></div>
         </div>
       </div>
       <div id="txContextPanel" class="tx-context-panel hidden"></div>
@@ -280,13 +282,20 @@
       <div class="modal-body">
         <input type="hidden" id="fixedEditId" />
         <div class="form-row">
+          <label id="fixedTypeLabel">종류</label>
+          <div class="kind-toggle" id="fixedTypeToggle" role="group" aria-labelledby="fixedTypeLabel">
+            <button class="kind-btn active" data-kind="expense" aria-pressed="true">지출</button>
+            <button class="kind-btn" data-kind="income" aria-pressed="false">수입</button>
+          </div>
+        </div>
+        <div class="form-row">
           <label>항목명</label>
           <input type="text" id="fixedEditName" placeholder="항목명" />
         </div>
         <div class="form-row">
           <label>금액</label>
           <div class="amount-input-wrap">
-            <input type="number" id="fixedEditAmount" placeholder="0" />
+            <input type="number" id="fixedEditAmount" placeholder="0" min="0" inputmode="numeric" data-money />
             <span class="currency">원</span>
           </div>
           <div class="amount-presets" data-target="fixedEditAmount">
@@ -301,16 +310,9 @@
           <select id="fixedEditCategory"></select>
         </div>
         <div class="form-row">
-          <label>구분</label>
-          <div class="kind-toggle" id="fixedTypeToggle">
-            <button class="kind-btn active" data-kind="expense" aria-pressed="true">지출</button>
-            <button class="kind-btn" data-kind="income" aria-pressed="false">수입</button>
-          </div>
-        </div>
-        <div class="form-row">
-          <label>지출일</label>
+          <label id="fixedDayLabel">매월 반영일</label>
           <div class="amount-input-wrap">
-            <input type="number" id="fixedEditDay" placeholder="1" min="1" max="31" />
+            <input type="number" id="fixedEditDay" placeholder="1" min="1" max="31" inputmode="numeric" />
             <span class="currency">일</span>
           </div>
         </div>
@@ -339,7 +341,7 @@
         <div class="form-row">
           <label>한 달 지출 예산</label>
           <div class="amount-input-wrap">
-            <input type="number" id="budgetAmount" placeholder="0" min="0" />
+            <input type="number" id="budgetAmount" placeholder="0" min="0" inputmode="numeric" data-money />
             <span class="currency">원</span>
           </div>
           <div class="amount-presets" data-target="budgetAmount">
@@ -423,7 +425,7 @@
         <div class="form-row">
           <label>계획 금액</label>
           <div class="amount-input-wrap">
-            <input type="number" id="wdItemPlanned" placeholder="0" min="0" />
+            <input type="number" id="wdItemPlanned" placeholder="0" min="0" inputmode="numeric" data-money />
             <span class="currency">원</span>
           </div>
           <div class="amount-presets" data-target="wdItemPlanned">
@@ -506,7 +508,7 @@
         <div class="form-row">
           <label>견적가</label>
           <div class="amount-input-wrap">
-            <input type="number" id="wdVendorPrice" placeholder="0" min="0" />
+            <input type="number" id="wdVendorPrice" placeholder="0" min="0" inputmode="numeric" data-money />
             <span class="currency">원</span>
           </div>
           <div class="amount-presets" data-target="wdVendorPrice">

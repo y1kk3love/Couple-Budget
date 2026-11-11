@@ -194,7 +194,7 @@ function renderPayments() {
       <button type="button" class="wd-pay-del" data-pay-i="${i}" title="삭제">&times;</button>
       <div class="wd-pay-settle" title="상대에게 돌려받은(정산된) 금액을 입력하세요">
         <span class="wd-pay-settle-lbl">정산</span>
-        <input type="number" class="wd-pay-settle-amt" data-settle-i="${i}" min="0" max="${escapeHtml(p.amount || 0)}" step="1"
+        <input type="number" inputmode="numeric" class="wd-pay-settle-amt" data-settle-i="${i}" min="0" max="${escapeHtml(p.amount || 0)}" step="1"
                placeholder="0" value="${escapeHtml(settledAmt || "")}" aria-label="정산 금액" />
         <span class="wd-pay-settle-of">/ ${fmtMoney(p.amount)}원</span>
         <button type="button" class="wd-pay-settle-full" data-settle-full="${i}">전액</button>
@@ -252,7 +252,7 @@ function renderPayInput(label) {
   row.className = "wd-pay-input";
   row.innerHTML = `
     <input type="text" class="wd-pay-in-label" placeholder="라벨" maxlength="10" value="${escapeHtml(label)}" />
-    <input type="number" class="wd-pay-in-amount" placeholder="금액" min="0" />
+    <input type="number" inputmode="numeric" class="wd-pay-in-amount" placeholder="금액" min="0" />
     <input type="date" class="wd-pay-in-date" value="${todayStr()}" />
     <button type="button" class="save-btn wd-pay-in-add">추가</button>`;
   box.appendChild(row);

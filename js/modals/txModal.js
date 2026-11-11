@@ -3,14 +3,15 @@
 // ================================================================
 
 import state from "../state.js";
-import { openOverlay, closeOverlay, flash, reducedMotion, animateNextRender } from "../motion.js";
+import { openOverlay, closeOverlay, flash, reducedMotion, animateNextRender, markOverlayDirty } from "../motion.js";
 import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml, runWrite, invalidField } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
 import {
   addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName,
-  updateCategoryByName, countCategoryTargets, moveFixedTransaction
+  updateCategoryByName, countCategoryTargets, moveFixedTransaction, fetchAllTransactions
 } from "../db.js";
 import { renderAll } from "../app.js";
+import { selectCalendarDate } from "../views/calendar.js";
 
 let editingTxId = null;
 // 수정 중인 거래의 원본 — 전체 기간 목록·이력 패널에서 연 다른 달 거래는
@@ -41,10 +42,12 @@ export function openAddModal(dateStr = null) {
   document.getElementById("txDate").value = date;
   document.getElementById("txMemo").value = "";
   document.getElementById("deleteTxBtn").classList.add("hidden");
+  document.getElementById("txFixedNote").classList.add("hidden");
 
   setType("expense");
   setKind("variable");
   openOverlay(document.getElementById("txModal"));
+  loadNameSuggest(); // 최근에 쓴 이름 추천 (전체 내역 사본에서 — 보통 네트워크 없이)
   // 가장 먼저 입력하는 금액 칸에 바로 포커스 (모바일에선 숫자 키패드가 뜬다)
   document.getElementById("txAmount").focus();
 
@@ -69,6 +72,9 @@ export function openEditModal(id, tx = null) {
   document.getElementById("txDate").value = t.date;
   document.getElementById("txMemo").value = t.memo ?? "";
   document.getElementById("deleteTxBtn").classList.remove("hidden");
+  // 고정비에서 자동으로 기록된 내역이면, 고치거나 지워도 이 달 기록만 바뀐다는 것을 알린다
+  document.getElementById("txFixedNote").classList.toggle("hidden", !(t.fromFixed && t.fixedId));
+  document.getElementById("txNameSuggest").classList.add("hidden");
 
   setType(t.type); // 칩도 이 타입으로 다시 그린다
   setCategory(t.category);
@@ -101,6 +107,12 @@ function setType(type) {
     b.setAttribute("aria-pressed", on);
   });
   populateCategorySelect(type);
+  // 빠른 금액 버튼 — 지출은 천 원 단위(커피·점심), 수입은 만 원 단위. 예전에는 둘 다 +50만/+10만/+1만이라
+  // 매일 쓰는 지출 입력에는 쓸모가 없었다
+  document.getElementById("txAmountPresets").innerHTML = PRESETS[type].map(([add, label]) =>
+    `<button type="button" class="preset-btn" data-add="${add}">${label}</button>`).join("")
+    + `<button type="button" class="preset-btn preset-clear" data-clear="1">지우기</button>`;
+  renderNameSuggest();
   // "내용" 칸이 곧 목록에 보이는 이름이라는 걸 예시로 알려 준다 (예전 라벨 "메모 (선택)"은 이를 가렸다)
   document.getElementById("txMemo").placeholder = type === "income"
     ? "예: 월급 (비우면 카테고리 이름)"
@@ -113,6 +125,53 @@ function setKind(kind) {
     b.classList.toggle("active", on);
     b.setAttribute("aria-pressed", on);
   });
+  // "고정비"를 고르면 매달 반복될 것으로 기대하기 쉽다 — 표시일 뿐이라고 알린다 (자동 기록된 내역은 위 안내가 대신한다)
+  document.getElementById("txKindHint").classList.toggle("hidden", !(kind === "fixed" && !editingTx?.fromFixed));
+}
+
+const PRESETS = {
+  expense: [[1000, "+1천"], [5000, "+5천"], [10000, "+1만"], [100000, "+10만"]],
+  income:  [[10000, "+1만"], [100000, "+10만"], [1000000, "+100만"]],
+};
+
+// ── 내용 추천 (추가할 때) ─────────────────────────────────────
+// 최근에 쓴 이름을 칩으로 보여 주고, 누르면 이름과 카테고리를 함께 채운다. 예전에는 매주 가는 곳도
+// 매번 다 치고 카테고리를 다시 골라야 했고, "스타벅스"와 "스벅"처럼 이름이 갈려 같은 이름 묶음도 깨졌다.
+let suggestPool = null; // 전체 내역(최신순) — 창을 열 때 받아 둔다
+
+async function loadNameSuggest() {
+  try { suggestPool = await fetchAllTransactions(); }
+  catch { suggestPool = null; } // 추천은 없어도 된다
+  renderNameSuggest();
+}
+
+function renderNameSuggest() {
+  const box = document.getElementById("txNameSuggest");
+  if (editingTxId || !suggestPool) { box.classList.add("hidden"); return; }
+  const type  = getType();
+  const query = document.getElementById("txMemo").value.trim().toLowerCase();
+  const picks = [], seen = new Set();
+  for (const t of suggestPool) {
+    if (picks.length >= 6) break;
+    if (t.type !== type || t.fromFixed || !t.name || seen.has(t.name)) continue;
+    if (t.name === getCategoryInfo(t.category, t.type).name) continue; // 내용을 비워 카테고리 이름으로 저장된 내역
+    if (query && (!t.name.toLowerCase().includes(query) || t.name.toLowerCase() === query)) continue;
+    seen.add(t.name);
+    picks.push(t);
+  }
+  box.classList.toggle("hidden", picks.length === 0);
+  box.innerHTML = picks.map((t, i) => {
+    const cat = getCategoryInfo(t.category, t.type);
+    return `<button type="button" class="name-chip" data-i="${i}" title="${escapeHtml(cat.name)}"><i style="background:${cat.color}"></i><span>${escapeHtml(t.name)}</span></button>`;
+  }).join("");
+  box.querySelectorAll(".name-chip").forEach(chip => chip.addEventListener("click", () => {
+    const t = picks[Number(chip.dataset.i)];
+    const memo = document.getElementById("txMemo");
+    memo.value = t.name;
+    setCategory(t.category);
+    markOverlayDirty(memo); // 고른 것도 입력이다 (실수로 닫을 때 확인)
+    box.classList.add("hidden");
+  }));
 }
 
 function getType() { return modalEl().querySelector(".type-btn.active").dataset.type; }
@@ -206,6 +265,15 @@ export function setupTxModal() {
     b.addEventListener("click", () => setKind(b.dataset.kind))
   );
 
+  // 내용: 입력에 맞춰 추천을 거르고, Enter로 바로 저장 (키보드의 "완료")
+  const memo = document.getElementById("txMemo");
+  memo.addEventListener("input", renderNameSuggest);
+  memo.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.isComposing) return; // 한글 조합 중의 Enter는 글자 확정이다
+    e.preventDefault();
+    document.getElementById("saveTxBtn").click();
+  });
+
   // 닫기
   document.getElementById("modalClose").addEventListener("click", closeModal);
   document.getElementById("txModal").addEventListener("click", e => {
@@ -290,6 +358,7 @@ export function setupTxModal() {
 
     closeModal();
     showToast(toastMsg);
+    if (state.currentView === "calendar") selectCalendarDate(data.date); // 달력 아래에 그날 내역이 보이게
     await fetchTransactions();
     animateNextRender(); // 목록이면 새 행이 나타나고 나머지가 제자리로 (다시 그리기 바로 앞에서만 유효)
     renderAll();
@@ -301,7 +370,11 @@ export function setupTxModal() {
   // 삭제
   document.getElementById("deleteTxBtn").addEventListener("click", async e => {
     const btn = e.currentTarget;
-    if (!(await showConfirm("이 내역을 삭제할까요?", { confirmText: "삭제" }))) return;
+    // 고정비 자동 기록은 문서를 지우는 대신 "이 달은 건너뜀"으로 남는다 — 무슨 일이 일어나는지 그대로 알린다
+    const msg = editingTx?.fromFixed && editingTx.fixedId
+      ? "이 달의 고정비 기록을 지울까요?\n이 달만 건너뛰고, 고정비 자체와 다른 달 기록은 그대로예요."
+      : "이 내역을 삭제할까요?";
+    if (!(await showConfirm(msg, { confirmText: "삭제" }))) return;
     if (!(await runWrite(btn, () => deleteTransaction(editingTxId), "삭제"))) return;
     closeModal();
     showToast("삭제되었습니다");
