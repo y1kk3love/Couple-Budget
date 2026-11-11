@@ -92,13 +92,24 @@ let layersPushed = 0;       // 내가 쌓아 둔 항목 수
 let ownBacks = 0;           // 내가 부른 history.back()이 일으킬 popstate 수 (무시한다)
 let closingFromBack = false; // 뒤로가기로 닫는 중 — 항목은 브라우저가 이미 뺐으니 또 되돌리지 않는다
 
+let pendingPush = 0;        // 내가 부른 back이 끝나기 전에 열린 창 수 — back이 끝난 뒤에 쌓는다
+
+function pushLayer() {
+  try { history.pushState({ couplebudgetLayer: true }, ""); layersPushed++; } catch { /* 기록을 쓸 수 없는 환경 */ }
+}
 /** 창·서랍이 열렸다 (서랍은 app.js가 부른다) */
 export function layerOpened() {
-  try { history.pushState({ couplebudgetLayer: true }, ""); layersPushed++; } catch { /* 기록을 쓸 수 없는 환경 */ }
+  // history.back()은 나중에 실행되는데, "부른 시점의 위치"에서 한 칸 물러난다. 그 사이에 pushState를 하면
+  // 새 항목을 지나쳐 바닥까지 내려가고, 계수가 어긋나 그 뒤로는 창을 닫을 때 앱 페이지를 벗어났다
+  // (통계 → 카테고리 상세 → 행: 상세를 닫자마자 수정 창을 연다). 내 back이 끝날 때까지 쌓기를 미룬다.
+  if (ownBacks > 0) { pendingPush++; return; }
+  pushLayer();
 }
 /** 창·서랍을 화면에서 닫았다 */
 export function layerClosed() {
-  if (closingFromBack || layersPushed <= 0) return;
+  if (closingFromBack) return;
+  if (pendingPush > 0) { pendingPush--; return; } // 아직 쌓지 않은 창 — 되돌릴 항목이 없다
+  if (layersPushed <= 0) return;
   layersPushed--;
   ownBacks++;
   try { history.back(); } catch { ownBacks--; }
@@ -107,7 +118,11 @@ export function layerClosed() {
 /** 뒤로가기 처리 등록 — closeDrawer(): 서랍이 열려 있으면 닫고 true를 돌려준다 (app.js) */
 export function setupBackToClose(closeDrawer = () => false) {
   addEventListener("popstate", () => {
-    if (ownBacks > 0) { ownBacks--; return; } // 내가 되돌린 것
+    if (ownBacks > 0) { // 내가 되돌린 것 — 끝났으니 미뤄 둔 창의 항목을 이제 쌓는다
+      ownBacks--;
+      if (ownBacks === 0) for (; pendingPush > 0; pendingPush--) pushLayer();
+      return;
+    }
     if (layersPushed <= 0) return;            // 내가 쌓은 것이 아니다 — 브라우저에 맡긴다
     const keep = () => { try { history.pushState({ couplebudgetLayer: true }, ""); } catch { layersPushed--; } };
     // 확인 창이 떠 있으면 그것만 취소하고, 아래 창은 그대로 둔다 (빠진 항목을 다시 쌓는다)
@@ -153,6 +168,12 @@ export function setupOverlayGuard(guard) {
   };
   document.addEventListener("input", onInput, true);
   document.addEventListener("change", onInput, true);
+  // 버튼으로 고르는 값(카테고리 칩, 지출/수입·변동/고정 토글)은 input 이벤트가 없다 — 눌러서 값이 바뀌면 입력으로 친다.
+  // 예전에는 카테고리만 바꾼 뒤 배경을 스치면 묻지 않고 닫혔다. (이미 선택된 버튼을 다시 누른 것은 변화가 아니다)
+  document.addEventListener("click", e => {
+    const b = e.target instanceof Element ? e.target.closest(".type-toggle button, .kind-toggle button, .cat-chip") : null;
+    if (b && !b.classList.contains("active")) markOverlayDirty(b);
+  }, true);
   // 배경 누르기 — 각 모달의 "배경을 누르면 닫기" 리스너보다 먼저(capture) 가로챈다
   document.addEventListener("click", e => {
     const overlay = e.target;

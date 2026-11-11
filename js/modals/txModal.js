@@ -17,6 +17,11 @@ let editingTxId = null;
 // 수정 중인 거래의 원본 — 전체 기간 목록·이력 패널에서 연 다른 달 거래는
 // state.transactions(현재 달)에 없으므로 원본을 여기 들고 있는다
 let editingTx = null;
+// 창을 열 때마다 1씩 늘어난다. 저장·삭제는 누른 순간의 대상과 이 값을 붙잡아 두고, 기다림(건수 세기·확인 창) 뒤에
+// 값이 달라졌거나 창이 닫혔으면 그만둔다. 예전에는 기다린 뒤에 editingTxId를 다시 읽어, 그 사이 다른 내역으로
+// 넘어가면 처음 내역의 입력값이 그 내역에 덮어써졌고, 닫고 새로 열면 새 내역으로 한 번 더 추가됐다.
+let openSeq = 0;
+const isOpenNow = () => { const el = document.getElementById("txModal"); return !el.classList.contains("hidden") && !el.classList.contains("is-closing"); };
 
 // ── 열기 ──────────────────────────────────────────────────────
 
@@ -33,6 +38,7 @@ function defaultAddDate() {
 }
 
 export function openAddModal(dateStr = null) {
+  openSeq++;
   editingTxId = null;
   editingTx = null;
   const date = dateStr ?? defaultAddDate();
@@ -64,6 +70,7 @@ export function openEditModal(id, tx = null) {
   const t = tx ?? state.transactions.find(t => t.id === id);
   if (!t) return;
 
+  openSeq++;
   editingTxId = id;
   editingTx = t;
   document.getElementById("modalTitle").textContent = "내역 수정";
@@ -284,6 +291,9 @@ export function setupTxModal() {
   document.getElementById("saveTxBtn").addEventListener("click", async e => {
     const btn    = e.currentTarget;
     if (btn.disabled) return;
+    // 누른 순간의 대상을 붙잡는다 — 아래의 기다림 뒤에 모듈 변수를 다시 읽지 않는다 (openSeq 설명 참고)
+    const id = editingTxId, orig = editingTx, seq = openSeq;
+    const stale = () => seq !== openSeq || !isOpenNow();
     const amount = parseInt(document.getElementById("txAmount").value);
     const date   = document.getElementById("txDate").value;
 
@@ -307,24 +317,26 @@ export function setupTxModal() {
     };
 
     // 새 내역에만 작성자를 기록 — 수정 시에는 원래 작성자를 보존한다
-    if (!editingTxId) data.owner = state.currentUser?.email ?? null;
+    if (!id) data.owner = state.currentUser?.email ?? null;
 
     // 카테고리를 바꿨고 같은 이름의 다른 내역이 있으면, 그것들도 함께 바꿀지 먼저 묻는다.
     // 예전에는 묻지 않고 전 기간의 같은 이름 내역(상대가 입력한 것 포함)을 모두 바꾸고 3초짜리
     // 안내만 띄웠다 — 하루만 다르게 분류하려던 수정이 과거 분류를 되돌릴 수 없게 덮어썼다.
     let propagate = false;
-    if (editingTxId && editingTx && editingTx.category !== data.category) {
+    if (id && orig && orig.category !== data.category) {
       btn.disabled = true; // 세는 동안의 연타 방지 (runWrite가 잠그기 전)
       let others = 0;
-      try { others = await countCategoryTargets(data.name, data.type, data.category, editingTxId); }
+      try { others = await countCategoryTargets(data.name, data.type, data.category, id); }
       catch (err) { console.warn("같은 이름 내역 수를 세지 못했습니다 — 이 내역만 바꿉니다:", err); }
       finally { btn.disabled = false; }
+      if (stale()) return; // 세는 동안 창을 닫았거나 다른 내역을 열었다 — 이 저장은 버린다
       if (others > 0) {
         const catName = getCategoryInfo(data.category, data.type).name;
         const choice = await showConfirm(
           `'${data.name}' 내역이 ${others}건 더 있어요.\n모두 '${catName}'(으)로 바꿀까요?`,
           { confirmText: `${others}건 모두 바꾸기`, altText: "이 내역만 바꾸기", danger: false });
         if (choice === false) return; // 취소 — 저장하지 않고 입력 창으로 돌아간다
+        if (stale()) return;
         propagate = choice === true;
       }
     }
@@ -333,14 +345,14 @@ export function setupTxModal() {
     let toastMsg;
     let savedId = null; // 저장한 거래 ID — 다시 그린 뒤 그 행(달력은 그 날짜 칸)을 반짝인다
     const ok = await runWrite(btn, async () => {
-      if (editingTxId) {
-        const prev = editingTx;
+      if (id) {
+        const prev = orig;
         // 고정비 자동생성 거래를 다른 달로 옮기면 원래 달엔 skip 마커, 옮긴 달엔 새 일반 거래
         // (결정적 ID를 그대로 두면 원래 달 방문 시 고정비가 다시 생성되며 옮긴 거래를 덮어쓴다)
         const movedFixed = prev?.fromFixed && prev.fixedId &&
           (prev.year !== data.year || prev.month !== data.month);
-        if (movedFixed) savedId = await moveFixedTransaction(editingTxId, prev, data);
-        else          { await updateTransaction(editingTxId, data); savedId = editingTxId; }
+        if (movedFixed) savedId = await moveFixedTransaction(id, prev, data);
+        else          { await updateTransaction(id, data); savedId = id; }
 
         // 사용자가 고른 경우에만 같은 이름의 거래 전체(전 기간)에 카테고리를 전파
         const synced = propagate
@@ -370,12 +382,15 @@ export function setupTxModal() {
   // 삭제
   document.getElementById("deleteTxBtn").addEventListener("click", async e => {
     const btn = e.currentTarget;
+    const id = editingTxId, orig = editingTx, seq = openSeq; // 누른 순간의 대상 (저장과 같은 이유)
+    if (!id) return;
     // 고정비 자동 기록은 문서를 지우는 대신 "이 달은 건너뜀"으로 남는다 — 무슨 일이 일어나는지 그대로 알린다
-    const msg = editingTx?.fromFixed && editingTx.fixedId
+    const msg = orig?.fromFixed && orig.fixedId
       ? "이 달의 고정비 기록을 지울까요?\n이 달만 건너뛰고, 고정비 자체와 다른 달 기록은 그대로예요."
       : "이 내역을 삭제할까요?";
     if (!(await showConfirm(msg, { confirmText: "삭제" }))) return;
-    if (!(await runWrite(btn, () => deleteTransaction(editingTxId), "삭제"))) return;
+    if (seq !== openSeq || !isOpenNow()) return;
+    if (!(await runWrite(btn, () => deleteTransaction(id), "삭제"))) return;
     closeModal();
     showToast("삭제되었습니다");
     await fetchTransactions();

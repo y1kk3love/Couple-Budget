@@ -7,7 +7,7 @@ import { openOverlay, closeOverlay, animateNextRender } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, runWrite } from "../utils.js";
 import { CATEGORIES } from "../constants.js";
 import {
-  saveFixedItem, deleteFixedItem, fetchFixedItems, syncFixedItemTransactions,
+  saveFixedItem, deleteFixedItem, fetchFixedItems, updateFixedItem,
   applyFixedItemsToMonth, fetchTransactions
 } from "../db.js";
 import { renderAll } from "../app.js";
@@ -114,8 +114,8 @@ export function setupFixedModal() {
     // 수정 전 값 — 실제로 바뀐 항목만 이번 달 이후 기록에 반영하려고 넘긴다 (db.syncFixedItemTransactions)
     const prev = id ? state.fixedItems.find(f => f.id === id) ?? null : null;
     const ok = await runWrite(e.currentTarget, async () => {
-      await saveFixedItem(data, id);
-      if (id) await syncFixedItemTransactions(id, data, prev);
+      if (id) await updateFixedItem(id, data, prev); // 기록 반영 → 고정비 저장 순서 (db.updateFixedItem)
+      else    await saveFixedItem(data);
     });
     if (!ok) return;
 

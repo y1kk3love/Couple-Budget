@@ -51,7 +51,9 @@ export function parseAmount(raw) {
   // 숫자·부호·소수점·괄호 외의 문자("원", "₩", 통화 표기, 인코딩이 깨진 기호 등)는 버린다 — 예전처럼 관대하게
   let s = String(raw ?? "").replace(/−/g, "-").replace(/[^\d.+\-()]/g, "");
   let negative = false;
-  const paren = s.match(/^[+-]?\((.*)\)$/); // (15,000) · -(15,000) 모두 음수
+  // 부호가 앞에 붙은 괄호 "-(15,000)"는 일부러 읽지 않는다(null) — 예전 파서가 건너뛰던 표기라, 새로 읽으면
+  // 그 행이 순번을 하나 차지해 뒤따르는 같은 날·가맹점·금액 행의 문서 ID가 밀리고, 다시 가져올 때 중복이 된다.
+  const paren = s.match(/^\((.*)\)$/); // (15,000)
   if (paren) { negative = true; s = paren[1]; }
   const trailing = s.match(/^(\d+(?:\.\d+)?)-$/); // 15,000- (일부 은행 표기)
   if (trailing) { negative = true; s = trailing[1]; }

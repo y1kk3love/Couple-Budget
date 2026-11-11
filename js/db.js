@@ -304,6 +304,15 @@ export async function syncFixedItemTransactions(id, data, prev = null) {
   invalidateBalanceCache();
 }
 
+// 고정비 수정 — 이미 만들어진 기록에 먼저 반영하고, 그다음 고정비를 저장한다.
+// 고정비를 먼저 저장하면, 기록 반영이 실패(연결 끊김)해 다시 저장할 때 화면이 들고 있는 수정 전 값(prev)이
+// 이미 새 값이라 "바뀐 것 없음"으로 끝났다 — 고정비는 새 금액, 이번 달 기록은 옛 금액으로 남았다.
+// 이 순서에서는 어느 쪽이 실패해도 prev가 그대로라, 다시 저장하면 같은 차이를 다시 반영한다(같은 값을 쓰므로 반복해도 안전).
+export async function updateFixedItem(id, data, prev = null) {
+  await syncFixedItemTransactions(id, data, prev);
+  await saveFixedItem(data, id);
+}
+
 // ── 고정비 → 해당 달 자동 적용 ────────────────────────────────
 // Deterministic doc ID `fixed_<fixedId>_<YYYY-MM>` → 동시 호출에도 멱등. 두 사용자가
 // 같은 달에 동시에 접속해도 같은 문서가 쓰일 뿐 중복 생성되지 않는다.

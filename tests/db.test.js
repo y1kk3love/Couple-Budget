@@ -12,6 +12,7 @@ const writes = () => globalThis.__writes.map(w => `${w.op}:${w.col}/${w.id}`);
 function reset(data = {}, year = 2026, month = 11) {
   globalThis.__latency = 0;
   globalThis.__failWrites = false;
+  globalThis.__failReads = false;
   globalThis.__resetStore({ transactions: {}, fixed_items: {}, settings: {}, budget_plans: {}, ...data });
   db.unwatchTransactions(); // 실시간 사본 없이 조회 경로로 (캐시도 함께 비워진다)
   Object.assign(state, {
@@ -121,4 +122,73 @@ test("syncFixedItemTransactions: 바뀐 항목만 반영 — 날짜만 고치면
   await db.syncFixedItemTransactions("f1", { ...prev, name: "아파트 관리비", day: 12, amount: 170000 }, { ...prev, day: 12, amount: 170000 });
   assert.equal(store("transactions").get(`fixed_f1_${cur}`).name, "아파트 관리비");
   assert.equal(store("transactions").get(`fixed_f1_${cur}`).memo, "아파트 관리비");
+});
+
+// 고정비 수정은 "기록 반영 → 고정비 저장" 순서여야 한다. 반대 순서에서는 고정비만 저장되고 기록 반영이
+// 실패했을 때, 다시 저장하면 수정 전 값(prev)이 이미 새 값이라 "바뀐 것 없음"으로 끝나 기록이 옛 금액으로 남았다.
+test("updateFixedItem: 기록 반영이 실패한 뒤 다시 저장하면 기록까지 반영된다", async () => {
+  const cur = ymOf(NOW);
+  const item = { name: "관리비", amount: 150000, type: "expense", category: "mgmt", day: 10, startYear: 2026, startMonth: 1 };
+  reset({
+    fixed_items: { f1: item },
+    transactions: { [`fixed_f1_${cur}`]: tx({ name: "관리비", memo: "관리비", amount: 150000, category: "mgmt", date: `${cur}-10`, year: NOW.y, month: NOW.m, fromFixed: true, fixedId: "f1", kind: "fixed" }) },
+  });
+  const data = { ...item, amount: 170000 };
+  const prevFromState = async () => { await db.fetchFixedItems(); return state.fixedItems.find(f => f.id === "f1"); };
+
+  // 1차: 연결이 끊겨 기록을 읽지 못한다 — 고정비도 아직 저장되지 않아야 한다
+  globalThis.__failReads = true;
+  const prev1 = { ...item, id: "f1" };
+  await assert.rejects(db.updateFixedItem("f1", data, prev1));
+  globalThis.__failReads = false;
+  assert.equal(store("fixed_items").get("f1").amount, 150000, "실패했으면 고정비도 예전 값");
+
+  // 2차: 화면이 들고 있는 값(state)에서 수정 전 값을 다시 읽어 저장 — 같은 차이가 다시 계산된다
+  await db.updateFixedItem("f1", data, await prevFromState());
+  assert.equal(store("fixed_items").get("f1").amount, 170000);
+  assert.equal(store("transactions").get(`fixed_f1_${cur}`).amount, 170000, "이번 달 기록에도 반영");
+  globalThis.__failReads = false;
+});
+
+test("applyFixedItemsToMonth: 이 달 조회에 안 잡혀도 같은 ID의 문서가 있으면 덮어쓰지 않는다", async () => {
+  // 예전에 날짜만 고쳐 12월로 옮긴 11월 고정비 기록 — 문서 ID는 11월 것인데 year/month는 12월이라 11월 조회에 안 잡힌다
+  const moved = tx({ name: "관리비", amount: 163200, date: "2026-12-03", year: 2026, month: 12, fromFixed: true, fixedId: "f2", kind: "fixed" });
+  reset({
+    fixed_items: { f2: { name: "관리비", amount: 150000, type: "expense", category: "mgmt", day: 10 } },
+    transactions: { "fixed_f2_2026-11": moved },
+  });
+  await db.fetchFixedItems();
+  await db.fetchTransactions();
+  assert.equal(state.transactions.length, 0, "11월 화면에는 보이지 않는다");
+  await db.applyFixedItemsToMonth(2026, 11);
+  assert.deepEqual(writes(), [], "옮긴 기록을 덮어쓰지 않는다");
+  assert.deepEqual(store("transactions").get("fixed_f2_2026-11"), moved);
+});
+
+test("txFromDoc: 글자로 저장된 금액은 읽을 때만 숫자로 바꾸고 문서는 그대로 둔다", async () => {
+  reset({ transactions: {
+    a: tx({ name: "커피", amount: "4500", date: "2026-11-03", year: 2026, month: 11 }),
+    b: tx({ name: "빵", amount: 3000, date: "2026-11-04", year: 2026, month: 11 }),
+  } });
+  await db.fetchTransactions();
+  assert.deepEqual(state.transactions.map(t => t.amount).sort(), [3000, 4500]);
+  assert.equal(store("transactions").get("a").amount, "4500", "저장된 값은 건드리지 않는다");
+  assert.deepEqual(writes(), []);
+});
+
+test("카테고리 일괄 변경: 미리 센 건수와 실제로 바뀌는 문서가 같다 (수정 중인 내역·다른 종류·건너뜀 표시 제외)", async () => {
+  reset({ transactions: {
+    a: tx({ name: "점심", category: "food", amount: 1, date: "2026-10-01", year: 2026, month: 10 }),
+    b: tx({ name: "점심", category: "food", amount: 1, date: "2026-09-01", year: 2026, month: 9 }),
+    c: tx({ name: "점심", category: "culture", amount: 1, date: "2026-08-01", year: 2026, month: 8 }),
+    d: tx({ name: "점심", type: "income", category: "food", amount: 1, date: "2026-08-01", year: 2026, month: 8 }),
+    e: tx({ name: "저녁", category: "food", amount: 1, date: "2026-08-01", year: 2026, month: 8 }),
+    "fixed_x_2026-08": { fixedId: "x", year: 2026, month: 8, date: "2026-08-01", fromFixed: true, skipped: true },
+  } });
+  assert.equal(await db.countCategoryTargets("점심", "expense", "culture", "a"), 1);
+  const changed = await db.updateCategoryByName("점심", "expense", "culture", "a");
+  assert.equal(changed, 1);
+  assert.deepEqual(writes(), ["update:transactions/b"]);
+  assert.equal(store("transactions").get("a").category, "food", "수정 중인 내역은 여기서 바꾸지 않는다");
+  assert.equal("category" in store("transactions").get("fixed_x_2026-08"), false, "건너뜀 표시에 카테고리를 쓰지 않는다");
 });

@@ -6,7 +6,7 @@ import { parseAmount, parseDate, parseCsvLine, parseCSV, buildImportOps, planImp
 test("parseAmount: 부호·괄호·소수·통화 표기", () => {
   const cases = [
     ["15,000", 15000, false], ["-15,000", 15000, true], ["−15,000", 15000, true], ["(15,000)", 15000, true],
-    ["-(15,000)", 15000, true], ["15,000-", 15000, true], ["12,000원", 12000, false], ["₩12,000", 12000, false],
+    ["15,000-", 15000, true], ["12,000원", 12000, false], ["₩12,000", 12000, false],
     ["12000.00", 12000, false], ["12000.6", 12001, false], ["+3,000", 3000, false], ["0", 0, false],
   ];
   for (const [raw, amount, negative] of cases) assert.deepEqual(parseAmount(raw), { amount, negative }, raw);
@@ -67,4 +67,23 @@ test("planImport: 이미 있는 행과 손으로 입력한 중복 의심을 가�
   ];
   const plan = planImport(ops, existing);
   assert.deepEqual(plan.map(p => [p.exists, p.suspect]), [[true, false], [false, true], [false, false]]);
+});
+
+// 문서 ID는 이미 저장된 데이터와 맞물려 있다 — 계산식이 조금이라도 바뀌면 같은 명세서를 다시 가져올 때
+// 전부 "새 내역"으로 보여 중복으로 들어간다. 실제 문자열을 고정해 둔다 (2026-11 이전 코드가 만든 값과 같다).
+test("buildImportOps: 문서 ID 문자열이 예전과 같다", () => {
+  const rows = parseCSV("날짜,가맹점,금액\n2026-09-01,GS25,3000\n2026-09-02,스타벅스 강남점,-4500").rows;
+  assert.deepEqual(buildImportOps(rows, "x").map(o => o.id),
+    ["csv_2026-09-01_3000_1wtfsk6_0", "csv_2026-09-02_4500_mwuxfz_0"]);
+});
+
+// 예전 파서가 읽지 못해 건너뛰던 표기를 새로 읽기 시작하면, 그 행이 순번을 하나 차지해
+// 뒤에 오는 같은 날·가맹점·금액 행의 ID가 _0 → _1로 밀린다. 다시 가져오면 그 행이 새 지출로 한 번 더 들어간다.
+test("parseCSV: 예전에 건너뛰던 -(금액) 표기는 계속 건너뛰고, 다른 행의 순번을 밀지 않는다", () => {
+  for (const raw of ["-(15,000)", "+(15,000)"]) assert.equal(parseAmount(raw), null, raw);
+  const r = parseCSV('날짜,가맹점,금액\n2026-09-01,쿠팡,"-(15,000)"\n2026-09-01,쿠팡,"15,000"');
+  assert.equal(r.badAmounts, 1, "읽지 못한 행으로 세어 미리보기에 알린다");
+  const ops = buildImportOps(r.rows, "x");
+  assert.equal(ops.length, 1);
+  assert.match(ops[0].id, /_0$/, "일반 행의 순번은 예전 그대로 0");
 });

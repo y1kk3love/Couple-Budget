@@ -33,10 +33,20 @@ export default async function () {
     let blob = null;
     const orig = URL.createObjectURL;
     URL.createObjectURL = b => { blob = b; return orig.call(URL, b); };
-    document.getElementById("backupBtn").click();
-    await __wait(500);
-    URL.createObjectURL = orig;
+    // 검사 중에는 실제로 내려받지 않는다 — 예전에는 검사를 돌릴 때마다 가짜 데이터 백업 파일이
+    // 다운로드 폴더에 저장됐다(저장 창이 떠서 진짜 백업처럼 보였다). 내려받기 직전의 클릭만 막고 이름을 본다.
+    const origClick = HTMLAnchorElement.prototype.click;
+    let fileName = null;
+    HTMLAnchorElement.prototype.click = function () { if (this.download) { fileName = this.download; return; } return origClick.call(this); };
+    try {
+      document.getElementById("backupBtn").click();
+      await __wait(500);
+    } finally {
+      HTMLAnchorElement.prototype.click = origClick;
+      URL.createObjectURL = orig;
+    }
     t.ok(blob, "백업 파일이 만들어지지 않음");
+    t.ok(/전체백업.*\.json$/.test(fileName ?? ""), `백업 파일 이름: ${fileName}`);
     if (blob) {
       const data = JSON.parse(await blob.text());
       for (const col of ["transactions", "fixed_items", "budget_plans", "wedding_items", "wedding_tasks", "wedding_vendors", "wedding_events"]) {
@@ -130,9 +140,9 @@ export default async function () {
     __remote("transactions", "t22manual", null); await __wait(300); await closeAll();
   }
 
-  // ④ 기본 날짜
+  // ④ 기본 날짜 — 목록에서 본다 (달력에서는 + 가 "고른 날짜"로 열리고, 앞선 검사가 고른 날이 남아 있을 수 있다)
   {
-    await __go("calendar");
+    await __go("list"); await __settle();
     const today = new Date(); const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
     document.getElementById("addTxBtn").click(); await __wait(200);
     t.ok(document.getElementById("txDate").value === todayStr, `이번 달 기본 날짜 ${document.getElementById("txDate").value}`);
