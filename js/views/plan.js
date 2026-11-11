@@ -198,7 +198,7 @@ function donutSVG(income, items, remain, owner = "") {
       <div class="plan-donut-center">
         <span class="plan-donut-lbl">${centerLabel}</span>
         <span class="plan-donut-val" style="color:${centerColor}"
-          data-count="${remain}" data-count-key="plan-remain:${escapeHtml(owner)}">${centerVal}</span>
+          data-count="${escapeHtml(remain)}" data-count-key="plan-remain:${escapeHtml(owner)}">${centerVal}</span>
       </div>
     </div>`;
 }

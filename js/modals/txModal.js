@@ -65,7 +65,11 @@ export function openEditModal(id, tx = null) {
   panel.innerHTML = `<div class="ctx-loading" aria-label="불러오는 중"><span class="skeleton" style="width:40%"></span><span class="skeleton" style="width:85%"></span></div>`;
   panel.classList.remove("hidden");
   fetchRecentTransactionsByName(t.name, id, 3).then(txs => {
+    if (editingTxId !== id) return; // 그 사이 다른 내역을 열었다
     renderContextPanel(txs.length ? `'${escapeHtml(t.name)}' 최근 3개월 내역` : null, txs);
+  }).catch(err => {
+    console.warn("최근 내역 조회 실패:", err);
+    if (editingTxId === id) panel.classList.add("hidden"); // 참고용 패널이라 조용히 숨긴다
   });
 }
 

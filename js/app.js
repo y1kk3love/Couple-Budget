@@ -239,19 +239,19 @@ async function renderSummary() {
   bar.innerHTML = `
     <div class="sum-card hero">
       <div class="lbl">이번달 잔액</div>
-      <div class="val ${balanceClass}" data-count="${balance}" data-count-key="sum-balance" data-count-fmt="signed">${balanceSign}${fmtMoney(balance)}원</div>
+      <div class="val ${balanceClass}" data-count="${escapeHtml(balance)}" data-count-key="sum-balance" data-count-fmt="signed">${balanceSign}${fmtMoney(balance)}원</div>
       <div class="sub">${state.currentMonth}월 수입 − 지출</div>
     </div>
     ${renderBudgetCard(totalExpense)}
     <div class="sum-card duo">
-      <div class="duo-row"><span class="lbl">수입</span><span class="duo-val income" data-count="${totalIncome}" data-count-key="sum-income" data-count-fmt="plus">${totalIncome > 0 ? "+" : ""}${fmtMoney(totalIncome)}원</span></div>
-      <div class="duo-row"><span class="lbl">지출</span><span class="duo-val expense" data-count="${totalExpense}" data-count-key="sum-expense" data-count-fmt="minus">${totalExpense > 0 ? "-" : ""}${fmtMoney(totalExpense)}원</span></div>
+      <div class="duo-row"><span class="lbl">수입</span><span class="duo-val income" data-count="${escapeHtml(totalIncome)}" data-count-key="sum-income" data-count-fmt="plus">${totalIncome > 0 ? "+" : ""}${fmtMoney(totalIncome)}원</span></div>
+      <div class="duo-row"><span class="lbl">지출</span><span class="duo-val expense" data-count="${escapeHtml(totalExpense)}" data-count-key="sum-expense" data-count-fmt="minus">${totalExpense > 0 ? "-" : ""}${fmtMoney(totalExpense)}원</span></div>
     </div>
     <div class="sum-card">
       <div class="lbl">누적 잔액</div>
       ${accum === null
         ? `<div class="val neutral">—</div><div class="sub">불러오지 못함</div>`
-        : `<div class="val ${accumClass}" data-count="${accumTotal}" data-count-key="sum-accum" data-count-fmt="signed">${accumSign}${fmtMoney(accumTotal)}원</div>
+        : `<div class="val ${accumClass}" data-count="${escapeHtml(accumTotal)}" data-count-key="sum-accum" data-count-fmt="signed">${accumSign}${fmtMoney(accumTotal)}원</div>
       <div class="sub">${accum !== 0 ? "이전 달 포함" : "첫 달"}</div>`}
     </div>`;
 
@@ -303,7 +303,7 @@ function renderBudgetCard(totalExpense) {
   return `
     <div class="sum-card budget-card" id="budgetCard" role="button" tabindex="0" title="클릭해서 월 예산 수정">
       <div class="lbl">예산 ${over ? "초과" : "남음"}</div>
-      <div class="val ${valClass}" data-count="${remaining}" data-count-key="sum-budget" data-count-fmt="neg">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
+      <div class="val ${valClass}" data-count="${escapeHtml(remaining)}" data-count-key="sum-budget" data-count-fmt="neg">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
       <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
       <div class="sub">${subText}</div>
     </div>`;
@@ -450,7 +450,14 @@ function setupMobileMenu() {
 
 async function exportAllCsv() {
   if (!state.currentUser) return;
-  const txs = await fetchAllTransactions();
+  let txs;
+  try {
+    txs = await fetchAllTransactions();
+  } catch (err) {
+    console.error("내보내기 조회 실패:", err);
+    showToast("내역을 불러오지 못해 내보내지 못했어요");
+    return;
+  }
   if (!txs.length) { showToast("내보낼 내역이 없습니다"); return; }
 
   const rows = [["날짜", "이름", "금액", "구분", "카테고리", "고정/변동", "메모", "작성자"]];
@@ -486,3 +493,6 @@ setupCsvModal();
 setupBudgetModal();
 setupWeddingModals();
 setupCategoryDetailModal();
+// 여기까지 왔으면 모든 모듈이 정상 로드됐다 — index.html의 "불러오지 못했어요" 안내를 끈다
+window.__appBooted = true;
+document.getElementById("bootError")?.classList.add("hidden");

@@ -194,8 +194,8 @@ function renderPayments() {
       <button type="button" class="wd-pay-del" data-pay-i="${i}" title="삭제">&times;</button>
       <div class="wd-pay-settle" title="상대에게 돌려받은(정산된) 금액을 입력하세요">
         <span class="wd-pay-settle-lbl">정산</span>
-        <input type="number" class="wd-pay-settle-amt" data-settle-i="${i}" min="0" max="${p.amount || 0}" step="1"
-               placeholder="0" value="${settledAmt || ""}" aria-label="정산 금액" />
+        <input type="number" class="wd-pay-settle-amt" data-settle-i="${i}" min="0" max="${escapeHtml(p.amount || 0)}" step="1"
+               placeholder="0" value="${escapeHtml(settledAmt || "")}" aria-label="정산 금액" />
         <span class="wd-pay-settle-of">/ ${fmtMoney(p.amount)}원</span>
         <button type="button" class="wd-pay-settle-full" data-settle-full="${i}">전액</button>
         <span class="wd-pay-settle-done">✓ 정산 완료</span>

@@ -178,15 +178,15 @@ export async function deleteWeddingEvent(id) {
 // ── 파생 합계 — payments 배열이 지출의 유일한 원본 ─────────────
 
 export function itemSpent(item) {
-  return (item.payments ?? []).reduce((s, p) => s + (p.amount || 0), 0);
+  return (item.payments ?? []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
 }
 
 // 결제 한 건의 정산된 금액 — settledAmount(부분 정산)가 원본이며,
 // 그 필드가 없는 과거 기록은 settled 체크(true = 전액)로 해석. 결제 금액을 넘지 않게 클램프.
 export function paymentSettled(p) {
-  const amount = p.amount || 0;
+  const amount = Number(p.amount) || 0;
   const raw = p.settledAmount ?? (p.settled ? amount : 0);
-  return Math.max(0, Math.min(amount, raw || 0));
+  return Math.max(0, Math.min(amount, Number(raw) || 0));
 }
 
 // 정산된 결제 금액 합 — 항목 모달에서 결제별로 입력한 정산 금액
@@ -198,7 +198,7 @@ export function weddingTotals(items) {
   const totals = { planned: 0, spent: 0, byPayer: {} };
   for (const it of items) {
     const spent = itemSpent(it);
-    totals.planned += it.planned || 0;
+    totals.planned += Number(it.planned) || 0;
     totals.spent   += spent;
     const key = it.payer ?? "both";
     totals.byPayer[key] = (totals.byPayer[key] ?? 0) + spent;

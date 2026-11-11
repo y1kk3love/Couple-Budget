@@ -48,6 +48,7 @@ export function renderListView() {
 
   if (scope === "month") {
     bindRowEvents(container);
+    container.querySelector("#listEmptyReset")?.addEventListener("click", resetFilters);
     playLayout(container, layout);
   } else {
     // 전체 기간은 비동기 조회 — 완료 시점에 다른 뷰/범위로 이동했으면 무시.
@@ -60,7 +61,15 @@ export function renderListView() {
       content.innerHTML = renderContent(filtered);
       bindRowEvents(content, new Map(filtered.map(t => [t.id, t])));
       bindMoreBtn(content);
+      content.querySelector("#listEmptyReset")?.addEventListener("click", resetFilters);
       playLayout(container, layout);
+    }).catch(err => {
+      // 조회 실패 — 자리표시(스켈레톤)를 영영 남기지 않고 알린다
+      console.error("전체 기간 조회 실패:", err);
+      const content = container.querySelector("#listContent");
+      if (content && state.currentView === "list" && scope === "all") {
+        content.innerHTML = emptyStateHTML("전체 기간 내역을 불러오지 못했어요<br><span class=\"empty-hint\">네트워크를 확인한 뒤 다시 열어 주세요</span>", "⚠️");
+      }
     });
   }
 }
@@ -200,12 +209,7 @@ function bindFilterEvents(container) {
     animateNextRender(); // 걸러진 행은 흐려지며 빠지고, 남은 행은 제자리로 모인다
     renderListView();
   });
-  container.querySelector("#filterResetBtn")?.addEventListener("click", () => {
-    filters = { name: "", category: "", minAmount: "", maxAmount: "", dateFrom: "", dateTo: "" };
-    visibleCount = LIST_CHUNK;
-    animateNextRender();
-    renderListView();
-  });
+  container.querySelector("#filterResetBtn")?.addEventListener("click", resetFilters);
 }
 
 // ── 정렬 컨트롤 UI ────────────────────────────────────────────
@@ -243,8 +247,33 @@ function bindSortEvents(container) {
 
 // ── 콘텐츠 렌더 ──────────────────────────────────────────────
 
+const hasFilters = () => Object.values(filters).some(v => v !== "");
+
+// 빈 목록 — 필터 때문인지, 정말 내역이 없는지 구분해 알린다.
+// 예전에는 항상 "조건에 맞는 내역이 없어요"라, 새 달 첫날에도 조건이 걸린 것처럼 보였다
+function renderEmpty() {
+  if (hasFilters()) {
+    return `
+      <div class="empty-state">
+        <span class="empty-emoji">🔍</span>
+        <p>조건에 맞는 내역이 없어요</p>
+        <button class="filter-reset-btn empty-action" id="listEmptyReset">필터 지우기</button>
+      </div>`;
+  }
+  return scope === "all"
+    ? emptyStateHTML("아직 내역이 없어요")
+    : emptyStateHTML(`${state.currentMonth}월 내역이 아직 없어요<br><span class="empty-hint">＋ 버튼으로 추가해 보세요</span>`);
+}
+
+function resetFilters() {
+  filters = { name: "", category: "", minAmount: "", maxAmount: "", dateFrom: "", dateTo: "" };
+  visibleCount = LIST_CHUNK;
+  animateNextRender();
+  renderListView();
+}
+
 function renderContent(filtered) {
-  if (!filtered.length) return emptyStateHTML("조건에 맞는 내역이 없어요");
+  if (!filtered.length) return renderEmpty();
   const sorted  = sortTransactions([...filtered]);
   const limited = scope === "all" ? sorted.slice(0, visibleCount) : sorted;
   const rest    = sorted.length - limited.length;

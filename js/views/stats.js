@@ -44,6 +44,13 @@ export function renderStatsView() {
       <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 카테고리별 지출</h4>
       ${renderMonthlyChart(summary)}`;
     bindMonthlyClicks(card);
+  }).catch(err => {
+    // 조회가 실패하면 자리표시(스켈레톤)가 영영 남았다 — 실패했다고 알린다
+    console.error("월별 합계 조회 실패:", err);
+    const card = document.getElementById("monthly-compare-card");
+    if (card) card.innerHTML = `
+      <h4>최근 ${MONTHLY_COMPARE_RANGE}개월 카테고리별 지출</h4>
+      <p class="stats-empty">불러오지 못했어요. 네트워크를 확인한 뒤 다시 열어 주세요.</p>`;
   });
 }
 
@@ -174,7 +181,7 @@ function renderCategoryBars(expTxs) {
           <div class="pfill" style="width:${pct}%;background:${cat.color}"></div>
         </div>
       </div>`;
-  }).join("") || `<p style="color:var(--text-3);font-size:0.85rem">지출 내역이 없어요</p>`;
+  }).join("") || `<p class="stats-empty">지출 내역이 없어요</p>`;
 
   return `
     <div class="stats-card full">
@@ -186,9 +193,10 @@ function renderCategoryBars(expTxs) {
 function renderFixedVsVariable(expTxs) {
   const fixedAmt = expTxs.filter(t => t.kind === "fixed").reduce((s, t) => s + t.amount, 0);
   const varAmt   = expTxs.filter(t => t.kind !== "fixed").reduce((s, t) => s + t.amount, 0);
-  const total    = fixedAmt + varAmt || 1;
-  const fixedPct = Math.round(fixedAmt / total * 100);
-  const varPct   = 100 - fixedPct;
+  const total    = fixedAmt + varAmt;
+  // 지출이 없는 달은 둘 다 0% — 예전에는 나머지 계산(100 - 0) 때문에 "변동비 0원 (100%)"에 막대가 꽉 찼다
+  const fixedPct = total ? Math.round(fixedAmt / total * 100) : 0;
+  const varPct   = total ? 100 - fixedPct : 0;
 
   return `
     <div class="stats-card">
@@ -262,7 +270,10 @@ function renderOwnerSplit(expTxs) {
 function renderIncomeVsExpense(incTxs, expTxs) {
   const totalInc = incTxs.reduce((s, t) => s + t.amount, 0);
   const totalExp = expTxs.reduce((s, t) => s + t.amount, 0);
-  const expPct   = Math.min(100, Math.round(totalExp / (totalInc || 1) * 100));
+  // 막대는 둘 중 큰 쪽을 100%로 — 예전에는 수입 막대가 항상 꽉 차서, 수입이 0원인 달에도 가득했다
+  const top      = Math.max(totalInc, totalExp);
+  const incPct   = top ? Math.round(totalInc / top * 100) : 0;
+  const expPct   = top ? Math.round(totalExp / top * 100) : 0;
 
   return `
     <div class="stats-card">
@@ -274,7 +285,7 @@ function renderIncomeVsExpense(incTxs, expTxs) {
             <span class="cat-bar-val" style="color:var(--income)">${fmtMoney(totalInc)}원</span>
           </div>
           <div class="pbar">
-            <div class="pfill" style="width:100%;background:var(--income)"></div>
+            <div class="pfill" style="width:${incPct}%;background:var(--income)"></div>
           </div>
         </div>
         <div>

@@ -149,7 +149,7 @@ function renderHeader() {
     const color  = over ? "var(--expense)" : pct >= 80 ? "var(--warn)" : "var(--accent)";
     budgetLine = `
       <div class="wd-budget-line">
-        <span>지출 <strong data-count="${totals.spent}" data-count-key="wd-spent">${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(totals.planned)}원</span>
+        <span>지출 <strong data-count="${escapeHtml(totals.spent)}" data-count-key="wd-spent">${fmtMoney(totals.spent)}원</strong> / 총예산 ${fmtMoney(totals.planned)}원</span>
         <span>${pct}%</span>
       </div>
       <div class="pbar"><div class="pfill wd-total-fill" style="width:${barPct}%;background:${color}"></div></div>`;

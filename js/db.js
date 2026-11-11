@@ -36,6 +36,15 @@ let liveTx    = null;  // 전체 거래(skip 마커 포함) — 리스너가 채
 let txUnsub   = null;
 let liveReady = null;  // 첫 스냅샷 대기 (fetchAllTransactions가 중복 전체 조회를 피하려고 기다림)
 
+// 거래 문서 → 화면에서 쓰는 객체. 금액은 숫자로 맞춘다 (메모리에서만 — 문서를 고쳐 쓰지 않는다).
+// Firestore 규칙은 필드 타입을 검사하지 않아 금액이 문자열로 들어올 수 있는데, 그러면 합계가
+// 문자열 이어 붙이기가 되어 요약이 NaN으로 깨지고, 그 값이 HTML 속성에 그대로 들어가 태그가 끼어든다.
+function txFromDoc(d) {
+  const t = { id: d.id, ...d.data() };
+  if ("amount" in t && typeof t.amount !== "number") t.amount = Number(t.amount) || 0;
+  return t;
+}
+
 // Firestore의 orderBy("date","desc")와 같은 순서 — 같은 날짜는 문서 ID 내림차순.
 // 예전 skip 마커에는 date가 없으므로 빈 문자열로 취급한다
 const byDateDesc = (a, b) =>
@@ -60,7 +69,7 @@ export function watchTransactions(onRemoteChange) {
   liveReady.catch(() => {}); // 기다리는 곳이 없을 때 unhandled rejection 방지
   let first = true;
   txUnsub = onSnapshot(collection(db, "transactions"), snap => {
-    liveTx = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    liveTx = snap.docs.map(txFromDoc);
     invalidateBalanceCache();
     deriveMonth(state.currentYear, state.currentMonth);
     if (first) { first = false; resolveReady(); return; }
@@ -97,7 +106,7 @@ export async function fetchTransactions() {
   // 응답을 기다리는 사이 다른 달로 이동했으면 낡은 결과로 state를 덮지 않는다
   if (y !== state.currentYear || m !== state.currentMonth) return;
 
-  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const rows = snap.docs.map(txFromDoc);
 
   // skip 마커(고정비 자동생성 거래를 사용자가 삭제한 흔적)는 화면에서 제외하고,
   // applyFixedItemsToMonth가 재생성하지 않도록 ID만 따로 보관한다.
@@ -349,27 +358,26 @@ export async function fetchRecentTransactionsByName(name, excludeId = null, n = 
     months.push({ year: y, month: m });
   }
 
-  const results = await Promise.all(months.map(({ year, month }) =>
-    getDocs(query(
-      collection(db, "transactions"),
-      where("year",  "==", year),
-      where("month", "==", month)
-    ))
-  ));
+  // 실시간 사본이 있으면 네트워크 없이 거른다 — 예전에는 수정 창을 열 때마다 3개월 치를 다시 읽었다
+  const pools = liveTx
+    ? months.map(({ year, month }) => liveTx.filter(t => t.year === year && t.month === month))
+    : (await Promise.all(months.map(({ year, month }) =>
+        getDocs(query(
+          collection(db, "transactions"),
+          where("year",  "==", year),
+          where("month", "==", month)
+        ))
+      ))).map(snap => snap.docs.map(txFromDoc));
 
-  const nameLower = name.toLowerCase();
+  const nameLower = String(name ?? "").toLowerCase();
   const txs = [];
-  results.forEach(snap => {
-    snap.docs.forEach(d => {
-      if (d.id === excludeId) return;
-      const t = { id: d.id, ...d.data() };
-      if (t.skipped) return; // skip 마커는 name이 없음
-      const n2 = t.name.toLowerCase();
-      if (n2.includes(nameLower) || nameLower.includes(n2)) txs.push(t);
-    });
-  });
+  for (const t of pools.flat()) {
+    if (t.id === excludeId || t.skipped) continue; // skip 마커는 name이 없음
+    const n2 = String(t.name ?? "").toLowerCase();
+    if (n2.includes(nameLower) || nameLower.includes(n2)) txs.push(t);
+  }
 
-  return txs.sort((a, b) => b.date.localeCompare(a.date));
+  return txs.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
 // ── 최근 N개월 수입/지출 합계 ─────────────────────────────────
@@ -396,7 +404,7 @@ export async function fetchMonthlySummary(months = 6) {
           where("year",  "==", year),
           where("month", "==", month)
         ))
-      ))).map(snap => snap.docs.map(d => d.data()));
+      ))).map(snap => snap.docs.map(txFromDoc));
 
   const summary = monthsList.map((m, i) => {
     let income = 0, expense = 0;
@@ -501,7 +509,7 @@ export async function fetchAllTransactions() {
   if (!liveTx && liveReady) {
     try { await Promise.race([liveReady, new Promise(r => setTimeout(r, 4000))]); } catch { /* 직접 조회 */ }
   }
-  const rows = liveTx ?? (await getDocs(collection(db, "transactions"))).docs.map(d => ({ id: d.id, ...d.data() }));
+  const rows = liveTx ?? (await getDocs(collection(db, "transactions"))).docs.map(txFromDoc);
   allTxCache = rows.filter(t => !t.skipped).sort(byDateDesc);
   return allTxCache;
 }
