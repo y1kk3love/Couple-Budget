@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, emptyStateHTML, escapeHtml, ownerName } from "../utils.js";
+import { fmtMoney, emptyStateHTML, escapeHtml, ownerName, icon } from "../utils.js";
 import { getCategoryInfo, CATEGORIES } from "../constants.js";
 import { openEditModal } from "../modals/txModal.js";
 import { fetchAllTransactions } from "../db.js";
@@ -68,7 +68,7 @@ export function renderListView() {
       console.error("전체 기간 조회 실패:", err);
       const content = container.querySelector("#listContent");
       if (content && state.currentView === "list" && scope === "all") {
-        content.innerHTML = emptyStateHTML("전체 기간 내역을 불러오지 못했어요<br><span class=\"empty-hint\">네트워크를 확인한 뒤 다시 열어 주세요</span>", "⚠️");
+        content.innerHTML = emptyStateHTML("전체 기간 내역을 불러오지 못했어요<br><span class=\"empty-hint\">네트워크를 확인한 뒤 다시 열어 주세요</span>", "alert");
       }
     });
   }
@@ -263,7 +263,7 @@ function renderEmpty() {
   if (hasFilters()) {
     return `
       <div class="empty-state">
-        <span class="empty-emoji">🔍</span>
+        <span class="empty-icon">${icon("search", 32)}</span>
         <p>조건에 맞는 내역이 없어요</p>
         <button class="filter-reset-btn empty-action" id="listEmptyReset">필터 지우기</button>
       </div>`;

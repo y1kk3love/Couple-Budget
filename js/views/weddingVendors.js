@@ -40,7 +40,7 @@ export function renderVendorsSegment(container) {
       </div>`;
   }).join("");
 
-  const empty = list.length ? "" : emptyStateHTML("등록된 업체가 없어요", "🏛️");
+  const empty = list.length ? "" : emptyStateHTML("등록된 업체가 없어요", "building");
 
   container.innerHTML = `
     ${chips}

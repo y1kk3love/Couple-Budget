@@ -482,7 +482,7 @@ export function setupWeddingModals() {
     if (!ok) return;
 
     closeVendor();
-    showToast("확정했습니다 💍");
+    showToast("확정했습니다");
     await Promise.all([fetchWeddingVendors(), fetchWeddingItems()]);
     animateNextRender();
     renderWeddingView();

@@ -3,6 +3,7 @@
 //  · 보이는 글자는 11px 이상, 터치 기기의 입력칸은 16px 이상(아이폰 자동 확대 방지)
 //  · 휴대폰 하단 탭은 5칸이고 + 버튼이 가운데
 //  · 닫기 버튼·라벨·현재 탭에 낭독용 이름과 상태가 있다
+//  · 화면 글자에 이모지가 없다 (아이콘은 선 아이콘 한 벌 — utils.js icon())
 const VIEWS = ["calendar", "list", "stats", "fixed", "plan", "wedding"];
 
 function overflowing() {
@@ -35,6 +36,17 @@ function smallText(root) {
   return [...out].slice(0, 6);
 }
 
+// 화면에 보이는 글자 속 이모지 (기기마다 그림이 다르고 글자색·테마를 따르지 않는다)
+const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}]/u;
+function emojiText(root) {
+  const out = new Set();
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (EMOJI.test(n.textContent) && n.parentElement?.offsetParent) out.add(n.textContent.trim().slice(0, 20));
+  }
+  return [...out].slice(0, 5);
+}
+
 export default async function () {
   const t = __expect();
   const mobile = innerWidth <= 768;
@@ -47,6 +59,8 @@ export default async function () {
     t.ok(o.length === 0, `${v}: 가로 넘침 — ${o.join(" | ")}`);
     const s = smallText(document.getElementById("app"));
     t.ok(s.length === 0, `${v}: 11px 미만 글자 — ${s.join(" | ")}`);
+    const e = emojiText(document.getElementById("app"));
+    t.ok(e.length === 0, `${v}: 화면 글자에 이모지 — ${e.join(" | ")}`);
     const active = [...document.querySelectorAll(`[data-view="${v}"]`)];
     t.ok(active.every(b => b.getAttribute("aria-current") === "page"), `${v}: 현재 탭 표시(aria-current) 없음`);
   }

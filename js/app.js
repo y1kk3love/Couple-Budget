@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast, showConfirm, todayStr, downloadCSV, escapeHtml, hasUnsavedInput, setupAmountHints } from "./utils.js";
+import { fmtMoney, showToast, showConfirm, todayStr, downloadCSV, escapeHtml, hasUnsavedInput, setupAmountHints, icon } from "./utils.js";
 import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
@@ -136,7 +136,7 @@ function renderLoadError(container) {
     : "네트워크 연결을 확인한 뒤 다시 시도해주세요.";
   container.innerHTML = `
     <div class="empty-state">
-      <span class="empty-emoji">⚠️</span>
+      <span class="empty-icon">${icon("alert", 32)}</span>
       <p>데이터를 불러오지 못했어요</p>
       <p class="load-error-hint">${hint}</p>
       <button class="save-btn load-retry-btn" id="loadRetryBtn">다시 시도</button>
@@ -300,7 +300,7 @@ function renderBudgetCard(totalExpense) {
   const ym         = `${state.currentYear}-${String(state.currentMonth).padStart(2, "0")}`;
   const isOverride = state.budgetMonths?.[ym] != null;
   const subText    = (over
-    ? `예산 초과! (${pct}%)`
+    ? `예산 초과 (${pct}%)`
     : `예산 ${fmtMoney(state.budget)}원 중 ${pct}% 사용`)
     + (isOverride ? " · 이번 달 전용" : "");
 
@@ -336,7 +336,7 @@ function renderWeddingBanner() {
   }).join(" · ");
   const more = upcoming.length > 3 ? ` 외 ${upcoming.length - 3}건` : "";
 
-  el.innerHTML = `💍 이번 달 결혼 일정 ${upcoming.length}건 — ${list}${more}`;
+  el.innerHTML = `${icon("ring")}<span>이번 달 결혼 일정 ${upcoming.length}건 — ${list}${more}</span>`;
   el.classList.remove("hidden");
 }
 

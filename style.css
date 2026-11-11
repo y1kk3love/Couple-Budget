@@ -199,7 +199,7 @@ a:focus-visible {
   transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .google-btn:hover { background: var(--surface-hover); }
-.login-note { font-size: 0.78rem; color: var(--text-3); margin-top: 1rem; }
+.login-note { font-size: 0.8rem; color: var(--text-3); margin-top: 1rem; }
 
 /* ── 앱 레이아웃 ── */
 .app { display: flex; min-height: 100vh; }
@@ -216,12 +216,12 @@ a:focus-visible {
   display: flex; align-items: center; gap: 10px;
   padding: 1.5rem 1.25rem 1.25rem;
 }
-.sidebar-title { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.sidebar-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
 .sidebar-nav { flex: 1; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 2px; }
 .nav-btn {
   display: flex; align-items: center; gap: 10px;
   padding: 0.65rem 0.85rem; border-radius: var(--radius);
-  font-size: 0.88rem; font-family: var(--font);
+  font-size: 0.9rem; font-family: var(--font);
   color: var(--text-2); background: none; border: none; cursor: pointer;
   transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
   text-align: left; width: 100%;
@@ -291,7 +291,7 @@ a:focus-visible {
 .icon-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 0.5rem 0.85rem; border-radius: 10px;
-  font-size: 0.82rem; font-family: var(--font); font-weight: 500;
+  font-size: 0.85rem; font-family: var(--font); font-weight: 500;
   color: var(--text-2); background: var(--surface2);
   border: none; cursor: pointer;
   transition: background 0.15s, transform var(--dur-base) var(--ease-spring);
@@ -302,7 +302,7 @@ a:focus-visible {
 .add-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 0.5rem 1rem; border-radius: 10px;
-  font-size: 0.88rem; font-family: var(--font); font-weight: 600;
+  font-size: 0.9rem; font-family: var(--font); font-weight: 600;
   background: var(--accent-fill); color: #fff; border: none; cursor: pointer;
   transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
@@ -339,7 +339,7 @@ a:focus-visible {
 @media (min-width: 769px) and (max-width: 1150px) {
   .summary-bar { grid-template-columns: 1fr 1fr; }
 }
-.duo-val { font-size: 0.95rem; font-weight: 700; font-family: var(--mono); letter-spacing: -0.01em; }
+.duo-val { font-size: 0.95rem; font-weight: 700; font-family: var(--mono); }
 .duo-val.income { color: var(--income); }
 .duo-val.expense { color: var(--expense); }
 
@@ -348,7 +348,7 @@ a:focus-visible {
 .budget-card:hover { background: var(--surface-hover); }
 .budget-card .budget-pbar { margin-top: 7px; background: var(--surface3); }
 .budget-card .budget-unset-val { font-family: var(--font); font-size: 0.95rem; font-weight: 600; color: var(--accent); }
-.budget-note { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; line-height: 1.5; }
+.budget-note { font-size: 0.8rem; color: var(--text-3); margin-top: 4px; line-height: 1.5; }
 
 /* ── 뷰 컨테이너 ── */
 .view-container { flex: 1; padding: 1.5rem; overflow-y: auto; }
@@ -381,7 +381,7 @@ a:focus-visible {
   width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
 }
 .day-num-wrap { margin-bottom: 4px; }
-.day-num { font-size: 0.78rem; color: var(--text-2); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.day-num { font-size: 0.8rem; color: var(--text-2); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
 .cal-cell:nth-child(7n+1) .day-num { color: var(--expense); }
 .cal-cell:nth-child(7n) .day-num { color: var(--saturday); }
 .cal-cell.today:nth-child(7n+1) .day-num,
@@ -393,12 +393,13 @@ a:focus-visible {
 /* 고른 날짜의 내역 (달력 아래) */
 .cal-day-panel { margin-top: 14px; }
 .cal-day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 4px 10px; }
-.cal-day-head h4 { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
+.cal-day-head h4 { font-size: 0.95rem; font-weight: 700; }
 .cal-day-head h4 span { font-size: 0.8rem; font-weight: 500; color: var(--text-3); margin-left: 2px; }
 .cal-day-total { display: flex; gap: 10px; font-family: var(--mono); font-size: 0.85rem; font-weight: 700; }
 .cal-day-total .minus { color: var(--expense); }
 .cal-day-total .plus { color: var(--income); }
-.cal-day-event { font-size: 0.82rem; font-weight: 600; color: var(--accent); padding: 0 4px 8px; }
+.cal-day-event { font-size: 0.85rem; font-weight: 600; color: var(--accent); padding: 0 4px 8px; }
+.cal-day-event .ico { margin-right: 6px; }
 .cal-day-event span { font-weight: 500; color: var(--text-3); }
 .cal-day-list { margin-bottom: 8px; }
 .cal-day-empty { text-align: center; color: var(--text-3); font-size: 0.85rem; padding: 1.1rem 0; }
@@ -429,13 +430,13 @@ a:focus-visible {
 }
 .sort-keys { display: flex; gap: 5px; flex-wrap: wrap; }
 .sort-key-btn {
-  font-size: 0.78rem; padding: 5px 12px; border-radius: 20px;
+  font-size: 0.8rem; padding: 5px 12px; border-radius: 20px;
   border: none; background: var(--surface3);
   color: var(--text-2); cursor: pointer; font-family: var(--font);
 }
 .sort-key-btn.active { background: var(--text); color: var(--bg); font-weight: 600; }
 .sort-dir-btn {
-  font-size: 0.78rem; padding: 5px 12px; border-radius: 20px;
+  font-size: 0.8rem; padding: 5px 12px; border-radius: 20px;
   border: none; background: var(--surface3);
   color: var(--text-2); cursor: pointer; font-family: var(--font); white-space: nowrap;
 }
@@ -443,7 +444,7 @@ a:focus-visible {
 
 /* ── 목록 필터 ── */
 .filter-toggle-btn {
-  font-size: 0.78rem; padding: 5px 14px; border-radius: 20px;
+  font-size: 0.8rem; padding: 5px 14px; border-radius: 20px;
   border: none; background: var(--surface3);
   color: var(--text-2); cursor: pointer; font-family: var(--font);
   display: inline-flex; align-items: center; gap: 5px;
@@ -460,10 +461,10 @@ a:focus-visible {
   padding: 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 10px;
 }
 .filter-row { display: flex; align-items: center; gap: 10px; }
-.filter-row label { font-size: 0.78rem; color: var(--text-2); min-width: 52px; }
+.filter-row label { font-size: 0.8rem; color: var(--text-2); min-width: 52px; }
 .filter-row input, .filter-row select {
   flex: 1; padding: 6px 10px; border: 1.5px solid transparent;
-  border-radius: 8px; font-size: 0.82rem; background: var(--surface2);
+  border-radius: 8px; font-size: 0.85rem; background: var(--surface2);
   color: var(--text); font-family: var(--font); outline: none;
   transition: border-color 0.15s;
 }
@@ -504,7 +505,7 @@ a:focus-visible {
   padding: 0.8rem 1rem 0.45rem;
   display: flex; justify-content: space-between;
 }
-.list-date-header .date-total { font-family: var(--mono); font-size: 0.78rem; }
+.list-date-header .date-total { font-family: var(--mono); font-size: 0.8rem; }
 /* 걸러 본 결과의 건수·합계 (list.renderResultSummary) */
 .list-result {
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
@@ -523,14 +524,14 @@ a:focus-visible {
 .tx-item:hover { background: var(--surface-hover); }
 .tx-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .tx-info { flex: 1; min-width: 0; }
-.tx-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.tx-name { font-size: 0.9rem; font-weight: 600; color: var(--text); }
 .tx-meta { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tx-memo { color: var(--text-2); }
 .tx-owner {
   background: var(--surface2); border-radius: 6px; padding: 0 6px;
   font-size: 0.75rem; color: var(--text-2); line-height: 1.6;
 }
-.tx-amount { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; font-family: var(--mono); flex-shrink: 0; }
+.tx-amount { font-size: 0.95rem; font-weight: 700; font-family: var(--mono); flex-shrink: 0; }
 .tx-amount.minus { color: var(--expense); }
 .tx-amount.plus { color: var(--income); }
 .tag {
@@ -547,14 +548,14 @@ a:focus-visible {
 /* ── 통계 뷰 ── */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .stats-card { background: var(--surface); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-card); }
-.stats-card h4 { font-size: 0.82rem; font-weight: 600; color: var(--text-2); margin-bottom: 1rem; }
+.stats-card h4 { font-size: 0.85rem; font-weight: 600; color: var(--text-2); margin-bottom: 1rem; }
 .stats-card.full { grid-column: 1 / -1; }
 .stats-grid > .stats-card:not(.full):last-child:nth-child(odd) { grid-column: 1 / -1; }
 .cat-bar-item { margin-bottom: 10px; }
 .cat-bar-item.clickable { cursor: pointer; padding: 4px 6px; margin-left: -6px; margin-right: -6px; border-radius: var(--radius); transition: background 0.15s; }
 .cat-bar-item.clickable:hover { background: var(--surface-hover); }
 .cat-bar-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.cat-bar-label { font-size: 0.82rem; color: var(--text); }
+.cat-bar-label { font-size: 0.85rem; color: var(--text); }
 .cat-bar-val { font-size: 0.8rem; color: var(--text-2); font-family: var(--mono); }
 /* 전체 지출에서의 비중, 그리고 "누르면 내역이 열린다"는 표시 */
 .cat-bar-pct { color: var(--text-3); font-size: 0.75rem; margin-left: 4px; }
@@ -599,11 +600,14 @@ a:focus-visible {
   font-family: var(--mono); font-size: 0.75rem; line-height: 1.2;
   margin-top: 2px;
 }
+.mc-amounts span { white-space: nowrap; }
+/* 아주 좁은 화면(320px)에서는 금액(약 40px)이 칸(35px)보다 넓다 — 칸 사이를 줄여 칸을 넓힌다 */
+@media (max-width: 360px) { .mc-grid { gap: 4px; } .mc-col { padding: 2px 0; } }
 .mc-inc { color: var(--income); }
 .mc-exp { color: var(--expense); }
 .mc-legend {
   display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center;
-  font-size: 0.74rem; color: var(--text-2);
+  font-size: 0.75rem; color: var(--text-2);
 }
 .mc-dot {
   display: inline-block; width: 10px; height: 10px;
@@ -627,7 +631,7 @@ a:focus-visible {
 .fixed-item:hover { background: var(--surface-hover); }
 .fixed-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .fixed-info { flex: 1; min-width: 0; }
-.fixed-name { font-size: 0.88rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fixed-name { font-size: 0.9rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .fixed-meta { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
 .fixed-amount { font-size: 0.95rem; font-weight: 700; font-family: var(--mono); color: var(--expense); }
 .fixed-amount.income { color: var(--income); }
@@ -636,7 +640,7 @@ a:focus-visible {
   display: flex; align-items: center; gap: 8px; justify-content: center;
   padding: 0.9rem 1rem; background: none;
   border: 1.5px dashed var(--border-strong); border-radius: var(--radius);
-  color: var(--text-2); font-size: 0.88rem; font-family: var(--font); font-weight: 500;
+  color: var(--text-2); font-size: 0.9rem; font-family: var(--font); font-weight: 500;
   cursor: pointer; width: 100%; margin-top: 4px;
   transition: border-color 0.15s, color 0.15s, background 0.15s, transform var(--dur-base) var(--ease-spring);
 }
@@ -754,10 +758,10 @@ a:focus-visible {
 .amount-presets { display: flex; gap: 6px; margin-top: 8px; }
 .amount-presets .preset-btn { flex: 1 1 0; min-width: 0; }
 /* 금액 읽기 표시 (utils.setupAmountHints) — 3,500만원 */
-.amount-hint { font-size: 0.78rem; color: var(--accent); font-weight: 600; min-height: 1.1em; margin-top: 2px; padding-left: 2px; }
+.amount-hint { font-size: 0.8rem; color: var(--accent); font-weight: 600; min-height: 1.1em; margin-top: 2px; padding-left: 2px; }
 .amount-hint:empty { display: none; }
 /* 입력칸 아래 안내 글 */
-.field-hint { font-size: 0.78rem; color: var(--text-2); line-height: 1.5; }
+.field-hint { font-size: 0.8rem; color: var(--text-2); line-height: 1.5; }
 .field-note {
   font-size: 0.8rem; color: var(--text-2); line-height: 1.5;
   background: var(--fixed-bg); border-radius: var(--radius); padding: 0.65rem 0.8rem;
@@ -777,7 +781,7 @@ a:focus-visible {
 .preset-btn {
   padding: 0.5rem 0; border: none; border-radius: 8px;
   background: var(--surface2); color: var(--text-2); font-family: var(--font);
-  font-size: 0.82rem; font-weight: 500; cursor: pointer;
+  font-size: 0.85rem; font-weight: 500; cursor: pointer;
   transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .preset-btn:hover { background: var(--accent-bg); color: var(--accent); }
@@ -789,7 +793,7 @@ a:focus-visible {
 }
 .type-btn, .kind-btn {
   flex: 1; padding: 0.5rem; border: none; background: none; cursor: pointer;
-  font-size: 0.88rem; font-family: var(--font); color: var(--text-2);
+  font-size: 0.9rem; font-family: var(--font); color: var(--text-2);
   border-radius: 9px;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform var(--dur-base) var(--ease-spring);
 }
@@ -803,14 +807,14 @@ a:focus-visible {
 .save-btn {
   padding: 0.65rem 1.5rem; background: var(--accent-fill); color: #fff;
   border: none; border-radius: var(--radius);
-  font-size: 0.88rem; font-family: var(--font); font-weight: 600; cursor: pointer;
+  font-size: 0.9rem; font-family: var(--font); font-weight: 600; cursor: pointer;
   transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .save-btn:hover { filter: brightness(1.08); }
 .delete-btn {
   padding: 0.65rem 1rem; background: var(--expense-bg); color: var(--expense);
   border: none; border-radius: var(--radius);
-  font-size: 0.88rem; font-family: var(--font); font-weight: 500;
+  font-size: 0.9rem; font-family: var(--font); font-weight: 500;
   cursor: pointer; margin-right: auto; transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .delete-btn:hover { filter: brightness(0.96); }
@@ -830,7 +834,7 @@ a:focus-visible {
 .confirm-actions { display: flex; gap: 8px; }
 .confirm-actions button {
   flex: 1; padding: 0.7rem; border-radius: var(--radius); border: none;
-  font-size: 0.88rem; font-family: var(--font); cursor: pointer;
+  font-size: 0.9rem; font-family: var(--font); cursor: pointer;
   transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .confirm-cancel { background: var(--surface2); color: var(--text-2); font-weight: 500; }
@@ -855,7 +859,7 @@ a:focus-visible {
 }
 .csv-drop-zone:hover, .csv-drop-zone.drag-over { border-color: var(--accent); background: var(--accent-bg); }
 .csv-drop-zone p { font-size: 0.9rem; font-weight: 600; color: var(--text); }
-.csv-drop-zone span { font-size: 0.78rem; color: var(--text-3); }
+.csv-drop-zone span { font-size: 0.8rem; color: var(--text-3); }
 .csv-preview { margin-top: 1rem; }
 .csv-preview table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .csv-preview th { background: var(--surface2); padding: 6px 8px; text-align: left; font-weight: 500; color: var(--text-2); }
@@ -878,11 +882,11 @@ a:focus-visible {
 .csv-mark.warn { background: var(--var-bg); color: var(--var-text); }
 .csv-existing {
   margin-top: 10px; padding: 0.75rem 0.875rem; border-radius: var(--radius);
-  background: var(--surface2); font-size: 0.82rem; color: var(--text-2); line-height: 1.5;
+  background: var(--surface2); font-size: 0.85rem; color: var(--text-2); line-height: 1.5;
 }
 .csv-existing .check-row { margin-top: 8px; font-size: 0.8rem; align-items: flex-start; }
 .csv-existing .check-row input { margin-top: 2px; flex-shrink: 0; }
-.csv-note { background: var(--surface2); border-radius: var(--radius); padding: 1rem; font-size: 0.82rem; }
+.csv-note { background: var(--surface2); border-radius: var(--radius); padding: 1rem; font-size: 0.85rem; }
 .csv-note strong { display: block; margin-bottom: 4px; color: var(--text); }
 .csv-note p { color: var(--text-2); line-height: 1.6; }
 /* 미리보기 안내 — 환불로 뒤집힌 행·날짜를 못 읽어 뺀 행 */
@@ -895,9 +899,9 @@ a:focus-visible {
 /* ── 카테고리 상세 모달 ── */
 #categoryDetailTitle { display: flex; align-items: center; gap: 8px; }
 .cd-cat-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.cd-total { margin-left: auto; font-family: var(--mono); font-size: 0.92rem; font-weight: 700; color: var(--expense); }
+.cd-total { margin-left: auto; font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: var(--expense); }
 #categoryDetailBody { max-height: 60vh; overflow-y: auto; padding: 0 0 0.5rem; }
-.cd-empty { color: var(--text-3); font-size: 0.88rem; text-align: center; padding: 2rem 0; }
+.cd-empty { color: var(--text-3); font-size: 0.9rem; text-align: center; padding: 2rem 0; }
 .cd-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 1.5rem; border-bottom: 1px solid var(--border);
@@ -905,24 +909,24 @@ a:focus-visible {
 }
 .cd-row:hover { background: var(--surface-hover); }
 .cd-row:last-child { border-bottom: none; }
-.cd-date { font-family: var(--mono); font-size: 0.78rem; color: var(--text-3); width: 44px; flex-shrink: 0; }
+.cd-date { font-family: var(--mono); font-size: 0.8rem; color: var(--text-3); width: 44px; flex-shrink: 0; }
 .cd-name {
-  flex: 1; min-width: 0; font-size: 0.88rem; color: var(--text);
+  flex: 1; min-width: 0; font-size: 0.9rem; color: var(--text);
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
-.cd-memo { font-size: 0.74rem; color: var(--text-3); }
-.cd-amt { font-family: var(--mono); font-size: 0.88rem; font-weight: 600; color: var(--expense); flex-shrink: 0; }
+.cd-memo { font-size: 0.75rem; color: var(--text-3); }
+.cd-amt { font-family: var(--mono); font-size: 0.9rem; font-weight: 600; color: var(--expense); flex-shrink: 0; }
 
 /* ── 예산안 뷰 ── */
 .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
 .plan-card { background: var(--surface); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-card); }
 .plan-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 0.5rem; }
-.plan-title { font-size: 0.98rem; font-weight: 700; letter-spacing: -0.01em; }
+.plan-title { font-size: 0.95rem; font-weight: 700; }
 .plan-me-tag {
   display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 1px 7px; border-radius: 6px;
   background: var(--accent-bg); color: var(--accent); margin-left: 6px; vertical-align: 2px;
 }
-.plan-sub { font-size: 0.78rem; color: var(--text-2); }
+.plan-sub { font-size: 0.8rem; color: var(--text-2); }
 .plan-donut-wrap { display: flex; justify-content: center; margin: 0.5rem 0; }
 /* 가운데 글자는 SVG 위에 겹친 HTML (금액 굴림은 HTML에서만 그려진다) — 크기는 예전 SVG 글자(160/140배)와 같게 */
 .plan-donut { position: relative; width: 160px; height: 160px; }
@@ -931,7 +935,7 @@ a:focus-visible {
   align-items: center; justify-content: center; text-align: center; pointer-events: none;
 }
 .plan-donut-lbl { font-size: 0.8rem; line-height: 1.2; color: var(--text-3); }
-.plan-donut-val { font-size: 1.14rem; font-weight: 700; line-height: 1.25; white-space: nowrap; }
+.plan-donut-val { font-size: 1.1rem; font-weight: 700; line-height: 1.25; white-space: nowrap; }
 .plan-rows { font-size: 0.85rem; }
 .plan-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .plan-row:last-child { border-bottom: none; }
@@ -939,20 +943,20 @@ a:focus-visible {
 .plan-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-pct { color: var(--text-3); font-size: 0.75rem; }
 .plan-amt { margin-left: auto; font-weight: 600; font-family: var(--mono); }
-.plan-empty { text-align: center; padding: 2rem 0; color: var(--text-3); font-size: 0.88rem; }
+.plan-empty { text-align: center; padding: 2rem 0; color: var(--text-3); font-size: 0.9rem; }
 .plan-empty p { margin-bottom: 1rem; }
 .plan-edit-btn {
   width: 100%; margin-top: 0.75rem; padding: 0.6rem;
   background: var(--surface2); border: none; border-radius: var(--radius);
-  color: var(--text-2); font-size: 0.82rem; font-weight: 500; font-family: var(--font); cursor: pointer;
+  color: var(--text-2); font-size: 0.85rem; font-weight: 500; font-family: var(--font); cursor: pointer;
   transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .plan-edit-btn:hover { background: var(--accent-bg); color: var(--accent); }
 .plan-edit { display: flex; flex-direction: column; gap: 8px; }
-.plan-edit label { font-size: 0.78rem; font-weight: 500; color: var(--text-2); margin-top: 4px; }
+.plan-edit label { font-size: 0.8rem; font-weight: 500; color: var(--text-2); margin-top: 4px; }
 .plan-edit input {
   padding: 0.55rem 0.75rem; border: 1.5px solid transparent; border-radius: 10px;
-  font-size: 0.88rem; font-family: var(--font); color: var(--text); background: var(--surface2);
+  font-size: 0.9rem; font-family: var(--font); color: var(--text); background: var(--surface2);
   outline: none; width: 100%; transition: border-color 0.15s, background 0.15s;
 }
 .plan-edit input:focus { border-color: var(--accent); background: var(--surface); }
@@ -978,7 +982,7 @@ a:focus-visible {
 .pe-del:hover { color: var(--expense); }
 .pe-add {
   padding: 0.55rem; background: none; border: 1.5px dashed var(--border-strong);
-  border-radius: 10px; color: var(--text-2); font-size: 0.82rem;
+  border-radius: 10px; color: var(--text-2); font-size: 0.85rem;
   font-family: var(--font); cursor: pointer;
   transition: border-color 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
@@ -998,7 +1002,7 @@ a:focus-visible {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 5px 12px; border-radius: 20px;
   background: var(--accent-bg); color: var(--accent);
-  font-size: 0.78rem; font-weight: 600; text-decoration: none;
+  font-size: 0.8rem; font-weight: 600; text-decoration: none;
   transition: background 0.15s, color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .wd-sheet-link:hover { background: var(--accent-fill); color: #fff; }
@@ -1015,7 +1019,7 @@ a:focus-visible {
 .wd-date { font-size: 0.85rem; color: var(--text-2); margin-top: 2px; }
 .wd-budget-line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-2); margin: 10px 0 5px; }
 .wd-budget-line strong { font-family: var(--mono); }
-.wd-payer-sum { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-3); margin-top: 8px; }
+.wd-payer-sum { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-3); margin-top: 8px; }
 .wd-payer-sum strong { color: var(--text-2); font-family: var(--mono); font-weight: 600; }
 .wd-seg { margin-bottom: 1rem; }
 .scope-btn:disabled { opacity: 0.45; cursor: default; }
@@ -1049,7 +1053,7 @@ a:focus-visible {
   width: 110px; padding: 0.3rem 0.5rem;
   border: 1.5px solid transparent; border-radius: 6px;
   background: var(--surface2); color: var(--text); outline: none;
-  font-family: var(--mono); font-size: 0.78rem; -moz-appearance: textfield;
+  font-family: var(--mono); font-size: 0.8rem; -moz-appearance: textfield;
 }
 .wd-pay-settle-amt::-webkit-outer-spin-button,
 .wd-pay-settle-amt::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1064,12 +1068,12 @@ a:focus-visible {
 .wd-pay-row.settled .wd-pay-settle-full { display: none; }
 .wd-pay-row.settled .wd-pay-settle-done { display: inline; }
 .wd-pay-row.settled .wd-pay-settle-amt { color: var(--income); }
-.wd-empty-note { font-size: 0.82rem; color: var(--text-3); padding: 8px 0; }
+.wd-empty-note { font-size: 0.85rem; color: var(--text-3); padding: 8px 0; }
 
 /* 결제 내역 (항목 모달) */
 .wd-pay-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 4px;
-  font-size: 0.82rem; padding: 6px 0; border-bottom: 1px solid var(--border);
+  font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--border);
 }
 .wd-pay-row:last-of-type { border-bottom: none; }
 .wd-pay-label { color: var(--text-2); min-width: 52px; }
@@ -1084,7 +1088,7 @@ a:focus-visible {
 .wd-pay-input { display: flex; gap: 6px; margin-top: 8px; }
 .wd-pay-input input {
   flex: 1; min-width: 0; padding: 0.45rem 0.6rem;
-  border: 1.5px solid transparent; border-radius: 8px; font-size: 0.82rem;
+  border: 1.5px solid transparent; border-radius: 8px; font-size: 0.85rem;
   background: var(--surface2); color: var(--text); outline: none; font-family: var(--font);
 }
 .wd-pay-input input:focus { border-color: var(--accent); }
@@ -1121,7 +1125,7 @@ a:focus-visible {
   stroke-dasharray: 1; stroke-dashoffset: 1;
 }
 .wd-task-chk:checked + .chk-mark path { stroke-dashoffset: 0; }
-.wd-task-title { font-size: 0.88rem; color: var(--text); }
+.wd-task-title { font-size: 0.9rem; color: var(--text); }
 .wd-task-row.done .wd-task-title { color: var(--text-3); }
 /* 완료 취소선 — text-decoration 대신 안쪽 인라인 요소의 선 그라데이션이라 왼쪽부터 그려질 수 있다(여러 줄도 줄마다) */
 .wd-task-row.done .strike {
@@ -1139,10 +1143,11 @@ a:focus-visible {
 .wd-banner {
   margin: 10px 1.5rem 0; padding: 0.65rem 1rem;
   background: var(--accent-bg); color: var(--accent);
-  border-radius: var(--radius); font-size: 0.82rem; font-weight: 600;
+  border-radius: var(--radius); font-size: 0.85rem; font-weight: 600;
   cursor: pointer; transition: filter 0.15s, transform var(--dur-base) var(--ease-spring);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.wd-banner .ico { margin-right: 6px; }
 .wd-banner:hover { filter: brightness(0.96); }
 .wd-banner:active { transform: scale(0.99); }
 
@@ -1179,7 +1184,7 @@ a:focus-visible {
 .wd-mc-cell {
   position: relative; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.78rem; color: var(--text-2); border-radius: 8px; cursor: pointer;
+  font-size: 0.8rem; color: var(--text-2); border-radius: 8px; cursor: pointer;
   transition: background 0.12s;
 }
 .wd-mc-cell:hover { background: var(--surface-hover); }
@@ -1200,7 +1205,7 @@ a:focus-visible {
 }
 .wd-event-past { opacity: 0.55; }
 .wd-event-past .wd-event-dday { color: var(--text-3); background: var(--surface2); }
-.wd-past-title { font-size: 0.78rem; color: var(--text-3); margin: 14px 0 6px; }
+.wd-past-title { font-size: 0.8rem; color: var(--text-3); margin: 14px 0 6px; }
 
 /* 메모 세그먼트 */
 .wd-memo-card {
@@ -1251,18 +1256,21 @@ a:focus-visible {
   box-shadow: 0 4px 12px rgba(49,130,246,0.35);
 }
 .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-3); }
-.empty-state .empty-emoji { display: block; font-size: 2.4rem; margin-bottom: 0.75rem; }
+.empty-state .empty-icon { display: block; margin-bottom: 12px; color: var(--text-3); line-height: 0; }
+.empty-state .empty-icon .ico { display: inline-block; }
+/* 선 아이콘(utils.js icon()) — 글자 옆에 놓일 때 글자 가운데에 맞춘다 */
+.ico { flex-shrink: 0; vertical-align: -0.15em; }
 .empty-state p { font-size: 0.9rem; }
 /* 데이터 로드 실패 안내 (app.js renderLoadError) */
-.empty-state .load-error-hint { font-size: 0.82rem; color: var(--text-2); margin-top: 6px; line-height: 1.5; }
+.empty-state .load-error-hint { font-size: 0.85rem; color: var(--text-2); margin-top: 6px; line-height: 1.5; }
 .empty-state .load-retry-btn { margin-top: 1rem; }
 /* 빈 상태의 다음 행동 안내·버튼 */
-.empty-state .empty-hint { display: inline-block; font-size: 0.82rem; color: var(--text-3); margin-top: 4px; }
+.empty-state .empty-hint { display: inline-block; font-size: 0.85rem; color: var(--text-3); margin-top: 4px; }
 .empty-state .empty-action { margin-top: 1rem; }
 .stats-empty { color: var(--text-3); font-size: 0.85rem; }
 /* 앱 스크립트를 불러오지 못했을 때 로그인 화면에 뜨는 안내 (index.html) */
 .boot-error { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-.boot-error p { font-size: 0.82rem; color: var(--text-2); line-height: 1.5; margin-bottom: 0.75rem; }
+.boot-error p { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; margin-bottom: 0.75rem; }
 
 /* ── 클릭 가능한 카드·행의 눌림 촉감 ──
    목록 행·달력 칸은 배경 음영 (토스 TDS·iOS 목록). 예전엔 통째로 0.98배 작아져, 스크롤하려고

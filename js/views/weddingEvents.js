@@ -70,11 +70,11 @@ function renderMiniCal() {
     <div class="wd-minical">
       <div class="wd-minical-head">
         <button class="arrow-btn" id="wdCalPrev" aria-label="이전 달">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <span class="wd-minical-title">${calYear}년 ${calMonth}월</span>
         <button class="arrow-btn" id="wdCalNext" aria-label="다음 달">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
       <div class="wd-minical-grid">${dayNames}${empties}${cells}</div>

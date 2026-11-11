@@ -6,7 +6,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort, escapeHtml } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, icon } from "../utils.js";
 import { openAddModal, openEditModal } from "../modals/txModal.js";
 import { renderTxRow } from "./list.js";
 
@@ -87,7 +87,7 @@ export function renderCalendarView() {
         <div class="day-num-wrap">
           <div class="day-num">${d}</div>
         </div>
-        ${weddingByDay[d] ? `<div class="cal-event" title="${escapeHtml(weddingByDay[d].map(e => e.title).join(", "))}"><span class="cal-event-ring">💍</span><span class="cal-event-text"> ${escapeHtml(weddingByDay[d][0].title)}${weddingByDay[d].length > 1 ? ` +${weddingByDay[d].length - 1}` : ""}</span></div>` : ""}
+        ${weddingByDay[d] ? `<div class="cal-event" title="${escapeHtml(weddingByDay[d].map(e => e.title).join(", "))}"><span class="cal-event-ring">${icon("ring", 12)}</span><span class="cal-event-text"> ${escapeHtml(weddingByDay[d][0].title)}${weddingByDay[d].length > 1 ? ` +${weddingByDay[d].length - 1}` : ""}</span></div>` : ""}
         <div class="cal-amounts">
           ${dd?.inc > 0 ? `<div class="cal-inc"><span class="cal-sign">+</span>${fmtMoneyShort(dd.inc)}</div>` : ""}
           ${dd?.exp > 0 ? `<div class="cal-exp"><span class="cal-sign">-</span>${fmtMoneyShort(dd.exp)}</div>` : ""}
@@ -149,7 +149,7 @@ function renderDayPanel(day, events) {
     inc > 0 ? `<span class="plus">+${fmtMoney(inc)}원</span>` : "",
   ].filter(Boolean).join("");
   const eventLines = events.map(e =>
-    `<div class="cal-day-event">💍 ${escapeHtml(e.title)}${e.time ? ` <span>${escapeHtml(e.time)}</span>` : ""}</div>`).join("");
+    `<div class="cal-day-event">${icon("ring", 14)}${escapeHtml(e.title)}${e.time ? ` <span>${escapeHtml(e.time)}</span>` : ""}</div>`).join("");
 
   return `
     <div class="cal-day-panel" data-date="${dateStr}">

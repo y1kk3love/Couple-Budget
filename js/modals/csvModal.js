@@ -114,7 +114,7 @@ function renderPreview() {
     </div>` : "";
 
   preview.innerHTML = `
-    <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
+    <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:8px">
       ${plan.length}건 인식됨 · <strong>새 내역 ${fresh}건</strong>${existing ? ` · 이미 있음 ${existing}건` : ""}
     </p>
     ${notes}

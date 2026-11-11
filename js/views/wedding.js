@@ -4,7 +4,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast, hasUnsavedInput } from "../utils.js";
+import { fmtMoney, fmtMoneyShort, escapeHtml, ownerName, emptyStateHTML, showToast, hasUnsavedInput, icon } from "../utils.js";
 import { getWeddingCategory } from "../constants.js";
 import {
   fetchWeddingConfig, fetchWeddingItems, fetchWeddingTasks, fetchWeddingVendors,
@@ -69,7 +69,7 @@ export function dDayInfo(dateStr, today = new Date()) {
   const target = new Date(y, m - 1, d);
   const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const diff = Math.round((target - t0) / 86400000);
-  const label = diff > 0 ? `D-${diff}` : diff === 0 ? "D-day 🎉" : `D+${-diff} 🎉`;
+  const label = diff > 0 ? `D-${diff}` : diff === 0 ? "D-day" : `D+${-diff}`;
   const dow = "일월화수목금토"[target.getDay()];
   return { label, pretty: `${y}년 ${m}월 ${d}일 (${dow})` };
 }
@@ -131,7 +131,7 @@ function renderHeader() {
   if (!cfg?.date) {
     return `
       <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="눌러서 설정">
-        <div class="wd-dday">💍 결혼 준비</div>
+        <div class="wd-dday">결혼 준비</div>
         <div class="wd-date">결혼식 날짜를 설정해주세요 — 눌러서 시작</div>
       </div>`;
   }
@@ -166,7 +166,7 @@ function renderHeader() {
   // 검증 시트 바로가기 — 설정에 저장된 링크가 있을 때만 (http/https만 렌더)
   const sheetOk = /^https?:\/\//.test(cfg.sheetUrl ?? "");
   const sheetLink = sheetOk
-    ? `<a class="wd-sheet-link" href="${escapeHtml(cfg.sheetUrl)}" target="_blank" rel="noopener" title="검증 시트 열기 (새 탭)">📄 검증 시트</a>`
+    ? `<a class="wd-sheet-link" href="${escapeHtml(cfg.sheetUrl)}" target="_blank" rel="noopener" title="검증 시트 열기 (새 탭)">${icon("link", 14)}검증 시트</a>`
     : "";
 
   return `
@@ -255,7 +255,7 @@ function renderBudgetSegment() {
       </div>`;
   }).join("");
 
-  const empty = items.length ? "" : emptyStateHTML("아직 예산 항목이 없어요", "💐");
+  const empty = items.length ? "" : emptyStateHTML("아직 예산 항목이 없어요", "wallet");
   // 막대 읽는 법 — 예전에는 마우스를 올려야 보이는 설명(title)뿐이라 폰에서는 빗금의 뜻을 알 수 없었다
   const legend = items.some(it => itemSpent(it) > 0)
     ? `<div class="wd-legend" aria-hidden="true"><span><i class="solid"></i>정산 완료</span><span><i class="hatch"></i>아직 정산 안 함</span></div>`

@@ -4,7 +4,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { escapeHtml, showToast, showConfirm, runWrite } from "../utils.js";
+import { escapeHtml, showToast, showConfirm, runWrite, icon } from "../utils.js";
 import { WEDDING_PERIODS } from "../constants.js";
 import { toggleWeddingTask, seedWeddingChecklist, fetchWeddingTasks } from "../weddingDb.js";
 import { renderWeddingView } from "./wedding.js";
@@ -32,7 +32,7 @@ export function renderChecklistSegment(container) {
   if (!tasks.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <span class="empty-emoji">📋</span>
+        <span class="empty-icon">${icon("checklist", 32)}</span>
         <p>아직 할 일이 없어요</p>
         <div class="wd-empty-actions">
           <button class="save-btn" id="wdSeedBtn">표준 체크리스트 불러오기</button>
