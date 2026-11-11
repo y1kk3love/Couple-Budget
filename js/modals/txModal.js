@@ -4,9 +4,12 @@
 
 import state from "../state.js";
 import { openOverlay, closeOverlay, flash, reducedMotion, animateNextRender } from "../motion.js";
-import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml, runWrite } from "../utils.js";
+import { showToast, showConfirm, todayStr, fmtMoney, setupAmountPresets, escapeHtml, runWrite, invalidField } from "../utils.js";
 import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import { addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName, updateCategoryByName, moveFixedTransaction } from "../db.js";
+import {
+  addTransaction, updateTransaction, deleteTransaction, fetchTransactions, fetchRecentTransactionsByName,
+  updateCategoryByName, countCategoryTargets, moveFixedTransaction
+} from "../db.js";
 import { renderAll } from "../app.js";
 
 let editingTxId = null;
@@ -16,10 +19,22 @@ let editingTx = null;
 
 // ── 열기 ──────────────────────────────────────────────────────
 
+// 날짜를 정하지 않고 추가할 때의 기본 날짜 — 이번 달을 보고 있으면 오늘, 다른 달을 보고 있으면 그 달.
+// 예전에는 항상 오늘이라, 지난달 화면에서 빠뜨린 영수증을 넣으면 이번 달에 저장되고 보던 화면에는
+// 아무 변화가 없어 다시 입력하게 됐다. (월과 무관한 화면 — 예산안·결혼 — 에서는 오늘)
+function defaultAddDate() {
+  const now = new Date();
+  const monthless = state.currentView === "plan" || state.currentView === "wedding";
+  if (monthless || (state.currentYear === now.getFullYear() && state.currentMonth === now.getMonth() + 1)) return todayStr();
+  const lastDay = new Date(state.currentYear, state.currentMonth, 0).getDate();
+  const pad = n => String(n).padStart(2, "0");
+  return `${state.currentYear}-${pad(state.currentMonth)}-${pad(Math.min(now.getDate(), lastDay))}`;
+}
+
 export function openAddModal(dateStr = null) {
   editingTxId = null;
   editingTx = null;
-  const date = dateStr ?? todayStr();
+  const date = dateStr ?? defaultAddDate();
   document.getElementById("modalTitle").textContent = "내역 추가";
   document.getElementById("txId").value = "";
   document.getElementById("txAmount").value = "";
@@ -199,11 +214,13 @@ export function setupTxModal() {
 
   // 저장
   document.getElementById("saveTxBtn").addEventListener("click", async e => {
+    const btn    = e.currentTarget;
+    if (btn.disabled) return;
     const amount = parseInt(document.getElementById("txAmount").value);
     const date   = document.getElementById("txDate").value;
 
-    if (!amount || amount <= 0) { showToast("금액을 입력하세요"); return; }
-    if (!date)                  { showToast("날짜를 선택하세요"); return; }
+    if (!amount || amount <= 0) { invalidField(document.getElementById("txAmount"), "금액을 입력하세요"); return; }
+    if (!date)                  { invalidField(document.getElementById("txDate"), "날짜를 선택하세요"); return; }
 
     const [y, m] = date.split("-").map(Number);
     const type   = getType();
@@ -224,10 +241,30 @@ export function setupTxModal() {
     // 새 내역에만 작성자를 기록 — 수정 시에는 원래 작성자를 보존한다
     if (!editingTxId) data.owner = state.currentUser?.email ?? null;
 
+    // 카테고리를 바꿨고 같은 이름의 다른 내역이 있으면, 그것들도 함께 바꿀지 먼저 묻는다.
+    // 예전에는 묻지 않고 전 기간의 같은 이름 내역(상대가 입력한 것 포함)을 모두 바꾸고 3초짜리
+    // 안내만 띄웠다 — 하루만 다르게 분류하려던 수정이 과거 분류를 되돌릴 수 없게 덮어썼다.
+    let propagate = false;
+    if (editingTxId && editingTx && editingTx.category !== data.category) {
+      btn.disabled = true; // 세는 동안의 연타 방지 (runWrite가 잠그기 전)
+      let others = 0;
+      try { others = await countCategoryTargets(data.name, data.type, data.category, editingTxId); }
+      catch (err) { console.warn("같은 이름 내역 수를 세지 못했습니다 — 이 내역만 바꿉니다:", err); }
+      finally { btn.disabled = false; }
+      if (others > 0) {
+        const catName = getCategoryInfo(data.category, data.type).name;
+        const choice = await showConfirm(
+          `'${data.name}' 내역이 ${others}건 더 있어요.\n모두 '${catName}'(으)로 바꿀까요?`,
+          { confirmText: `${others}건 모두 바꾸기`, altText: "이 내역만 바꾸기", danger: false });
+        if (choice === false) return; // 취소 — 저장하지 않고 입력 창으로 돌아간다
+        propagate = choice === true;
+      }
+    }
+
     // 쓰기 성공 후에만 모달을 닫는다 — 실패 시 입력값을 보존하고 알린다
     let toastMsg;
     let savedId = null; // 저장한 거래 ID — 다시 그린 뒤 그 행(달력은 그 날짜 칸)을 반짝인다
-    const ok = await runWrite(e.currentTarget, async () => {
+    const ok = await runWrite(btn, async () => {
       if (editingTxId) {
         const prev = editingTx;
         // 고정비 자동생성 거래를 다른 달로 옮기면 원래 달엔 skip 마커, 옮긴 달엔 새 일반 거래
@@ -237,15 +274,16 @@ export function setupTxModal() {
         if (movedFixed) savedId = await moveFixedTransaction(editingTxId, prev, data);
         else          { await updateTransaction(editingTxId, data); savedId = editingTxId; }
 
-        // 카테고리를 바꿨으면 같은 이름의 거래 전체(전 기간)에 전파
-        let synced = 0;
-        if (prev && prev.category !== data.category) {
-          synced = await updateCategoryByName(data.name, data.type, data.category, editingTxId);
-        }
+        // 사용자가 고른 경우에만 같은 이름의 거래 전체(전 기간)에 카테고리를 전파
+        const synced = propagate
+          ? await updateCategoryByName(data.name, data.type, data.category, savedId)
+          : 0;
         toastMsg = synced > 0 ? `수정되었습니다 · 같은 이름 ${synced}건 카테고리 변경` : "수정되었습니다";
+        if (prev && (prev.year !== data.year || prev.month !== data.month)) toastMsg += ` · ${m}월로 옮겼어요`;
       } else {
         savedId = await addTransaction(data);
-        toastMsg = "추가되었습니다";
+        // 어느 날짜에 들어갔는지 알린다 — 보고 있는 달이 아니면 화면에 변화가 없어 사라진 것처럼 보였다
+        toastMsg = `${m}월 ${Number(date.split("-")[2])}일 내역으로 추가되었습니다`;
       }
     });
     if (!ok) return;

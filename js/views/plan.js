@@ -283,6 +283,10 @@ function bindEvents(container, myEmail) {
     },
   });
 
+  // 입력할 때마다 초안에 회수한다 — 예전에는 행 추가·삭제·저장 때만 회수해서, 수정 중에 다른 탭을
+  // 잘못 눌렀다 돌아오면(화면을 다시 그린다) 그사이 입력한 값이 사라졌다
+  container.querySelector(".plan-edit")?.addEventListener("input", () => { if (editing && draft) syncDraft(container); });
+
   container.querySelector("#peCancelBtn")?.addEventListener("click", () => {
     resetPlanEdit();
     renderPlanView();

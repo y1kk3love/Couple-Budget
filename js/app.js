@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "./state.js";
-import { fmtMoney, showToast, todayStr, downloadCSV, escapeHtml, hasUnsavedInput } from "./utils.js";
+import { fmtMoney, showToast, showConfirm, todayStr, downloadCSV, escapeHtml, hasUnsavedInput } from "./utils.js";
 import { getCategoryInfo } from "./constants.js";
 import {
   fetchTransactions, fetchFixedItems,
@@ -22,12 +22,14 @@ import { renderStatsView, setupCategoryDetailModal } from "./views/stats.js";
 import { renderFixedView }    from "./views/fixed.js";
 import { renderPlanView, resetPlanEdit } from "./views/plan.js";
 import { renderWeddingView, setWeddingSegment, markWeddingStale, weddingAddAction } from "./views/wedding.js";
+import { resetMemoDraft } from "./views/weddingMemo.js";
 import { setupWeddingModals } from "./modals/weddingModal.js";
 import { fetchWeddingEvents } from "./weddingDb.js";
 import { startSync } from "./sync.js";
+import { setupBackup } from "./backup.js";
 import {
   playEntrance, slideLabel, rollNumber, animateWidth, setupSegmentThumbs, setupSheetDrag, setupTouchFeedback,
-  highlightRows
+  highlightRows, setupOverlayGuard, isOverlayDirty
 } from "./motion.js";
 
 // 다음 렌더 때 재생할 화면 등장 효과 — 0: 탭 전환(순차 등장), ±1: 월 이동(옆에서 밀려옴),
@@ -70,6 +72,7 @@ export async function initApp() {
 // 내가 쓰던 초안·입력이 보이거나 상대 이름으로 저장되지 않도록 비운다.
 export function resetSessionUI() {
   resetPlanEdit();
+  resetMemoDraft();
   // 열린 모달은 각자의 닫기 버튼으로 닫아 모달별 정리 로직을 태운다 (확인 다이얼로그는 취소)
   document.querySelector(".confirm-overlay:not(.is-closing) .confirm-cancel")?.click();
   document.querySelectorAll(".modal-overlay:not(.hidden):not(.is-closing) .modal-close").forEach(b => b.click());
@@ -408,6 +411,21 @@ function switchView(view) {
   renderAll();
 }
 
+// ── 입력한 창 닫힘 확인 ───────────────────────────────────────
+// 배경 누르기·Esc·시트 끌어내리기처럼 실수로 닫히기 쉬운 경로에서, 입력한 내용이 있으면 먼저 묻는다.
+// (X 버튼과 저장·삭제 뒤의 닫힘은 묻지 않는다 — motion.js의 설명 참고)
+let discardAsking = false;
+async function confirmDiscard(overlay) {
+  if (discardAsking) return;
+  discardAsking = true;
+  try {
+    const ok = await showConfirm("입력한 내용을 버리고 닫을까요?", { confirmText: "버리기", cancelText: "계속 입력" });
+    if (ok) overlay.querySelector(".modal-close")?.click();
+  } finally {
+    discardAsking = false;
+  }
+}
+
 // ── 전역 키보드 (접근성) ──────────────────────────────────────
 
 function setupGlobalKeys() {
@@ -415,6 +433,8 @@ function setupGlobalKeys() {
     // Esc → 열려 있는 모달 닫기 (확인 다이얼로그는 utils.js에서 자체 처리)
     if (e.key === "Escape" && !document.querySelector(".confirm-overlay:not(.is-closing)")) {
       const open = document.querySelector(".modal-overlay:not(.hidden):not(.is-closing)");
+      // 입력한 내용이 있으면 버릴지 먼저 묻는다 (motion.setupOverlayGuard)
+      if (open && isOverlayDirty(open)) { confirmDiscard(open); return; }
       // 각 모달의 닫기 버튼을 눌러 모달별 정리 로직(초기화 등)을 그대로 태운다
       open?.querySelector(".modal-close")?.click();
       return;
@@ -483,6 +503,7 @@ setupThemeToggle();
 setupSegmentThumbs(); // 세그먼트 컨트롤 슬라이딩 배경 (어느 화면이든 자동)
 setupSheetDrag();     // 모바일 바텀시트 끌어서 닫기
 setupTouchFeedback(); // 아이폰에서도 :active 눌림 효과가 보이도록
+setupOverlayGuard(confirmDiscard); // 입력한 창을 배경 누르기·Esc·끌어내리기로 닫을 때 확인
 document.getElementById("csvExportBtn").addEventListener("click", exportAllCsv);
 document.getElementById("sideExportBtn").addEventListener("click", exportAllCsv); // 모바일 햄버거 메뉴
 document.getElementById("addTxBtn").addEventListener("click", onAddClick);
@@ -493,6 +514,7 @@ setupCsvModal();
 setupBudgetModal();
 setupWeddingModals();
 setupCategoryDetailModal();
+setupBackup();
 // 여기까지 왔으면 모든 모듈이 정상 로드됐다 — index.html의 "불러오지 못했어요" 안내를 끈다
 window.__appBooted = true;
 document.getElementById("bootError")?.classList.add("hidden");

@@ -3,7 +3,7 @@
 // ================================================================
 
 import state from "../state.js";
-import { openOverlay, closeOverlay, animateNextRender } from "../motion.js";
+import { openOverlay, closeOverlay, animateNextRender, markOverlayDirty } from "../motion.js";
 import { showToast, showConfirm, setupAmountPresets, escapeHtml, fmtMoney, todayStr, ownerName, runWrite } from "../utils.js";
 import { WEDDING_CATEGORIES, WEDDING_PERIODS, getWeddingCategory } from "../constants.js";
 import {
@@ -213,6 +213,7 @@ function renderPayments() {
   box.querySelectorAll(".wd-pay-del").forEach(btn =>
     btn.addEventListener("click", () => {
       draftPayments.splice(Number(btn.dataset.payI), 1);
+      markOverlayDirty(box); // 결제 내역을 고쳤다 — 실수로 닫을 때 확인
       renderPayments();
     })
   );
@@ -233,6 +234,7 @@ function renderPayments() {
     btn.addEventListener("click", () => {
       const p = draftPayments[Number(btn.dataset.settleFull)];
       withSettled(p, p.amount);
+      markOverlayDirty(box);
       renderPayments();
     })
   );
@@ -271,6 +273,7 @@ function commitPayInput() {
   if (raw === "") return "none";
   const amount = parseInt(raw);
   if (!amount || amount <= 0) return "invalid";
+  markOverlayDirty(document.getElementById("wdPayments"));
   draftPayments.push({
     label:  row.querySelector(".wd-pay-in-label").value.trim() || "결제",
     amount,

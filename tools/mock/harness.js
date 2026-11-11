@@ -70,11 +70,13 @@ window.__expect = () => {
   };
 };
 
+window.__checkCount = 0; // 이 페이지에서 돌린 검사 수 (t20은 첫 검사일 때만 "페이지를 연 뒤 전체 쓰기"를 본다)
 window.__check = async (name, variant = "") => {
+  const order = ++window.__checkCount;
   let result;
   try {
     const mod = await import(new URL(`checks/${name}.js?${Date.now()}`, import.meta.url).href);
-    result = await mod.default({ variant });
+    result = await mod.default({ variant, first: order === 1 });
   } catch (e) {
     result = { pass: false, failures: [`예외: ${e?.name}: ${e?.message}`], info: String(e?.stack ?? "").slice(0, 800) };
   }

@@ -1,5 +1,6 @@
 // ================================================================
 // js/modals/csvModal.js — CSV 가져오기 모달
+// 파싱·문서 ID·기존 내역과의 대조는 js/csvParse.js (순수 함수, Node 테스트 대상)
 // ================================================================
 
 import { db } from "../../firebase.js";
@@ -7,48 +8,16 @@ import { doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/fire
 import state from "../state.js";
 import { openOverlay, closeOverlay } from "../motion.js";
 import { showToast, fmtMoney, escapeHtml } from "../utils.js";
-import { CATEGORIES, getCategoryInfo } from "../constants.js";
-import { fetchTransactions, invalidateBalanceCache } from "../db.js";
+import { getCategoryInfo } from "../constants.js";
+import { fetchTransactions, fetchAllTransactions, invalidateBalanceCache } from "../db.js";
+import { parseCSV, buildImportOps, planImport } from "../csvParse.js";
 import { renderAll } from "../app.js";
 
-let parsedRows = [];
-
-const categoryNameToId = Object.fromEntries(
-  CATEGORIES.expense.map(c => [c.name, c.id])
-);
-const incomeNameToId = Object.fromEntries(
-  CATEGORIES.income.map(c => [c.name, c.id])
-);
-
-// 문자열을 안정적인 짧은 해시로 (FNV-1a 32bit). 가맹점명을 문서 ID에
-// 안전하게 끼워넣기 위한 용도라 암호학적 강도는 필요 없음.
-function hashStr(s) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(36);
-}
-
-// 같은 CSV를 다시 가져와도 중복이 쌓이지 않도록, 행 내용으로 결정적
-// 문서 ID를 만든다. 한 파일 안에 완전히 동일한 행(같은 날·금액·가맹점)이
-// 여러 건이면 occ(등장 순번)로 구분해 모두 보존한다.
-// idName: ID용 원래 가맹점명 — 환불 행은 표시 이름에 "환불"이 붙지만 ID는 예전 방식 그대로
-// 만들어, 부호가 사라진 채 지출로 잘못 들어간 예전 기록을 같은 파일 재가져오기로 바로잡는다.
-function buildImportOps(rows) {
-  const seen = new Map();
-  return rows.map(({ idName, ...row }) => {
-    const [y, m]  = row.date.split("-").map(Number);
-    const baseKey = `${row.date}_${row.amount}_${hashStr(idName)}`;
-    const occ     = seen.get(baseKey) ?? 0;
-    seen.set(baseKey, occ + 1);
-    return {
-      id:   `csv_${baseKey}_${occ}`,
-      data: { ...row, year: y, month: m, owner: state.currentUser?.email ?? null },
-    };
-  });
-}
+// 가져오기 계획 — 파일을 읽을 때 만든다: [{ id, data, exists, suspect }]
+// exists: 같은 문서가 이미 있음(예전에 가져온 행) — 기본은 건너뛴다
+let plan = [];
+let parseInfo = null; // 미리보기 안내용 { badDates, badAmounts, reversed }
+let fileSeq = 0;      // 파일을 연달아 고르면 나중 것만 반영
 
 // ── 열기/닫기 ─────────────────────────────────────────────────
 
@@ -57,154 +26,66 @@ function openModal()  { resetModal(); openOverlay(document.getElementById("csvMo
 function closeModal() { closeOverlay(document.getElementById("csvModal")); }
 
 function resetModal() {
-  parsedRows = [];
+  plan = [];
+  parseInfo = null;
+  fileSeq++;
   document.getElementById("csvPreview").classList.add("hidden");
   document.getElementById("csvImportConfirm").classList.add("hidden");
   document.getElementById("csvFileInput").value = "";
 }
 
-// ── CSV 파싱 ──────────────────────────────────────────────────
+const overwriteChecked = () => document.getElementById("csvOverwrite")?.checked ?? false;
+// 이번에 실제로 쓸 행 — 새 행, 그리고 "덮어쓰기"를 골랐을 때만 이미 있는 행
+const opsToWrite = () => plan.filter(op => !op.exists || overwriteChecked());
 
-// 한 줄을 필드 배열로 분해 — 따옴표로 감싼 필드 안의 쉼표("ABC, DEF")와
-// 이중 따옴표 이스케이프("")를 처리한다. (필드 내 줄바꿈은 미지원)
-function parseCsvLine(line) {
-  const out = [];
-  let cur = "", inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
-        else inQuotes = false;
-      } else cur += ch;
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      out.push(cur); cur = "";
-    } else cur += ch;
-  }
-  out.push(cur);
-  return out.map(v => v.trim());
-}
-
-// 금액 문자열 → { amount: 양의 정수(원), negative } — 읽을 수 없으면 null.
-// "-15,000", 유니코드 마이너스 "−15,000", 회계식 "(15,000)", "12,000원", "₩12,000", "12000.00"을 처리한다.
-// 예전에는 숫자 외 문자를 모두 지워 부호와 소수점이 사라졌다
-// (환불 -15,000이 지출 15,000으로, 12000.00이 1,200,000으로 들어왔다).
-function parseAmount(raw) {
-  // 숫자·부호·소수점·괄호 외의 문자("원", "₩", 통화 표기, 인코딩이 깨진 기호 등)는 버린다 — 예전처럼 관대하게
-  let s = String(raw ?? "").replace(/−/g, "-").replace(/[^\d.+\-()]/g, "");
-  let negative = false;
-  const paren = s.match(/^\((.*)\)$/);
-  if (paren) { negative = true; s = paren[1]; }
-  const m = s.match(/^([+-]?)(\d+(?:\.\d+)?)/);
-  if (!m) return null;
-  if (m[1] === "-") negative = !negative;
-  return { amount: Math.round(parseFloat(m[2])), negative };
-}
-
-// 날짜 문자열 → "YYYY-MM-DD" — 읽을 수 없거나 없는 날짜면 null.
-// 2026-09-01 / 2026.09.01 / 2026. 9. 1 / 2026/09/01 / 2026년 9월 1일 / 20260901, 뒤에 시간이 붙어도 된다.
-// 예전에는 모르는 형식을 오늘 날짜로 넣어 버려, 전부 이번 달에 쌓이고 다른 날 다시
-// 가져오면 문서 ID(날짜 포함)가 달라져 중복이 생겼다. 이제는 그 행을 빼고 미리보기에서 알린다.
-function parseDate(raw) {
-  const s = String(raw ?? "").trim();
-  const m = s.match(/^(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/) ||
-            s.match(/^(\d{4})(\d{2})(\d{2})(?!\d)/);
-  if (!m) return null;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  if (mo < 1 || mo > 12 || d < 1 || d > new Date(y, mo, 0).getDate()) return null;
-  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-// 반환: { rows, badDates: 날짜를 읽지 못해 뺀 행 수, reversed: 음수라 수입↔지출을 뒤집은 행 수 }
-function parseCSV(text) {
-  const result = { rows: [], badDates: 0, reversed: 0 };
-  const lines  = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return result;
-
-  const headers = parseCsvLine(lines[0]);
-
-  // 신한카드 주요 컬럼명 자동 감지
-  const dateKey = headers.find(h => /날짜|일자|거래일/.test(h));
-  const amtKey  = headers.find(h => /금액|이용금액/.test(h));
-  const nameKey = headers.find(h => /가맹점|내용|적요/.test(h));
-  const typeKey = headers.find(h => /구분|입출금/.test(h));
-  const catKey  = headers.find(h => /카테고리/.test(h));
-
-  for (const line of lines.slice(1)) {
-    const vals = parseCsvLine(line);
-    if (vals.length < 2) continue;
-
-    const row    = Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
-    const parsed = parseAmount(row[amtKey]);
-    if (!parsed?.amount) continue; // 금액 없는 행(소계·빈 줄 등)은 조용히 건너뜀
-
-    const date = parseDate(row[dateKey]);
-    if (!date) { result.badDates++; continue; }
-
-    const baseType = /입금|수입/.test(row[typeKey] ?? "") ? "income" : "expense";
-    // 음수 금액은 반대 방향 거래 — 카드 지출의 음수는 환불(수입), 입금의 음수는 취소(지출)
-    const type = parsed.negative ? (baseType === "expense" ? "income" : "expense") : baseType;
-    if (parsed.negative) result.reversed++;
-
-    const rawCat  = row[catKey] ?? "";
-    // 카테고리 이름이 있으면 타입에 맞는 목록에서 찾고, 없으면 기타로
-    const category = type === "income"
-      ? (incomeNameToId[rawCat] ?? "etc_in")
-      : (categoryNameToId[rawCat] ?? "etc");
-
-    const merchant = row[nameKey] || "";
-    // 뒤집힌 행은 이름에 표시 — 같은 가맹점의 원래 거래와 구분되고, 목록에서도 바로 알아본다
-    const suffix = !parsed.negative ? "" : baseType === "expense" ? " 환불" : " 취소";
-    const label  = merchant ? `${merchant}${suffix}` : "";
-
-    result.rows.push({
-      name:     label || "내역",
-      amount:   parsed.amount,
-      date,
-      type,
-      category,
-      kind:     "variable",
-      memo:     label,
-      idName:   merchant || "내역", // buildImportOps가 ID를 만들 때만 쓰고 저장하지 않음
-    });
-  }
-  return result;
+function refreshConfirmButton() {
+  const btn = document.getElementById("csvImportConfirm");
+  const n = opsToWrite().length;
+  btn.classList.toggle("hidden", n === 0);
+  btn.textContent = `${n.toLocaleString("ko-KR")}건 가져오기`;
 }
 
 // ── 미리보기 렌더 ─────────────────────────────────────────────
 
-function renderPreview({ rows, badDates, reversed }) {
+function renderPreview() {
   const preview = document.getElementById("csvPreview");
+  const { badDates, badAmounts, reversed } = parseInfo;
+  const existing = plan.filter(op => op.exists).length;
+  const fresh    = plan.length - existing;
+  const suspects = plan.filter(op => op.suspect).length;
 
   // 조용히 바뀌거나 빠지는 행이 없도록 미리보기에서 알린다
   const notes = [
-    reversed ? `금액이 음수인 ${reversed}건은 환불·취소로 보고 반대 방향(지출↔수입)으로 가져옵니다.` : "",
-    badDates ? `날짜를 읽지 못한 ${badDates}건은 제외했습니다.` : "",
+    reversed   ? `금액이 음수인 ${reversed}건은 환불·취소로 보고 반대 방향(지출↔수입)으로 가져옵니다.` : "",
+    badDates   ? `날짜를 읽지 못한 ${badDates}건은 제외했습니다.` : "",
+    badAmounts ? `금액을 읽지 못한 ${badAmounts}건은 제외했습니다.` : "",
+    suspects   ? `직접 입력한 내역과 날짜·금액이 같은 ${suspects}건이 있어요(표의 '중복 의심'). 가져온 뒤 겹치는지 확인해 주세요.` : "",
   ].filter(Boolean).map(n => `<p class="csv-warn">${n}</p>`).join("");
 
-  if (!rows.length) {
+  if (!plan.length) {
     preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">인식된 데이터가 없습니다. CSV 형식을 확인해주세요.</p>${notes}`;
     preview.classList.remove("hidden");
     document.getElementById("csvImportConfirm").classList.add("hidden");
     return;
   }
 
-  const tableRows = rows.map(r => {
+  const tableRows = plan.map(({ data: r, exists, suspect }) => {
     const color   = r.type === "income" ? "var(--income)" : "var(--expense)";
     const sign    = r.type === "income" ? "+" : "-";
     const catName = getCategoryInfo(r.category, r.type).name;
-    return `<tr>
+    const mark    = exists ? `<span class="csv-mark">이미 있음</span>` : suspect ? `<span class="csv-mark warn">중복 의심</span>` : "";
+    return `<tr class="${exists ? "csv-exists" : ""}">
       <td>${escapeHtml(r.date)}</td>
-      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.name)}${mark}</td>
       <td style="color:${color}">${sign}${fmtMoney(r.amount)}</td>
       <td>${escapeHtml(catName)}</td>
     </tr>`;
   }).join("");
 
-  const totalIncome  = rows.filter(r => r.type === "income").reduce((s, r) => s + r.amount, 0);
-  const totalExpense = rows.filter(r => r.type === "expense").reduce((s, r) => s + r.amount, 0);
+  // 합계는 새로 들어올 행만 (이미 있는 행은 기본으로 건너뛰므로)
+  const freshRows    = plan.filter(op => !op.exists).map(op => op.data);
+  const totalIncome  = freshRows.filter(r => r.type === "income").reduce((s, r) => s + r.amount, 0);
+  const totalExpense = freshRows.filter(r => r.type === "expense").reduce((s, r) => s + r.amount, 0);
   const net          = totalIncome - totalExpense;
   const netColor     = net >= 0 ? "var(--income)" : "var(--expense)";
   const netSign      = net >= 0 ? "+" : "-";
@@ -216,14 +97,25 @@ function renderPreview({ rows, badDates, reversed }) {
       <div class="csv-summary-row"><span>수입</span><strong style="color:var(--income)">+${fmtMoney(totalIncome)}원</strong></div>
       <div class="csv-summary-row csv-summary-net"><span>합계</span><strong style="color:${netColor}">${netSign}${fmtMoney(net)}원</strong></div>`;
   } else if (totalExpense) {
-    summaryRows = `<div class="csv-summary-row"><span>총 지출</span><strong style="color:var(--expense)">-${fmtMoney(totalExpense)}원</strong></div>`;
+    summaryRows = `<div class="csv-summary-row"><span>새 내역 총 지출</span><strong style="color:var(--expense)">-${fmtMoney(totalExpense)}원</strong></div>`;
   } else if (totalIncome) {
-    summaryRows = `<div class="csv-summary-row"><span>총 수입</span><strong style="color:var(--income)">+${fmtMoney(totalIncome)}원</strong></div>`;
+    summaryRows = `<div class="csv-summary-row"><span>새 내역 총 수입</span><strong style="color:var(--income)">+${fmtMoney(totalIncome)}원</strong></div>`;
   }
+
+  // 이미 있는 행 — 기본은 건너뛴다. 예전에는 통째로 덮어써서, 가져온 뒤 고친 카테고리·이름이
+  // CSV 값으로 되돌아갔다. 예전 파일의 잘못된 값을 바로잡으려는 경우에만 덮어쓰기를 고른다.
+  const existingBox = existing ? `
+    <div class="csv-existing">
+      <p>이미 가져온 내역 <strong>${existing}건</strong>은 건너뜁니다 — 가져온 뒤 고친 내용이 그대로 남아요.</p>
+      <label class="check-row">
+        <input type="checkbox" id="csvOverwrite" />
+        <span>이미 있는 ${existing}건도 CSV 내용으로 덮어쓰기 (고친 카테고리·이름이 CSV 값으로 돌아가요)</span>
+      </label>
+    </div>` : "";
 
   preview.innerHTML = `
     <p style="font-size:0.82rem;color:var(--text-2);margin-bottom:8px">
-      ${rows.length}건 인식됨
+      ${plan.length}건 인식됨 · <strong>새 내역 ${fresh}건</strong>${existing ? ` · 이미 있음 ${existing}건` : ""}
     </p>
     ${notes}
     <div style="max-height:260px;overflow-y:auto">
@@ -232,19 +124,42 @@ function renderPreview({ rows, badDates, reversed }) {
         <tbody>${tableRows}</tbody>
       </table>
     </div>
-    <div class="csv-summary">${summaryRows}</div>`;
+    <div class="csv-summary">${summaryRows}</div>
+    ${existingBox}`;
+  preview.querySelector("#csvOverwrite")?.addEventListener("change", refreshConfirmButton);
   preview.classList.remove("hidden");
-  document.getElementById("csvImportConfirm").classList.remove("hidden");
+  refreshConfirmButton();
+}
+
+function renderPreviewError(msg) {
+  const preview = document.getElementById("csvPreview");
+  preview.innerHTML = `<p style="color:var(--expense);font-size:0.85rem">${msg}</p>`;
+  preview.classList.remove("hidden");
+  document.getElementById("csvImportConfirm").classList.add("hidden");
 }
 
 // ── 파일 처리 ─────────────────────────────────────────────────
 
 function handleFile(file) {
+  const seq = ++fileSeq;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     const parsed = parseCSV(e.target.result);
-    parsedRows = parsed.rows;
-    renderPreview(parsed);
+    const ops    = buildImportOps(parsed.rows, state.currentUser?.email ?? null);
+    // 지금 있는 내역과 대조해 "새 내역 / 이미 있음"을 가른다. 대조하지 못하면 가져오지 않는다 —
+    // 모르는 채로 쓰면 예전처럼 고친 내용을 덮어쓸 수 있다.
+    let existing;
+    try {
+      existing = await fetchAllTransactions();
+    } catch (err) {
+      console.error("CSV 가져오기: 기존 내역 조회 실패", err);
+      if (seq === fileSeq) renderPreviewError("지금 있는 내역을 확인하지 못해 가져올 수 없어요. 네트워크를 확인한 뒤 파일을 다시 선택해 주세요.");
+      return;
+    }
+    if (seq !== fileSeq) return; // 그 사이 다른 파일을 골랐거나 창을 다시 열었다
+    plan = planImport(ops, existing);
+    parseInfo = parsed;
+    renderPreview();
   };
   reader.readAsText(file, "euc-kr");
 }
@@ -279,15 +194,17 @@ export function setupCsvModal() {
   // 가져오기 확정
   document.getElementById("csvImportConfirm").addEventListener("click", async e => {
     const btn = e.currentTarget;
-    if (!parsedRows.length || btn.disabled) return;
+    const ops = opsToWrite();
+    if (!ops.length || btn.disabled) return;
 
-    const count = parsedRows.length;
-    const ops   = buildImportOps(parsedRows);
+    const skipped = plan.length - ops.length;
+    const label   = btn.textContent;
 
     // writeBatch는 한 번에 최대 500개 쓰기. 여유를 두고 450개씩 끊어 커밋.
     // 실패 시 전용 안내(이어서 가져오기)가 필요해 runWrite 대신 직접 잠근다 — 연타 방지는 동일
     const CHUNK = 450;
     btn.disabled = true;
+    btn.textContent = "가져오는 중…";
     try {
       for (let i = 0; i < ops.length; i += CHUNK) {
         const batch = writeBatch(db);
@@ -298,20 +215,24 @@ export function setupCsvModal() {
       }
     } catch (err) {
       btn.disabled = false;
-      // 청크 일부만 커밋됐을 수 있다 — 문서 ID가 결정적이라 같은 파일을
-      // 다시 가져오면 중복 없이 이어서 채워진다
+      btn.textContent = label;
+      // 청크 일부만 커밋됐을 수 있다 — 문서 ID가 결정적이라 버튼을 다시 누르면 같은 문서에
+      // 같은 내용을 다시 쓸 뿐 중복 없이 이어서 채워진다
       console.error("CSV 가져오기 실패:", err);
       invalidateBalanceCache();
-      showToast("가져오기에 실패했습니다. 같은 파일로 다시 시도하면 이어서 가져옵니다");
+      showToast("가져오기에 실패했습니다. 다시 누르면 이어서 가져옵니다");
       await fetchTransactions();
       renderAll();
       return;
     }
     btn.disabled = false;
+    btn.textContent = label;
     invalidateBalanceCache();
 
     closeModal();
-    showToast(`${count}건을 가져왔습니다`);
+    showToast(skipped
+      ? `${ops.length}건을 가져왔습니다 · 이미 있던 ${skipped}건은 그대로 두었어요`
+      : `${ops.length}건을 가져왔습니다`);
     await fetchTransactions();
     renderAll();
   });

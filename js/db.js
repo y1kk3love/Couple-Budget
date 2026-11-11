@@ -145,11 +145,21 @@ export async function updateCategoryByName(name, type, category, excludeId = nul
   });
   if (!targets.length) return 0;
 
-  const batch = writeBatch(db);
-  targets.forEach(d => batch.update(d.ref, { category }));
-  await batch.commit();
+  // writeBatch 한도(500) 여유를 두고 450개씩
+  for (let i = 0; i < targets.length; i += 450) {
+    const batch = writeBatch(db);
+    targets.slice(i, i + 450).forEach(d => batch.update(d.ref, { category }));
+    await batch.commit();
+  }
   invalidateBalanceCache();
   return targets.length;
+}
+
+// 위 일괄 적용의 대상이 몇 건인지 미리 센다 (쓰지 않는다) — 저장 전에 "같은 이름 N건도 함께 바꿀까요?"를
+// 묻는 데 쓴다. 실시간 사본에서 세므로 보통 네트워크가 필요 없다.
+export async function countCategoryTargets(name, type, category, excludeId = null) {
+  const txs = await fetchAllTransactions();
+  return txs.filter(t => t.id !== excludeId && t.name === name && t.type === type && t.category !== category).length;
 }
 
 export async function deleteTransaction(id) {

@@ -231,6 +231,7 @@ a:focus-visible {
 .sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
 /* CSV 가져오기/내보내기 — 모바일에서만 보임 (데스크톱은 헤더 버튼 사용) */
 .sidebar-tools { display: none; flex-direction: column; gap: 2px; margin: -0.25rem -0.5rem 0.75rem; }
+.sidebar-backup { margin: -0.25rem -0.5rem 0.75rem; }
 .user-info { font-size: 0.8rem; color: var(--text-2); margin-bottom: 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .logout-btn {
   font-size: 0.8rem; color: var(--text-3); background: none; border: none;
@@ -773,7 +774,15 @@ a:focus-visible {
 .confirm-cancel { background: var(--surface2); color: var(--text-2); font-weight: 500; }
 .confirm-ok { background: var(--accent-fill); color: #fff; font-weight: 600; }
 .confirm-ok.danger { background: var(--expense); }
-.confirm-ok:hover, .confirm-cancel:hover { filter: brightness(0.97); }
+.confirm-ok:hover, .confirm-cancel:hover, .confirm-alt:hover { filter: brightness(0.97); }
+/* 선택지가 셋인 확인 창(showConfirm의 altText) — 세로로 쌓고, 가장 권하는 선택을 맨 위에 */
+.confirm-alt { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.confirm-actions.stacked { flex-direction: column-reverse; }
+.confirm-actions.stacked button { flex: none; width: 100%; }
+
+/* 검증에 걸린 입력칸 (utils.invalidField) — 다시 입력하면 사라진다 */
+.form-row input.invalid, .form-row select.invalid,
+.amount-input-wrap:has(input.invalid) { border-color: var(--expense); background: var(--surface); }
 
 /* ── CSV ── */
 .csv-drop-zone {
@@ -798,6 +807,19 @@ a:focus-visible {
 .csv-summary-row strong { font-family: var(--mono); font-weight: 600; }
 .csv-summary-net { padding-top: 6px; margin-top: 2px; border-top: 1px solid var(--border); }
 .csv-summary-net span { color: var(--text); font-weight: 500; }
+/* 이미 가져온 행 — 기본은 건너뛴다 (흐리게), 손으로 입력한 내역과 겹칠 수 있는 새 행은 표시 */
+.csv-preview tr.csv-exists td { color: var(--text-3); }
+.csv-mark {
+  display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 6px;
+  font-size: 0.72rem; background: var(--surface2); color: var(--text-2); white-space: nowrap;
+}
+.csv-mark.warn { background: var(--var-bg); color: var(--var-text); }
+.csv-existing {
+  margin-top: 10px; padding: 0.75rem 0.875rem; border-radius: var(--radius);
+  background: var(--surface2); font-size: 0.82rem; color: var(--text-2); line-height: 1.5;
+}
+.csv-existing .check-row { margin-top: 8px; font-size: 0.8rem; align-items: flex-start; }
+.csv-existing .check-row input { margin-top: 2px; flex-shrink: 0; }
 .csv-note { background: var(--surface2); border-radius: var(--radius); padding: 1rem; font-size: 0.82rem; }
 .csv-note strong { display: block; margin-bottom: 4px; color: var(--text); }
 .csv-note p { color: var(--text-2); line-height: 1.6; }
@@ -1223,7 +1245,8 @@ a:focus-visible {
   /* 좁은 헤더가 화면 밖으로 넘치지 않도록 (375px에서 432px까지 넘쳐 가져오기가 잘렸다):
      내역 추가는 하단 + 버튼이 맡고, CSV 가져오기/내보내기는 햄버거 메뉴(.sidebar-tools)로 */
   #addTxBtn, #csvImportBtn, #csvExportBtn { display: none; }
-  .sidebar-tools { display: flex; }
+  .sidebar-tools { display: flex; margin-bottom: 2px; }
+  .sidebar-backup { margin-top: 0; }
   .icon-btn { padding: 0.5rem 0.6rem; }
 
   /* 모달을 토스식 바텀시트로 */

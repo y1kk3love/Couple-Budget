@@ -45,7 +45,41 @@ export function openOverlay(overlay) {
   overlay.classList.remove("is-closing");
   ensureScrim(overlay);
   resetSheet(overlay);
+  delete overlay.dataset.dirty; // 새로 열면 "입력한 내용 있음" 표시를 지운다 (아래 닫힘 확인)
   overlay.classList.remove("hidden");
+}
+
+// ── 입력한 내용이 있는 창을 실수로 닫지 않게 ───────────────────
+// 배경을 스치거나, Esc를 누르거나, 시트를 끌어내리면 입력하던 내용이 경고 없이 사라졌다
+// (결혼 예산 항목에 결제를 여러 건 쌓다가 배경을 스치면 전부 사라졌다).
+// 창 안에서 input/change가 한 번이라도 일어나면 data-dirty를 달고, 위 세 경로로 닫으려 할 때
+// 앱이 등록한 확인 함수(discardGuard)에 맡긴다. X 버튼과 저장·삭제 뒤의 닫힘은 묻지 않는다.
+// 창을 여는 코드가 값을 채우는 것(.value = …)은 이벤트가 없어 dirty가 아니다.
+let discardGuard = null;
+
+export function markOverlayDirty(el) {
+  const overlay = el?.closest?.(".modal-overlay:not(.confirm-overlay)");
+  if (overlay) overlay.dataset.dirty = "1";
+}
+export const isOverlayDirty = overlay => overlay?.dataset.dirty === "1";
+
+// guard(overlay): 닫을지 사용자에게 묻고, 닫기로 하면 스스로 닫는다 (app.js가 등록)
+export function setupOverlayGuard(guard) {
+  discardGuard = guard;
+  const onInput = e => {
+    if (e.target instanceof HTMLInputElement && e.target.type === "file") return; // 파일 고르기는 입력이 아니다
+    markOverlayDirty(e.target);
+  };
+  document.addEventListener("input", onInput, true);
+  document.addEventListener("change", onInput, true);
+  // 배경 누르기 — 각 모달의 "배경을 누르면 닫기" 리스너보다 먼저(capture) 가로챈다
+  document.addEventListener("click", e => {
+    const overlay = e.target;
+    if (!(overlay instanceof HTMLElement) || !overlay.matches(".modal-overlay:not(.confirm-overlay)")) return;
+    if (!isOverlayDirty(overlay)) return;
+    e.stopPropagation();
+    discardGuard(overlay);
+  }, true);
 }
 
 export function closeOverlay(overlay) {
@@ -119,7 +153,10 @@ export function setupSheetDrag() {
       // 손가락을 멈췄다가 떼면 튕긴 게 아니다 — 마지막 움직임 뒤 80ms가 지났으면 속도 0 (iOS)
       const flingVelocity = performance.now() - lastT > 80 ? 0 : velocity;
       const dismiss = dy > Math.min(140, height * 0.3) || (dy > 20 && flingVelocity > 0.6);
-      if (dismiss) {
+      // 입력한 내용이 있으면 닫지 않고 제자리로 돌린 뒤 버릴지 묻는다
+      const guarded = dismiss && discardGuard && isOverlayDirty(overlay);
+      if (guarded) discardGuard(overlay);
+      if (dismiss && !guarded) {
         // 손가락 속도를 이어받아 끊김 없이 내려간다 (Apple WWDC 'Animate with springs').
         // ease-out 곡선의 시작 기울기가 약 4.5라 4.5 × 남은 거리 ÷ 시간이 곧 시작 속도 —
         // 예전의 천천히 출발하는 곡선(ease-in)은 휙 내린 직후 순간 멈칫했다

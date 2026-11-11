@@ -80,17 +80,61 @@ export function showToast(msg) {
  *  사용: if (!(await runWrite(btn, () => saveX(data)))) return; */
 export async function runWrite(button, write, action = "저장") {
   if (button?.disabled) return false;
-  if (button) button.disabled = true;
+  // 글자만 있는 버튼은 진행 중임을 글자로도 알린다 (흐려지기만 하면 눌렸는지 알기 어렵다)
+  const label = button && !button.children.length ? button.textContent : null;
+  if (button) {
+    button.disabled = true;
+    if (label !== null) button.textContent = `${action} 중…`;
+  }
+  // 연결이 끊겼거나 느리면 Firestore 쓰기는 서버가 확인할 때까지 끝나지 않는다. 예전에는 버튼만 흐려진 채
+  // 아무 안내가 없어, 실패한 줄 알고 다시 입력하면 연결이 돌아왔을 때 두 건이 다 올라갔다.
+  const SLOW_MSG = "연결이 느려요. 저장을 계속 시도하고 있어요 — 다시 입력하지 않아도 돼요";
+  if (navigator.onLine === false) showToast("오프라인이에요. 연결되면 이어서 저장돼요 — 다시 입력하지 않아도 돼요");
+  const slowTimer = setTimeout(() => {
+    // 쓰기 도중 확인 창(상대가 고친 내용을 덮어쓸지 등)에 머무는 중이면 느린 게 아니다
+    if (!document.querySelector(".confirm-overlay:not(.is-closing)")) showToast(SLOW_MSG);
+  }, SLOW_WRITE_MS);
   try {
     await write();
     return true;
   } catch (err) {
     console.error(`${action} 실패:`, err);
-    showToast(`${action}에 실패했습니다. 네트워크를 확인해주세요`);
+    showToast(writeErrorMessage(err, action));
     return false;
   } finally {
-    if (button) button.disabled = false;
+    clearTimeout(slowTimer);
+    if (button) {
+      button.disabled = false;
+      if (label !== null) button.textContent = label;
+    }
   }
+}
+const SLOW_WRITE_MS = 7000;
+
+// 실패 원인에 맞는 안내 — 예전에는 상대가 지운 항목을 저장할 때도 "네트워크를 확인"이라고 했다
+function writeErrorMessage(err, action) {
+  const code = String(err?.code ?? err?.message ?? "");
+  if (/not-found/.test(code)) return `${action}하지 못했어요. 상대가 이미 지운 항목일 수 있어요`;
+  if (/permission-denied|unauthenticated/.test(code)) return `${action} 권한이 없어요. 다시 로그인해 주세요`;
+  return `${action}에 실패했습니다. 네트워크를 확인해주세요`;
+}
+
+/** 입력 검증 실패 — 안내만 띄우면 어느 칸인지 알 수 없어(키패드에 가려지기도 한다),
+ *  그 칸에 포커스를 주고 빨간 테두리로 표시한다. 다시 입력하면 표시가 사라진다. */
+export function invalidField(input, msg) {
+  showToast(msg);
+  if (!input) return;
+  const clear = () => {
+    input.classList.remove("invalid");
+    input.removeAttribute("aria-invalid");
+    input.removeEventListener("input", clear);
+    input.removeEventListener("change", clear);
+  };
+  input.classList.add("invalid");
+  input.setAttribute("aria-invalid", "true");
+  input.addEventListener("input", clear);
+  input.addEventListener("change", clear);
+  input.focus();
 }
 
 /** root 안에 사용자가 입력 중이거나 아직 반영하지 않은 값이 있는지.
@@ -126,6 +170,8 @@ export function setupAmountPresets(container) {
       } else if (btn.dataset.clear) {
         input.value = "";
       }
+      // 직접 입력한 것과 똑같이 알린다 — 금액 읽기 표시(setupAmountHints)와 "입력 중" 판단이 이 이벤트를 본다
+      input.dispatchEvent(new Event("input", { bubbles: true }));
       input.focus();
     });
   });
@@ -140,8 +186,10 @@ export function ownerName(email) {
 }
 
 /** 네이티브 confirm() 대체 — 토스식 확인 다이얼로그.
- *  사용: if (!(await showConfirm("삭제할까요?", { confirmText: "삭제" }))) return; */
-export function showConfirm(message, { confirmText = "확인", danger = true } = {}) {
+ *  사용: if (!(await showConfirm("삭제할까요?", { confirmText: "삭제" }))) return;
+ *  altText를 주면 버튼이 셋이 되고(세로로 쌓임) 그 버튼은 "alt"를 돌려준다:
+ *    true = 확인, "alt" = 다른 선택, false = 취소(Esc·배경 누르기 포함) */
+export function showConfirm(message, { confirmText = "확인", cancelText = "취소", altText = null, danger = true } = {}) {
   return new Promise(resolve => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay confirm-overlay";
@@ -150,8 +198,9 @@ export function showConfirm(message, { confirmText = "확인", danger = true } =
       <div class="modal-scrim"></div>
       <div class="confirm-box" role="alertdialog" aria-modal="true" aria-label="${escapeHtml(message)}">
         <p class="confirm-msg">${escapeHtml(message)}</p>
-        <div class="confirm-actions">
-          <button type="button" class="confirm-cancel">취소</button>
+        <div class="confirm-actions${altText ? " stacked" : ""}">
+          <button type="button" class="confirm-cancel">${escapeHtml(cancelText)}</button>
+          ${altText ? `<button type="button" class="confirm-alt">${escapeHtml(altText)}</button>` : ""}
           <button type="button" class="confirm-ok${danger ? " danger" : ""}">${escapeHtml(confirmText)}</button>
         </div>
       </div>`;
@@ -174,10 +223,21 @@ export function showConfirm(message, { confirmText = "확인", danger = true } =
     document.addEventListener("keydown", onKey, true);
     overlay.querySelector(".confirm-cancel").addEventListener("click", () => done(false));
     overlay.querySelector(".confirm-ok").addEventListener("click", () => done(true));
+    overlay.querySelector(".confirm-alt")?.addEventListener("click", () => done("alt"));
     overlay.addEventListener("click", e => { if (e.target === overlay) done(false); });
     document.body.appendChild(overlay);
     overlay.querySelector(".confirm-ok").focus(); // Enter로 바로 확인 가능
   });
+}
+
+/** 글자 내용을 파일로 내려받기 */
+export function downloadFile(filename, text, type) {
+  const blob = new Blob([text], { type });
+  const a    = document.createElement("a");
+  a.href     = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 /** 2차원 배열을 CSV 파일로 다운로드. BOM을 붙여 엑셀에서 한글이 깨지지 않게 한다. */
@@ -188,13 +248,7 @@ export function downloadCSV(filename, rows) {
     if (/^[=+\-@]/.test(s)) s = "'" + s;
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const csv  = "\uFEFF" + rows.map(r => r.map(esc).join(",")).join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const a    = document.createElement("a");
-  a.href     = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  downloadFile(filename, "\uFEFF" + rows.map(r => r.map(esc).join(",")).join("\r\n"), "text/csv;charset=utf-8");
 }
 
 /** 빈 상태 HTML 반환 — 토스식 이모지 + 부드러운 문구 */

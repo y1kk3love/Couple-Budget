@@ -1,10 +1,10 @@
 // t20 — 데이터 보호: 앱을 열고 둘러보는 것만으로는 기존 문서를 고치거나 지우지 않는다.
 // 모든 탭·지난달·결혼 세그먼트를 돌고, 추가·수정 창을 열었다가 저장 없이 닫은 뒤 쓰기 기록(__writes)을 본다.
 // 허용되는 쓰기는 "이번 달 고정비 자동 기록 생성"(없던 문서를 새로 만드는 것)뿐이다.
-export default async function () {
+export default async function ({ first }) {
   const t = __expect();
   const st = (await import(__appUrl("js/state.js"))).default;
-  const before = JSON.stringify(Object.fromEntries(Object.entries(__store).map(([c, m]) => [c, [...m.entries()]])));
+  const before = JSON.stringify(Object.fromEntries(Object.entries(__store).filter(([, m]) => m.size).map(([c, m]) => [c, [...m.entries()]])));
   const startWrites = __writes.length;
   const closeAll = async () => {
     document.querySelectorAll(".modal-overlay:not(.hidden):not(.is-closing) .modal-close").forEach(b => b.click());
@@ -44,10 +44,11 @@ export default async function () {
   const unexpected = mine.filter(w => !(w.op === "create" && w.col === "transactions" && w.id.startsWith("fixed_") && w.id.endsWith(`_${ym}`)));
   t.ok(unexpected.length === 0, `예상 밖의 쓰기: ${unexpected.map(w => `${w.op}:${w.col}/${w.id}`).join(", ")}`);
   // 처음부터의 쓰기 전체도 "새 문서 생성"뿐이어야 한다 (기존 문서 수정·삭제·덮어쓰기 0건)
-  const touching = __writes.filter(w => w.op !== "create");
+  // (다른 검사가 먼저 돌았으면 그 검사의 저장이 섞이므로, 새로 연 페이지의 첫 검사일 때만 본다)
+  const touching = first ? __writes.filter(w => w.op !== "create") : [];
   t.ok(touching.length === 0, `기존 문서를 건드린 쓰기: ${touching.map(w => `${w.op}:${w.col}/${w.id}`).join(", ")}`);
   // 저장소 내용 비교 — 시작 시점과 같아야 한다
-  const after = JSON.stringify(Object.fromEntries(Object.entries(__store).map(([c, m]) => [c, [...m.entries()]])));
+  const after = JSON.stringify(Object.fromEntries(Object.entries(__store).filter(([, m]) => m.size).map(([c, m]) => [c, [...m.entries()]])));
   t.ok(after === before, "둘러본 뒤 저장소 내용이 달라짐");
-  return t.done({ writesSinceLoad: __writes.length, during: mine.length });
+  return t.done({ writesSinceLoad: __writes.length, during: mine.length, checkedSinceLoad: !!first });
 }
