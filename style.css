@@ -35,7 +35,7 @@
   --overlay: rgba(0, 0, 0, 0.4);
   --shadow-card: 0 1px 3px rgba(2, 32, 71, 0.04);
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.18);
-  --dot-ring: rgba(2, 32, 71, 0.1); /* 파스텔 카테고리 점 윤곽 — 가장 연한 색도 흰 카드에서 보이게 */
+  --dot-ring: rgba(2, 32, 71, 0.26); /* 파스텔 카테고리 점 윤곽 — 가장 연한 색(1.3:1)도 흰 카드에서 보이게 */
   --radius: 12px;
   --radius-lg: 18px;
   --sidebar-w: 200px;
@@ -228,6 +228,10 @@ a:focus-visible {
 }
 .nav-btn:hover { background: var(--surface2); color: var(--text); }
 .nav-btn.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+/* 서랍 뒤 어두운 막 — 모바일 반응형 블록에서만 켠다. 이 기본값은 반드시 그 블록보다 앞에 있어야 한다:
+   예전에는 파일 뒤쪽에 있어서(같은 우선순위면 뒤가 이긴다) 모바일에서도 막이 한 번도 표시되지 않았고,
+   서랍 밖을 눌러도 닫히지 않았다 */
+.sidebar-scrim { display: none; }
 .sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
 /* CSV 가져오기/내보내기 — 모바일에서만 보임 (데스크톱은 헤더 버튼 사용) */
 .sidebar-tools { display: none; flex-direction: column; gap: 2px; margin: -0.25rem -0.5rem 0.75rem; }
@@ -316,7 +320,7 @@ a:focus-visible {
 }
 .sum-card .lbl { font-size: 0.75rem; font-weight: 500; color: var(--text-3); margin-bottom: 5px; }
 .sum-card .val { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; font-family: var(--mono); }
-.sum-card .sub { font-size: 0.72rem; color: var(--text-3); margin-top: 3px; }
+.sum-card .sub { font-size: 0.75rem; color: var(--text-3); margin-top: 3px; }
 .val.income { color: var(--income); }
 .val.expense { color: var(--expense); }
 .val.neutral { color: var(--text); }
@@ -447,7 +451,7 @@ a:focus-visible {
 .filter-toggle-btn.has-filter { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 .filter-badge {
   background: var(--accent-fill); color: #fff; border-radius: 50%;
-  width: 17px; height: 17px; font-size: 0.7rem;
+  width: 17px; height: 17px; font-size: 0.75rem;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .filter-panel {
@@ -524,13 +528,13 @@ a:focus-visible {
 .tx-memo { color: var(--text-2); }
 .tx-owner {
   background: var(--surface2); border-radius: 6px; padding: 0 6px;
-  font-size: 0.72rem; color: var(--text-2); line-height: 1.6;
+  font-size: 0.75rem; color: var(--text-2); line-height: 1.6;
 }
 .tx-amount { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; font-family: var(--mono); flex-shrink: 0; }
 .tx-amount.minus { color: var(--expense); }
 .tx-amount.plus { color: var(--income); }
 .tag {
-  display: inline-block; font-size: 0.72rem; font-weight: 500;
+  display: inline-block; font-size: 0.75rem; font-weight: 500;
   padding: 1px 7px; border-radius: 6px;
 }
 .tag.fixed { background: var(--fixed-bg); color: var(--fixed-text); }
@@ -545,12 +549,16 @@ a:focus-visible {
 .stats-card { background: var(--surface); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-card); }
 .stats-card h4 { font-size: 0.82rem; font-weight: 600; color: var(--text-2); margin-bottom: 1rem; }
 .stats-card.full { grid-column: 1 / -1; }
+.stats-grid > .stats-card:not(.full):last-child:nth-child(odd) { grid-column: 1 / -1; }
 .cat-bar-item { margin-bottom: 10px; }
 .cat-bar-item.clickable { cursor: pointer; padding: 4px 6px; margin-left: -6px; margin-right: -6px; border-radius: var(--radius); transition: background 0.15s; }
 .cat-bar-item.clickable:hover { background: var(--surface-hover); }
 .cat-bar-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
 .cat-bar-label { font-size: 0.82rem; color: var(--text); }
 .cat-bar-val { font-size: 0.8rem; color: var(--text-2); font-family: var(--mono); }
+/* 전체 지출에서의 비중, 그리고 "누르면 내역이 열린다"는 표시 */
+.cat-bar-pct { color: var(--text-3); font-size: 0.75rem; margin-left: 4px; }
+.cat-bar-go { color: var(--text-3); margin-left: 6px; font-family: var(--font); }
 .pbar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
 .pfill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 
@@ -585,10 +593,10 @@ a:focus-visible {
 /* 사람별 지출 라벨 앞 색 점 (사람마다 고정 색) */
 .owner-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 .mc-col:hover .mc-stack { opacity: 0.85; }
-.mc-label { font-size: 0.72rem; color: var(--text-2); margin-top: 4px; }
+.mc-label { font-size: 0.75rem; color: var(--text-2); margin-top: 4px; }
 .mc-amounts {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
-  font-family: var(--mono); font-size: 0.72rem; line-height: 1.2;
+  font-family: var(--mono); font-size: 0.75rem; line-height: 1.2;
   margin-top: 2px;
 }
 .mc-inc { color: var(--income); }
@@ -623,6 +631,7 @@ a:focus-visible {
 .fixed-meta { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
 .fixed-amount { font-size: 0.95rem; font-weight: 700; font-family: var(--mono); color: var(--expense); }
 .fixed-amount.income { color: var(--income); }
+.fixed-amount.quote { color: var(--text); } /* 업체 견적가 — 아직 쓴 돈이 아니라 빨강을 쓰지 않는다 */
 .add-fixed-btn {
   display: flex; align-items: center; gap: 8px; justify-content: center;
   padding: 0.9rem 1rem; background: none;
@@ -634,7 +643,10 @@ a:focus-visible {
 .add-fixed-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .section-header h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
-.section-sub { font-size: 0.8rem; color: var(--text-3); }
+.section-sub { font-size: 0.8rem; color: var(--text-2); }
+.section-sub strong { font-family: var(--mono); font-weight: 700; }
+.section-sub strong.minus { color: var(--expense); }
+.section-sub strong.plus { color: var(--income); }
 
 /* ── 모달 ── */
 .modal-overlay {
@@ -650,6 +662,7 @@ a:focus-visible {
      끝난 뒤 transform을 붙잡고 있으면 바텀시트 끌기(인라인 transform)가 먹지 않는다 */
   animation: m-pop-in 280ms var(--ease-spring) backwards;
 }
+.modal:focus { outline: none; }
 .modal-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 1.25rem 1.5rem 1rem;
@@ -860,7 +873,7 @@ a:focus-visible {
 .csv-preview tr.csv-exists td { color: var(--text-3); }
 .csv-mark {
   display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 6px;
-  font-size: 0.72rem; background: var(--surface2); color: var(--text-2); white-space: nowrap;
+  font-size: 0.75rem; background: var(--surface2); color: var(--text-2); white-space: nowrap;
 }
 .csv-mark.warn { background: var(--var-bg); color: var(--var-text); }
 .csv-existing {
@@ -906,7 +919,7 @@ a:focus-visible {
 .plan-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 0.5rem; }
 .plan-title { font-size: 0.98rem; font-weight: 700; letter-spacing: -0.01em; }
 .plan-me-tag {
-  display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 1px 7px; border-radius: 6px;
+  display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 1px 7px; border-radius: 6px;
   background: var(--accent-bg); color: var(--accent); margin-left: 6px; vertical-align: 2px;
 }
 .plan-sub { font-size: 0.78rem; color: var(--text-2); }
@@ -924,7 +937,7 @@ a:focus-visible {
 .plan-row:last-child { border-bottom: none; }
 .plan-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .plan-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plan-pct { color: var(--text-3); font-size: 0.72rem; }
+.plan-pct { color: var(--text-3); font-size: 0.75rem; }
 .plan-amt { margin-left: auto; font-weight: 600; font-family: var(--mono); }
 .plan-empty { text-align: center; padding: 2rem 0; color: var(--text-3); font-size: 0.88rem; }
 .plan-empty p { margin-bottom: 1rem; }
@@ -991,6 +1004,12 @@ a:focus-visible {
 .wd-sheet-link:hover { background: var(--accent-fill); color: #fff; }
 .wd-sheet-link:active { transform: scale(0.96); }
 .wd-header:hover { background: var(--surface-hover); }
+/* 카드 전체가 설정 버튼이라는 표시 — 예전에는 마우스를 올려야 보이는 설명뿐이었다 */
+.wd-header-edit { position: absolute; right: 1.1rem; bottom: 1rem; font-size: 0.75rem; color: var(--text-3); }
+/* 예산 막대 읽는 법 (채운 색 = 정산 완료, 빗금 = 아직 정산 안 함) */
+.wd-legend { display: flex; gap: 14px; padding: 0 4px 8px; font-size: 0.75rem; color: var(--text-2); }
+.wd-legend i { display: inline-block; width: 18px; height: 6px; border-radius: 3px; margin-right: 5px; vertical-align: middle; background: var(--text-3); position: relative; overflow: hidden; }
+.wd-legend i.hatch::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--bg) 3px 5px); }
 .wd-header:active { transform: scale(0.99); }
 .wd-dday { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; color: var(--accent); font-family: var(--mono); }
 .wd-date { font-size: 0.85rem; color: var(--text-2); margin-top: 2px; }
@@ -1002,7 +1021,7 @@ a:focus-visible {
 .scope-btn:disabled { opacity: 0.45; cursor: default; }
 .wd-item-plan { font-size: 0.75rem; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
 /* 정산 줄 — 막대 아래 따로 (예전에는 금액 줄에 섞여 빽빽했다) */
-.wd-settle-line { font-size: 0.72rem; margin-top: 5px; font-family: var(--mono); }
+.wd-settle-line { font-size: 0.75rem; margin-top: 5px; font-family: var(--mono); }
 /* 오른쪽: 계획 대비 사용률 — 평소엔 본문색, 초과면 빨강, 아직 0이면 흐리게 */
 .wd-item-pct {
   font-size: 0.9rem; font-weight: 700; font-family: var(--mono);
@@ -1038,7 +1057,7 @@ a:focus-visible {
 .wd-pay-settle-of { font-family: var(--mono); flex-shrink: 0; }
 .wd-pay-settle-full {
   background: none; border: 1px solid var(--border); border-radius: 6px;
-  padding: 0.2rem 0.55rem; font-size: 0.72rem; color: var(--text-2); cursor: pointer; flex-shrink: 0;
+  padding: 0.2rem 0.55rem; font-size: 0.75rem; color: var(--text-2); cursor: pointer; flex-shrink: 0;
 }
 .wd-pay-settle-full:hover { border-color: var(--accent); color: var(--accent); }
 .wd-pay-settle-done { display: none; color: var(--income); font-weight: 600; flex-shrink: 0; }
@@ -1129,7 +1148,7 @@ a:focus-visible {
 
 /* 메인 달력의 결혼 일정 마커 */
 .cal-event {
-  font-size: 0.68rem; color: var(--accent); font-weight: 600;
+  font-size: 0.75rem; color: var(--accent); font-weight: 600;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   margin-bottom: 2px;
 }
@@ -1156,7 +1175,7 @@ a:focus-visible {
 .wd-minical-head { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 8px; }
 .wd-minical-title { font-size: 0.9rem; font-weight: 700; min-width: 92px; text-align: center; }
 .wd-minical-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.wd-mc-dayname { text-align: center; font-size: 0.7rem; color: var(--text-3); padding: 4px 0; }
+.wd-mc-dayname { text-align: center; font-size: 0.75rem; color: var(--text-3); padding: 4px 0; }
 .wd-mc-cell {
   position: relative; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
@@ -1175,7 +1194,7 @@ a:focus-visible {
 
 /* 일정 목록 */
 .wd-event-dday {
-  font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 700;
   color: var(--accent); background: var(--accent-bg);
   border-radius: 6px; padding: 2px 7px; flex-shrink: 0;
 }
@@ -1215,13 +1234,13 @@ a:focus-visible {
 .mobile-tabs {
   display: none; position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--surface); border-top: 1px solid var(--border);
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   z-index: 100; padding-bottom: env(safe-area-inset-bottom);
 }
 .mob-tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 3px; padding: 0.6rem 0; border: none; background: none; cursor: pointer;
-  font-size: 0.7rem; color: var(--text-3); font-family: var(--font);
+  font-size: 0.75rem; color: var(--text-3); font-family: var(--font);
   transition: color 0.15s, transform var(--dur-base) var(--ease-spring);
 }
 .mob-tab.active { color: var(--accent); font-weight: 600; }
@@ -1261,6 +1280,7 @@ a:focus-visible {
 
 /* ── 반응형 ── */
 @media (max-width: 768px) {
+  html { font-size: 16px; }
   /* 서랍은 하단 탭(z-index 100)보다 위 — 예전에는 같은 값이라 뒤에 오는 하단 탭이 서랍 맨 아래의
      로그아웃 버튼을 덮어 휴대폰에서 로그아웃할 수 없었다. 높이는 주소창을 뺀 실제 화면(dvh) */
   .sidebar {
@@ -1311,11 +1331,18 @@ a:focus-visible {
   /* 확인 다이얼로그는 바텀시트가 아니라 가운데 유지 */
   .modal-overlay.confirm-overlay { align-items: center; padding: 1.5rem; }
 }
+/* 좁은 폰(≤400px): 헤더의 여백과 간격을 줄인다 — 44px 버튼 넷과 월 이름이 320px에 들어가도록
+   (여백 24px·간격 16px 그대로면 320px에서 테마 버튼이 화면 밖으로 밀렸다) */
+@media (max-width: 400px) {
+  .main-header { padding-left: 12px; padding-right: 12px; }
+  .header-left { gap: 4px; }
+  .month-nav { gap: 0; }
+}
 @media (max-width: 480px) {
   .cal-cell { min-height: 58px; padding: 4px; position: relative; }
   /* 좁은 화면에서는 지출만 표시 — 수입은 우상단 파란 점으로 축약 */
   .cal-inc { display: none; }
-  .cal-exp { font-size: 0.7rem; white-space: nowrap; letter-spacing: -0.02em; }
+  .cal-exp { font-size: 0.75rem; white-space: nowrap; letter-spacing: -0.02em; }
   /* 좁은 칸에서는 일정 이름이 한 글자에서 잘린다 — 반지 표시만 남긴다 (이름은 아래 그날 내역에) */
   .cal-event-text { display: none; }
   .cal-event { text-align: center; }
@@ -1335,6 +1362,11 @@ a:focus-visible {
    손가락으로 누르는 기기(pointer: coarse)에서만 적용 — 마우스 환경의 촘촘한 크기는 그대로.
    예전 측정: 헤더 아이콘 28~31px, 세그먼트·정렬 칩 24px, 로그아웃 14px */
 @media (pointer: coarse) {
+  /* 입력칸 글자는 16px 이상 — 아이폰 Safari는 그보다 작은 입력칸에 포커스하면 화면을 확대해서,
+     입력할 때마다 시트가 커지고 좌우가 잘렸다. 화면별 크기 지정보다 우선해야 해서 !important */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea { font-size: 16px !important; }
+  /* 결혼 예산 행: 44px 손잡이가 왼쪽을 100px 넘게 차지했다 — 여백 쪽으로 겹쳐 글자 자리를 돌려준다 */
+  .wd-item-drag { margin: 0 -10px 0 -12px; }
   /* 아이콘 버튼 — 정사각 44px (display는 건드리지 않는다: 햄버거는 데스크톱에서 숨김 유지) */
   .mobile-menu-btn, .arrow-btn, .icon-btn, .modal-close {
     min-width: 44px; min-height: 44px;
@@ -1427,8 +1459,6 @@ a:focus-visible {
   .modal-overlay.is-closing:not(.confirm-overlay) > .modal { animation: m-sheet-down 240ms var(--ease-out) forwards; }
 }
 
-/* ── 서랍 배경막은 모바일에서만 (위 반응형 블록) ── */
-.sidebar-scrim { display: none; }
 
 /* ── 앱·로그인 등장 ── */
 .login-box { animation: m-rise 600ms var(--ease-out) backwards; }

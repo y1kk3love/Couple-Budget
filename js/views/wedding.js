@@ -130,9 +130,9 @@ function renderHeader() {
   const cfg = state.wedding.config;
   if (!cfg?.date) {
     return `
-      <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="클릭해서 설정">
+      <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="눌러서 설정">
         <div class="wd-dday">💍 결혼 준비</div>
-        <div class="wd-date">결혼식 날짜를 설정해주세요 — 클릭해서 시작</div>
+        <div class="wd-date">결혼식 날짜를 설정해주세요 — 눌러서 시작</div>
       </div>`;
   }
 
@@ -170,8 +170,9 @@ function renderHeader() {
     : "";
 
   return `
-    <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="클릭해서 설정 변경">
+    <div class="wd-header" id="wdHeader" role="button" tabindex="0" title="눌러서 날짜·검증 시트 설정 변경" aria-label="${escapeHtml(label)}, ${escapeHtml(pretty)} — 눌러서 설정 변경">
       ${sheetLink}
+      <span class="wd-header-edit" aria-hidden="true">설정 ›</span>
       <div class="wd-dday">${label}</div>
       <div class="wd-date">${pretty}</div>
       ${budgetLine}
@@ -255,7 +256,12 @@ function renderBudgetSegment() {
   }).join("");
 
   const empty = items.length ? "" : emptyStateHTML("아직 예산 항목이 없어요", "💐");
+  // 막대 읽는 법 — 예전에는 마우스를 올려야 보이는 설명(title)뿐이라 폰에서는 빗금의 뜻을 알 수 없었다
+  const legend = items.some(it => itemSpent(it) > 0)
+    ? `<div class="wd-legend" aria-hidden="true"><span><i class="solid"></i>정산 완료</span><span><i class="hatch"></i>아직 정산 안 함</span></div>`
+    : "";
   return `
+    ${legend}
     <div class="fixed-list">
       ${rows}${empty}
       <button class="add-fixed-btn" id="wdItemAddBtn">+ 예산 항목 추가</button>

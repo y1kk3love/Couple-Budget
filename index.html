@@ -60,7 +60,7 @@
           통계
         </button>
         <button class="nav-btn" data-view="fixed">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           고정비
         </button>
         <button class="nav-btn" data-view="plan">
@@ -109,7 +109,7 @@
             <button id="prevMonth" class="arrow-btn" aria-label="이전 달">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <button id="currentMonthLabel" class="month-label" title="이번 달로 이동"></button>
+            <button id="currentMonthLabel" class="month-label" title="누르면 이번 달로 이동"></button>
             <button id="nextMonth" class="arrow-btn" aria-label="다음 달">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
@@ -166,14 +166,6 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         통계
       </button>
-      <button class="mob-tab" data-view="fixed">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        고정비
-      </button>
-      <button class="mob-tab" data-view="plan">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-        예산안
-      </button>
       <button class="mob-tab" data-view="wedding">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         결혼
@@ -186,7 +178,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-header">
         <h3 id="modalTitle">내역 추가</h3>
-        <button class="modal-close" id="modalClose">
+        <button class="modal-close" id="modalClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -247,14 +239,14 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="csvModalTitle">
       <div class="modal-header">
         <h3 id="csvModalTitle">CSV 가져오기</h3>
-        <button class="modal-close" id="csvModalClose">
+        <button class="modal-close" id="csvModalClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
       <div class="modal-body">
         <div class="csv-drop-zone" id="csvDropZone">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <p>CSV 파일을 드래그하거나 클릭해서 선택</p>
+          <p>CSV 파일을 끌어다 놓거나 눌러서 선택</p>
           <span>신한카드 CSV 형식 지원</span>
           <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
         </div>
@@ -275,7 +267,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fixedEditTitle">
       <div class="modal-header">
         <h3 id="fixedEditTitle">고정비 수정</h3>
-        <button class="modal-close" id="fixedEditClose">
+        <button class="modal-close" id="fixedEditClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -333,7 +325,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle">
       <div class="modal-header">
         <h3 id="budgetModalTitle">월 예산 설정</h3>
-        <button class="modal-close" id="budgetModalClose">
+        <button class="modal-close" id="budgetModalClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -369,7 +361,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="categoryDetailTitle">
       <div class="modal-header">
         <h3 id="categoryDetailTitle">카테고리</h3>
-        <button class="modal-close" id="categoryDetailClose">
+        <button class="modal-close" id="categoryDetailClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -382,7 +374,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wdSettingsTitle">
       <div class="modal-header">
         <h3 id="wdSettingsTitle">결혼 준비 설정</h3>
-        <button class="modal-close" id="wdSettingsClose">
+        <button class="modal-close" id="wdSettingsClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -408,7 +400,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wdItemTitle">
       <div class="modal-header">
         <h3 id="wdItemTitle">예산 항목</h3>
-        <button class="modal-close" id="wdItemClose">
+        <button class="modal-close" id="wdItemClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -460,7 +452,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wdTaskModalTitle">
       <div class="modal-header">
         <h3 id="wdTaskModalTitle">할 일</h3>
-        <button class="modal-close" id="wdTaskClose">
+        <button class="modal-close" id="wdTaskClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -491,7 +483,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wdVendorModalTitle">
       <div class="modal-header">
         <h3 id="wdVendorModalTitle">업체</h3>
-        <button class="modal-close" id="wdVendorClose">
+        <button class="modal-close" id="wdVendorClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -540,7 +532,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wdEventModalTitle">
       <div class="modal-header">
         <h3 id="wdEventModalTitle">일정</h3>
-        <button class="modal-close" id="wdEventClose">
+        <button class="modal-close" id="wdEventClose" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>

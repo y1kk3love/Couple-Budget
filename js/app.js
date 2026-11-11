@@ -242,9 +242,9 @@ async function renderSummary() {
   const bar = document.getElementById("summaryBar");
   bar.innerHTML = `
     <div class="sum-card hero">
-      <div class="lbl">이번달 잔액</div>
+      <div class="lbl">${state.currentMonth}월 잔액</div>
       <div class="val ${balanceClass}" data-count="${escapeHtml(balance)}" data-count-key="sum-balance" data-count-fmt="signed">${balanceSign}${fmtMoney(balance)}원</div>
-      <div class="sub">${state.currentMonth}월 수입 − 지출</div>
+      <div class="sub">수입 − 지출</div>
     </div>
     ${renderBudgetCard(totalExpense)}
     <div class="sum-card duo">
@@ -282,10 +282,10 @@ const COUNT_FORMATS = {
 function renderBudgetCard(totalExpense) {
   if (state.budget == null) {
     return `
-      <div class="sum-card budget-card unset" id="budgetCard" role="button" tabindex="0" title="클릭해서 월 예산 설정">
+      <div class="sum-card budget-card unset" id="budgetCard" role="button" tabindex="0" title="눌러서 월 예산 설정">
         <div class="lbl">예산</div>
         <div class="val neutral budget-unset-val">설정하기</div>
-        <div class="sub">클릭해서 월 예산 설정</div>
+        <div class="sub">눌러서 월 예산 설정</div>
       </div>`;
   }
 
@@ -305,7 +305,7 @@ function renderBudgetCard(totalExpense) {
     + (isOverride ? " · 이번 달 전용" : "");
 
   return `
-    <div class="sum-card budget-card" id="budgetCard" role="button" tabindex="0" title="클릭해서 월 예산 수정">
+    <div class="sum-card budget-card" id="budgetCard" role="button" tabindex="0" title="눌러서 월 예산 수정">
       <div class="lbl">예산 ${over ? "초과" : "남음"}</div>
       <div class="val ${valClass}" data-count="${escapeHtml(remaining)}" data-count-key="sum-budget" data-count-fmt="neg">${over ? "-" : ""}${fmtMoney(remaining)}원</div>
       <div class="pbar budget-pbar"><div class="pfill" style="width:${barPct}%;background:${barColor}"></div></div>
@@ -404,9 +404,11 @@ function switchView(view) {
   document.getElementById(`view-${view}`).classList.add("active");
 
   // 사이드바 / 모바일 탭 활성화 상태
-  document.querySelectorAll("[data-view]").forEach(b =>
-    b.classList.toggle("active", b.dataset.view === view)
-  );
+  document.querySelectorAll("[data-view]").forEach(b => {
+    const on = b.dataset.view === view;
+    b.classList.toggle("active", on);
+    if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); // 화면 낭독기에 현재 탭 알림
+  });
 
   pendingEntrance = 0; // 새 화면의 카드·행이 차례로 떠오른다
   renderAll();
@@ -438,6 +440,21 @@ function setupGlobalKeys() {
       if (open && isOverlayDirty(open)) { confirmDiscard(open); return; }
       // 각 모달의 닫기 버튼을 눌러 모달별 정리 로직(초기화 등)을 그대로 태운다
       open?.querySelector(".modal-close")?.click();
+      return;
+    }
+    // Tab — 열린 창 안에서만 돈다 (뒤에 가려진 화면으로 빠져나가지 않게)
+    if (e.key === "Tab") {
+      const open = [...document.querySelectorAll(".modal-overlay:not(.hidden):not(.is-closing)")].pop();
+      if (open) {
+        const items = [...open.querySelectorAll("button, input:not([type=hidden]), select, textarea, a[href], [tabindex='0']")]
+          .filter(el => !el.disabled && el.offsetParent !== null);
+        if (items.length) {
+          const first = items[0], last = items[items.length - 1];
+          if (!open.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+          else if (e.shiftKey && (document.activeElement === first || document.activeElement === open.querySelector(".modal"))) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
       return;
     }
     // role="button"인 div/행을 Enter·Space로 활성화 (키보드 접근성)
@@ -508,6 +525,16 @@ async function exportAllCsv() {
   showToast(`${txs.length}건을 내보냈습니다`);
 }
 
+// ── 라벨과 입력칸 연결 (접근성) ───────────────────────────────
+// 모달의 라벨 31개 중 2개만 입력칸과 연결돼 있어, 화면 낭독기가 금액 칸을 이름 없이 읽었다.
+// 같은 .form-row 안의 첫 입력칸에 연결한다 (라벨을 눌러도 그 칸에 포커스가 간다).
+function linkFormLabels() {
+  document.querySelectorAll(".form-row > label:not([for])").forEach(label => {
+    const field = label.parentElement.querySelector("input:not([type=hidden]), select, textarea");
+    if (field?.id) label.htmlFor = field.id;
+  });
+}
+
 // ── 앱 부트스트랩 ─────────────────────────────────────────────
 
 setupAuth();
@@ -529,5 +556,6 @@ setupCategoryDetailModal();
 setupBackup();
 setupAmountHints(); // 금액 입력칸 아래 읽기 표시 (3,500만원)
 // 여기까지 왔으면 모든 모듈이 정상 로드됐다 — index.html의 "불러오지 못했어요" 안내를 끈다
+linkFormLabels();
 window.__appBooted = true;
 document.getElementById("bootError")?.classList.add("hidden");

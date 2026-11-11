@@ -230,7 +230,7 @@ function renderContextPanel(title, txs) {
   const rows = txs.map((t, i) => {
     const sign  = t.type === "income" ? "+" : "-";
     const color = t.type === "income" ? "var(--income)" : "var(--expense)";
-    return `<div class="ctx-row" role="button" tabindex="0" data-i="${i}" title="클릭해서 이 내역 수정">
+    return `<div class="ctx-row" role="button" tabindex="0" data-i="${i}" title="눌러서 이 내역 수정">
       <span class="ctx-date">${escapeHtml(t.date.slice(5).replace("-", "/"))}</span>
       <span class="ctx-name">${escapeHtml(t.name)}</span>
       <span class="ctx-amt" style="color:${color}">${sign}${fmtMoney(t.amount)}</span>

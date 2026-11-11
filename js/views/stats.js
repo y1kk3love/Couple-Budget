@@ -166,6 +166,7 @@ function renderCategoryBars(expTxs) {
 
   const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
   const max    = sorted[0]?.[1] ?? 1;
+  const total  = sorted.reduce((s, [, amt]) => s + amt, 0) || 1;
 
   const bars = sorted.map(([catId, amt]) => {
     const cat = getCategoryInfo(catId, "expense");
@@ -175,7 +176,7 @@ function renderCategoryBars(expTxs) {
         aria-label="${escapeHtml(cat.name)} 세부 내역 보기">
         <div class="cat-bar-row">
           <span class="cat-bar-label">${escapeHtml(cat.name)}</span>
-          <span class="cat-bar-val">${fmtMoney(amt)}원</span>
+          <span class="cat-bar-val">${fmtMoney(amt)}원 <span class="cat-bar-pct">${Math.round(amt / total * 100)}%</span><span class="cat-bar-go" aria-hidden="true">›</span></span>
         </div>
         <div class="pbar">
           <div class="pfill" style="width:${pct}%;background:${cat.color}"></div>
@@ -262,7 +263,7 @@ function renderOwnerSplit(expTxs) {
 
   return `
     <div class="stats-card">
-      <h4>사람별 지출</h4>
+      <h4>입력한 사람별 지출</h4>
       ${bars}
     </div>`;
 }

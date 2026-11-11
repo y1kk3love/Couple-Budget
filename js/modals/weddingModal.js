@@ -204,7 +204,7 @@ function renderPayments() {
   }).join("");
 
   box.innerHTML = `
-    ${rows || `<p class="wd-empty-note">아직 결제 기록이 없어요</p>`}
+    ${rows ? `<p class="field-hint">정산: 이 결제 중 상대에게 돌려받은(정산이 끝난) 금액</p>${rows}` : `<p class="wd-empty-note">아직 결제 내역이 없어요</p>`}
     <div class="wd-pay-presets">
       ${PAY_LABELS.map(l => `<button type="button" class="preset-btn" data-pay-label="${l}">+ ${l}</button>`).join("")}
       <button type="button" class="preset-btn" data-pay-label="">+ 직접 입력</button>
@@ -527,7 +527,11 @@ export function setupWeddingModals() {
   document.getElementById("wdItemDelete").addEventListener("click", async e => {
     const btn = e.currentTarget;
     if (!editingItemId) return;
-    if (!(await showConfirm("이 예산 항목을 삭제할까요?", { confirmText: "삭제" }))) return;
+    const paid = draftPayments.length;
+    const msg = paid
+      ? `이 예산 항목을 삭제할까요?\n결제 내역 ${paid}건도 함께 삭제돼요.`
+      : "이 예산 항목을 삭제할까요?";
+    if (!(await showConfirm(msg, { confirmText: "삭제" }))) return;
     if (!(await runWrite(btn, () => deleteWeddingItem(editingItemId), "삭제"))) return;
     closeItem();
     showToast("삭제되었습니다");

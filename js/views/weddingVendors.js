@@ -36,7 +36,7 @@ export function renderVendorsSegment(container) {
           <div class="fixed-name">${escapeHtml(v.name)} ${chosen ? `<span class="tag applied">확정</span>` : ""}</div>
           <div class="fixed-meta">${meta}</div>
         </div>
-        <div class="fixed-amount">${v.price > 0 ? `${fmtMoney(v.price)}원` : ""}</div>
+        <div class="fixed-amount quote">${v.price > 0 ? `${fmtMoney(v.price)}원` : ""}</div>
       </div>`;
   }).join("");
 

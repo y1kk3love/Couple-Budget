@@ -17,7 +17,7 @@ export function renderFixedView() {
   container.innerHTML = `
     <div class="section-header">
       <h3>고정비 관리</h3>
-      <span class="section-sub">매달 자동으로 적용됩니다</span>
+      <span class="section-sub">${renderMonthlyTotals()}</span>
     </div>
     <div class="fixed-list">
       ${rows}
@@ -41,6 +41,17 @@ export function renderFixedView() {
   playLayout(container, layout);
 }
 
+// 매달 나가고 들어오는 고정 금액 합계 — 고정비 화면의 핵심 숫자인데 예전에는 어디에도 없었다
+function renderMonthlyTotals() {
+  const exp = state.fixedItems.filter(i => i.type !== "income").reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const inc = state.fixedItems.filter(i => i.type === "income").reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  if (!exp && !inc) return "매달 자동으로 기록됩니다";
+  return [
+    exp ? `매달 지출 <strong class="minus">-${fmtMoney(exp)}원</strong>` : "",
+    inc ? `수입 <strong class="plus">+${fmtMoney(inc)}원</strong>` : "",
+  ].filter(Boolean).join(" · ");
+}
+
 function renderFixedRow(item) {
   const cat       = getCategoryInfo(item.category, item.type);
   const amtCls    = item.type === "income" ? "income" : "";
@@ -60,10 +71,10 @@ function renderFixedRow(item) {
 // 이번 달(현재 보고 있는 달) 기준 적용 상태 표시
 function renderStatusTag(item) {
   if (state.skippedFixedIds.has(item.id)) {
-    return `<span class="tag skipped">이번 달 건너뜀</span>`;
+    return `<span class="tag skipped">${state.currentMonth}월 건너뜀</span>`;
   }
   if (state.transactions.some(t => t.fromFixed && t.fixedId === item.id)) {
-    return `<span class="tag applied">이번 달 반영</span>`;
+    return `<span class="tag applied">${state.currentMonth}월 반영</span>`;
   }
   const future = item.startYear &&
     item.startYear * 100 + item.startMonth > state.currentYear * 100 + state.currentMonth;

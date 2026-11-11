@@ -99,9 +99,9 @@ function renderToolbar() {
 
   return `
     <div class="list-toolbar">
-      <div class="scope-toggle">
-        <button class="scope-btn ${scope === "month" ? "active" : ""}" data-scope="month">이번 달</button>
-        <button class="scope-btn ${scope === "all" ? "active" : ""}" data-scope="all">전체 기간</button>
+      <div class="scope-toggle" role="group" aria-label="보는 기간">
+        <button class="scope-btn ${scope === "month" ? "active" : ""}" data-scope="month" aria-pressed="${scope === "month"}">${state.currentMonth}월</button>
+        <button class="scope-btn ${scope === "all" ? "active" : ""}" data-scope="all" aria-pressed="${scope === "all"}">전체 기간</button>
       </div>
       <button id="filterToggleBtn" class="filter-toggle-btn ${activeCount > 0 ? "has-filter" : ""}">
         필터 ${badge}
@@ -230,13 +230,13 @@ function renderSortControls() {
     { key: "name",     label: "이름" },
   ];
   const keyBtns  = keys.map(({ key, label }) => `
-    <button class="sort-key-btn ${sortKey === key ? "active" : ""}" data-sort-key="${key}">${label}</button>`
+    <button class="sort-key-btn ${sortKey === key ? "active" : ""}" data-sort-key="${key}" aria-pressed="${sortKey === key}">${label}</button>`
   ).join("");
   const dirLabel = sortDir === "asc" ? "↑ 오름차순" : "↓ 내림차순";
 
   return `
     <div class="sort-bar">
-      <div class="sort-keys">${keyBtns}</div>
+      <div class="sort-keys" role="group" aria-label="정렬 기준">${keyBtns}</div>
       <button class="sort-dir-btn" id="sortDirBtn">${dirLabel}</button>
     </div>`;
 }

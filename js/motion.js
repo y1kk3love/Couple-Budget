@@ -49,7 +49,38 @@ export function openOverlay(overlay) {
   resetSheet(overlay);
   delete overlay.dataset.dirty; // 새로 열면 "입력한 내용 있음" 표시를 지운다 (아래 닫힘 확인)
   overlay.classList.remove("hidden");
-  if (!wasOpen) layerOpened();
+  if (!wasOpen) {
+    layerOpened();
+    focusInto(overlay);
+  }
+}
+
+// ── 창을 열고 닫을 때의 포커스 (키보드·화면 낭독기) ─────────────
+// 예전에는 창을 열어도 포커스가 뒤 화면에 남아, Tab이 가려진 화면을 돌았고 닫은 뒤에는 어디에 있는지 잃었다.
+// 열 때: 창을 연 요소를 기억하고, 여는 코드가 입력칸에 포커스를 주지 않았으면 창 자체에 준다
+//        (입력칸에 자동으로 주지 않는 이유: 폰에서 키패드가 불쑥 올라온다).
+// 닫을 때: 기억해 둔 요소로 돌려준다 (그 사이 화면이 다시 그려져 사라졌으면 그대로 둔다).
+const openers = new WeakMap();
+
+function focusInto(overlay) {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body && !overlay.contains(active)) openers.set(overlay, active);
+  const modal = overlay.querySelector(":scope > .modal");
+  if (!modal) return;
+  modal.tabIndex = -1;
+  // 여는 코드가 openOverlay 바로 뒤에 금액 칸 등에 포커스를 줄 수 있으니 한 박자 뒤에 확인
+  setTimeout(() => {
+    if (overlay.classList.contains("hidden") || overlay.contains(document.activeElement)) return;
+    modal.focus({ preventScroll: true });
+  }, 0);
+}
+
+function restoreFocus(overlay) {
+  const opener = openers.get(overlay);
+  openers.delete(overlay);
+  if (!opener?.isConnected || !overlay.contains(document.activeElement)) return;
+  if (opener.matches("input, textarea, select")) return; // 입력칸으로 돌려주면 폰에서 키패드가 다시 뜬다
+  opener.focus({ preventScroll: true });
 }
 
 // ── 뒤로가기로 창 닫기 ────────────────────────────────────────
@@ -135,6 +166,7 @@ export function setupOverlayGuard(guard) {
 export function closeOverlay(overlay) {
   if (overlay.classList.contains("hidden") || closeTimers.has(overlay)) return;
   layerClosed(); // 열 때 쌓은 뒤로가기 항목을 되돌린다
+  restoreFocus(overlay);
   // 끌어서 닫은 시트는 이미 화면 밖으로 내려가 있다 — 퇴장 애니메이션 없이 숨긴다
   if (reducedMotion() || overlay.dataset.dismissed) {
     overlay.classList.add("hidden");
